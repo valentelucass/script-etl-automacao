@@ -1,0 +1,58 @@
+# Arquivos de configuração com informações sensíveis
+src/main/resources/config.properties
+*.properties
+*.env
+.env
+
+# Arquivos de log
+logs/
+*.log
+
+# Arquivos de backup
+backups/
+*.bak
+*.backup
+
+# Arquivos compilados
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Arquivos de IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+.vscode/
+
+# Arquivos do sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Arquivos temporários
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+
+# Arquivos Maven
+.mvn/
+mvnw
+mvnw.cmd
+
+# Diretórios específicos que podem conter dados sensíveis
+credentials/
+secrets/
+temp/
+tmp/
+cache/
