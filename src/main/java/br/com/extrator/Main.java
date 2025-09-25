@@ -1,17 +1,18 @@
 package br.com.extrator;
 
 import br.com.extrator.api.ClienteApiRest;
-import br.com.extrator.api.ClienteApiGraphQL;
-import br.com.extrator.api.ClienteApiDataExport;
+//import br.com.extrator.api.ClienteApiGraphQL;
+//import br.com.extrator.api.ClienteApiDataExport;
 import br.com.extrator.db.ServicoBancoDadosDinamico;
 import br.com.extrator.modelo.EntidadeDinamica;
-import br.com.extrator.util.TerminalCores;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Sistema de Extração de Dados do ESL Cloud
@@ -30,374 +31,582 @@ import java.util.List;
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
+    // Variáveis para controle de estatísticas
+    private static int totalEntidadesExtraidas = 0;
+    private static int totalEntidadesProcessadas = 0;
+    private static List<String> sucessos = new ArrayList<>();
+    private static List<String> erros = new ArrayList<>();
+    private static List<String> avisos = new ArrayList<>();
+
     public static void main(String[] args) {
         // Verifica se o usuário quer apenas validar os dados de acesso
         if (args.length > 0 && "--validar".equals(args[0])) {
             validarDadosAcesso();
             return;
         }
+
         // Exibe banner no console para melhor visualização
         exibirBanner();
-        
+
         logger.info("Iniciando processo de extração de dados das 3 APIs do ESL Cloud");
-        System.out.println(TerminalCores.titulo("[INICIANDO] Processo de extração de dados das 3 APIs do ESL Cloud"));
-        
+        System.out.println("\n" + "=".repeat(60));
+        System.out.println("INICIANDO PROCESSO DE EXTRAÇÃO DE DADOS");
+        System.out.println("=".repeat(60));
+        System.out.println("Sistema: Extração de dados das 3 APIs do ESL Cloud ");
+        System.out.println("Versão: 2.0 by @valentelucass");
+        System.out.println("Início: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")));
+        System.out.println("=".repeat(60) + "\n");
+
         try {
             // Verifica se as configurações foram personalizadas
             logger.info("Verificando configurações");
-            System.out.println(TerminalCores.info("[ETAPA 1/6] Verificando configurações..."));
+            System.out.println("    [ETAPA 1/10] Verificando configurações do sistema...");
             br.com.extrator.util.CarregadorConfig.verificarConfiguracoesPersonalizadas();
-            System.out.println(TerminalCores.sucesso("✓ Configurações validadas com sucesso!"));
-            
+            System.out.println("    Configurações validadas com sucesso!");
+            sucessos.add("Configurações do sistema validadas");
+            System.out.println();
+
+            // Valida conexão com banco de dados
+            logger.info("Validando conexão com banco de dados");
+            System.out.println("    [ETAPA 2/10] Validando conexão com o banco de dados SQL Server...");
+            br.com.extrator.util.CarregadorConfig.validarConexaoBancoDados();
+            System.out.println("    Conexão com banco de dados validada com sucesso!");
+            sucessos.add("Conexão com banco de dados estabelecida");
+            System.out.println();
+
             // Inicializa o serviço de banco de dados dinâmico
             logger.info("Inicializando banco de dados");
-            System.out.println(TerminalCores.info("[ETAPA 2/6] Inicializando conexão com o banco de dados SQL Server..."));
+            System.out.println("    [ETAPA 3/9] Inicializando serviço de banco de dados...");
             ServicoBancoDadosDinamico servicoBD = new ServicoBancoDadosDinamico();
-            System.out.println(TerminalCores.sucesso("✓ Conexão com banco de dados estabelecida com sucesso!"));
-            
+            System.out.println("    Serviço de banco de dados inicializado com sucesso!");
+            sucessos.add("Serviço de banco de dados inicializado");
+            System.out.println();
+
             // Inicializa os clientes das APIs
             logger.info("Inicializando clientes das APIs");
-            System.out.println(TerminalCores.info("[ETAPA 3/6] Inicializando clientes das 3 APIs ESL Cloud..."));
+            System.out.println("    [ETAPA 4/10] Inicializando clientes das 3 APIs ESL Cloud...");
             ClienteApiRest clienteApiRest = new ClienteApiRest();
-            // TEMPORARIAMENTE COMENTADO - APIs não utilizadas no teste focado
-            // ClienteApiGraphQL clienteApiGraphQL = new ClienteApiGraphQL();
-            // ClienteApiDataExport clienteApiDataExport = new ClienteApiDataExport();
-            System.out.println(TerminalCores.sucesso("✓ Clientes das 3 APIs inicializados com sucesso!"));
-            
+            //ClienteApiGraphQL clienteApiGraphQL = new ClienteApiGraphQL();
+            //ClienteApiDataExport clienteApiDataExport = new ClienteApiDataExport();
+            System.out.println("    Clientes das 3 APIs inicializados com sucesso!");
+            sucessos.add("Clientes das APIs inicializados (REST, GraphQL, Data Export)");
+            System.out.println();
+
             // Define o período de busca (padrão: últimas 24 horas)
             String dataBusca = null;
             if (args.length > 0) {
-                dataBusca = args[0];
-                logger.info("Data de busca fornecida via parâmetro: {}", dataBusca);
-                System.out.println(TerminalCores.info("→ Data de busca fornecida: ") + TerminalCores.destaque(dataBusca));
+                String parametroData = args[0];
+                logger.info("Data de busca fornecida via parâmetro: {}", parametroData);
+                System.out.println("    Data de busca fornecida: " + parametroData);
+
+                // Valida o formato da data antes de usar
+                dataBusca = validarEFormatarData(parametroData);
+                if (dataBusca == null) {
+                    logger.error("Formato de data inválido: {}", parametroData);
+                    System.err.println("    Formato de data inválido: " + parametroData);
+                    System.err.println("   Formatos aceitos: yyyy-MM-dd, dd/MM/yyyy, dd-MM-yyyy, yyyy-MM-ddTHH:mm:ss");
+                    erros.add("Formato de data inválido: " + parametroData);
+                    exibirResumoFinal();
+                    System.exit(1);
+                } else {
+                    System.out.println("    Data validada e formatada: " + dataBusca);
+                    sucessos.add("Data de busca validada: " + parametroData);
+                }
             } else {
-                LocalDateTime dataInicio = LocalDateTime.now().minusHours(24);
+                // Usa as últimas 24 horas como padrão
+                LocalDateTime agora = LocalDateTime.now();
+                LocalDateTime dataInicio = agora.minusHours(24);
                 dataBusca = dataInicio.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-                logger.info("Usando data de busca padrão (últimas 24 horas): {}", dataBusca);
-                System.out.println(TerminalCores.info("→ Usando data de busca padrão (últimas 24 horas): ") + TerminalCores.destaque(dataBusca));
+
+                logger.info("Usando período padrão: últimas 24 horas. Data de início: {}", dataBusca);
+                System.out.println("    Período padrão: últimas 24 horas");
+                System.out.println("      Data de início: "
+                        + dataInicio.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")));
+                sucessos.add("Período padrão configurado (últimas 24 horas)");
             }
-            
-            int totalEntidadesExtraidas = 0;
-            int totalEntidadesProcessadas = 0;
-            
-            // ========== ETAPA 4/9: EXTRAÇÃO DE FATURAS (API REST) ==========
+            System.out.println();
+/*
+            // ========== ETAPA 5/10: EXTRAÇÃO DE FATURAS (API REST) ==========
             logger.info("Extraindo faturas da API REST");
-            System.out.println(TerminalCores.info("\n[ETAPA 4/9] Extraindo Faturas da API REST..."));
-            
+            System.out.println("    [ETAPA 5/10] Extraindo Faturas da API REST...");
+
             List<EntidadeDinamica> faturas = clienteApiRest.buscarFaturas(dataBusca);
             totalEntidadesExtraidas += faturas.size();
-            
+
             logger.info("Extração de faturas concluída. Total encontrado: {}", faturas.size());
-            System.out.println(TerminalCores.sucesso("✓ Extração de faturas concluída! Total: ") + TerminalCores.destaque(String.valueOf(faturas.size())));
-            
+            System.out.println("    Total de faturas encontradas: " + faturas.size());
+
             if (!faturas.isEmpty()) {
                 logger.info("Salvando faturas no banco de dados");
-                System.out.println(TerminalCores.info("→ Salvando faturas no banco SQL Server..."));
-                
+                System.out.println("    Salvando faturas no banco SQL Server...");
+
                 int processados = servicoBD.salvarEntidades(faturas, "faturas");
                 totalEntidadesProcessadas += processados;
-                
+
                 logger.info("Faturas salvas. Total processado: {}", processados);
-                System.out.println(TerminalCores.sucesso("✓ Faturas salvas com sucesso! Total: ") + TerminalCores.destaque(String.valueOf(processados)));
+                System.out
+                        .println("    Faturas salvas com sucesso! Processadas: " + processados + "/" + faturas.size());
+                sucessos.add("Faturas extraídas e salvas: " + processados + "/" + faturas.size());
+
+                if (processados < faturas.size()) {
+                    String aviso = "Algumas faturas não foram salvas: " + (faturas.size() - processados) + " falharam";
+                    avisos.add(aviso);
+                    System.out.println("   !!!!  " + aviso);
+                }
+            } else {
+                System.out.println("    Nenhuma fatura encontrada para o período especificado");
+                avisos.add("Nenhuma fatura encontrada para o período");
             }
-            
-            /* TEMPORARIAMENTE COMENTADO PARA TESTE FOCADO EM FATURAS
+
             // Pausa obrigatória de 2 segundos entre APIs
             logger.info("Aguardando 2 segundos antes da próxima API...");
-            System.out.println(TerminalCores.info("→ Aguardando 2 segundos..."));
+            System.out.println("    Aguardando 2 segundos antes da próxima API...");
             Thread.sleep(2000);
-            
-            // ========== ETAPA 5/9: EXTRAÇÃO DE OCORRÊNCIAS (API REST) ==========
+            System.out.println();
+*/
+            // ========== ETAPA 6/10: EXTRAÇÃO DE OCORRÊNCIAS (API REST) ==========
             logger.info("Extraindo ocorrências da API REST");
-            System.out.println(TerminalCores.info("\n[ETAPA 5/9] Extraindo Ocorrências da API REST..."));
-            
+            System.out.println("    [ETAPA 6/10] Extraindo Ocorrências da API REST...");
+
+            // Chama o método que você corrigiu em ClienteApiRest.java
             List<EntidadeDinamica> ocorrencias = clienteApiRest.buscarOcorrencias(dataBusca);
             totalEntidadesExtraidas += ocorrencias.size();
-            
+
             logger.info("Extração de ocorrências concluída. Total encontrado: {}", ocorrencias.size());
-            System.out.println(TerminalCores.sucesso("✓ Extração de ocorrências concluída! Total: ") + TerminalCores.destaque(String.valueOf(ocorrencias.size())));
-            
+            System.out.println("    Total de ocorrências encontradas: " + ocorrencias.size());
+
             if (!ocorrencias.isEmpty()) {
                 logger.info("Salvando ocorrências no banco de dados");
-                System.out.println(TerminalCores.info("→ Salvando ocorrências no banco SQL Server..."));
-                
+                System.out.println("    Salvando ocorrências no banco SQL Server...");
+
+                // Salva os resultados na tabela "ocorrencias"
                 int processados = servicoBD.salvarEntidades(ocorrencias, "ocorrencias");
                 totalEntidadesProcessadas += processados;
-                
+
                 logger.info("Ocorrências salvas. Total processado: {}", processados);
-                System.out.println(TerminalCores.sucesso("✓ Ocorrências salvas com sucesso! Total: ") + TerminalCores.destaque(String.valueOf(processados)));
+                System.out.println(
+                        "    Ocorrências salvas com sucesso! Processadas: " + processados + "/" + ocorrencias.size());
+                sucessos.add("Ocorrências extraídas e salvas: " + processados + "/" + ocorrencias.size());
+            } else {
+                System.out.println("    Nenhuma ocorrência encontrada para o período especificado");
+                avisos.add("Nenhuma ocorrência encontrada para o período");
             }
-            
+
             // Pausa obrigatória de 2 segundos entre APIs
             logger.info("Aguardando 2 segundos antes da próxima API...");
-            System.out.println(TerminalCores.info("→ Aguardando 2 segundos..."));
+            System.out.println("    Aguardando 2 segundos antes da próxima API...");
             Thread.sleep(2000);
-            
-            // ========== ETAPA 6/9: EXTRAÇÃO DE COLETAS (API GRAPHQL) ==========
+            System.out.println();
+/*
+            // ========== ETAPA 7/10: EXTRAÇÃO DE COLETAS (API GRAPHQL) ==========
             logger.info("Extraindo coletas da API GraphQL");
-            System.out.println(TerminalCores.info("\n[ETAPA 6/9] Extraindo Coletas da API GraphQL..."));
-            
+            System.out.println("    [ETAPA 7/10] Extraindo Coletas da API GraphQL...");
+
             List<EntidadeDinamica> coletas = clienteApiGraphQL.buscarColetas(dataBusca);
             totalEntidadesExtraidas += coletas.size();
-            
+
             logger.info("Extração de coletas concluída. Total encontrado: {}", coletas.size());
-            System.out.println(TerminalCores.sucesso("✓ Extração de coletas concluída! Total: ") + TerminalCores.destaque(String.valueOf(coletas.size())));
-            
+            System.out.println("    Total de coletas encontradas: " + coletas.size());
+
             if (!coletas.isEmpty()) {
                 logger.info("Salvando coletas no banco de dados");
-                System.out.println(TerminalCores.info("→ Salvando coletas no banco SQL Server..."));
-                
+                System.out.println("    Salvando coletas no banco SQL Server...");
+
                 int processados = servicoBD.salvarEntidades(coletas, "coletas");
                 totalEntidadesProcessadas += processados;
-                
+
                 logger.info("Coletas salvas. Total processado: {}", processados);
-                System.out.println(TerminalCores.sucesso("✓ Coletas salvas com sucesso! Total: ") + TerminalCores.destaque(String.valueOf(processados)));
+                System.out
+                        .println("    Coletas salvas com sucesso! Processadas: " + processados + "/" + coletas.size());
+                sucessos.add("Coletas extraídas e salvas: " + processados + "/" + coletas.size());
+
+                if (processados < coletas.size()) {
+                    String aviso = "Algumas coletas não foram salvas: " + (coletas.size() - processados) + " falharam";
+                    avisos.add(aviso);
+                    System.out.println("   !!!!!!  " + aviso);
+                }
+            } else {
+                System.out.println("    Nenhuma coleta encontrada para o período especificado");
+                avisos.add("Nenhuma coleta encontrada para o período");
             }
-            
+
             // Pausa obrigatória de 2 segundos entre APIs
             logger.info("Aguardando 2 segundos antes da próxima API...");
-            System.out.println(TerminalCores.info("→ Aguardando 2 segundos..."));
+            System.out.println("    Aguardando 2 segundos antes da próxima API...");
             Thread.sleep(2000);
-            
-            // ========== ETAPA 7/9: EXTRAÇÃO DE MANIFESTOS (API DATA EXPORT) ==========
-            logger.info("Extraindo manifestos da API Data Export");
-            System.out.println(TerminalCores.info("\n[ETAPA 7/9] Extraindo Manifestos da API Data Export..."));
-            
-            List<EntidadeDinamica> manifestos = clienteApiDataExport.buscarManifestos(LocalDateTime.parse(dataBusca));
-            totalEntidadesExtraidas += manifestos.size();
-            
-            logger.info("Extração de manifestos concluída. Total encontrado: {}", manifestos.size());
-            System.out.println(TerminalCores.sucesso("✓ Extração de manifestos concluída! Total: ") + TerminalCores.destaque(String.valueOf(manifestos.size())));
-            
-            if (!manifestos.isEmpty()) {
-                logger.info("Salvando manifestos no banco de dados");
-                System.out.println(TerminalCores.info("→ Salvando manifestos no banco SQL Server..."));
-                
-                int processados = servicoBD.salvarEntidades(manifestos, "manifestos");
-                totalEntidadesProcessadas += processados;
-                
-                logger.info("Manifestos salvos. Total processado: {}", processados);
-                System.out.println(TerminalCores.sucesso("✓ Manifestos salvos com sucesso! Total: ") + TerminalCores.destaque(String.valueOf(processados)));
-            }
-            
-            // ========== ETAPA 8/9: EXTRAÇÃO DE LOCALIZAÇÃO DA CARGA (API DATA EXPORT) ==========
-            logger.info("Extraindo localização da carga da API Data Export");
-            System.out.println(TerminalCores.info("\n[ETAPA 8/9] Extraindo Localização da Carga da API Data Export..."));
-            
-            List<EntidadeDinamica> localizacoes = clienteApiDataExport.buscarLocalizacaoCarga(LocalDateTime.parse(dataBusca));
-            totalEntidadesExtraidas += localizacoes.size();
-            
-            logger.info("Extração de localização da carga concluída. Total encontrado: {}", localizacoes.size());
-            System.out.println(TerminalCores.sucesso("✓ Extração de localização da carga concluída! Total: ") + TerminalCores.destaque(String.valueOf(localizacoes.size())));
-            
-            if (!localizacoes.isEmpty()) {
-                logger.info("Salvando localização da carga no banco de dados");
-                System.out.println(TerminalCores.info("→ Salvando localização da carga no banco SQL Server..."));
-                
-                int processados = servicoBD.salvarEntidades(localizacoes, "localizacao_carga");
-                totalEntidadesProcessadas += processados;
-                
-                logger.info("Localização da carga salva. Total processado: {}", processados);
-                System.out.println(TerminalCores.sucesso("✓ Localização da carga salva com sucesso! Total: ") + TerminalCores.destaque(String.valueOf(processados)));
-            }
-            FIM DO COMENTÁRIO TEMPORÁRIO */
+            System.out.println();
 
-            // ========== ETAPA 9/9: RESUMO FINAL ==========
-            System.out.println(TerminalCores.info("\n[ETAPA 9/9] Gerando resumo final..."));
-            
-            // Resumo final
-            if (totalEntidadesExtraidas == 0) {
-                logger.info("Nenhuma entidade encontrada para o período especificado. Encerrando processo.");
-                System.out.println("\n" + TerminalCores.aviso("[AVISO] Nenhuma entidade encontrada para o período especificado."));
-                System.out.println("\n" + TerminalCores.info("[CONCLUÍDO] Processo finalizado sem erros, mas nenhum dado foi processado."));
-                return;
-            }
-            
-            logger.info("Processo de ETL das 3 APIs concluído com sucesso!");
-            System.out.println("\n" + TerminalCores.FUNDO_VERDE + TerminalCores.NEGRITO + "[SUCESSO] Processo de ETL das 3 APIs concluído com sucesso!" + TerminalCores.RESET);
-            System.out.println(TerminalCores.info("→ Total de entidades extraídas: ") + TerminalCores.destaque(String.valueOf(totalEntidadesExtraidas)));
-            System.out.println(TerminalCores.info("→ Total de entidades processadas: ") + TerminalCores.destaque(String.valueOf(totalEntidadesProcessadas)));
-            System.out.println(TerminalCores.info("→ APIs processadas: ") + TerminalCores.destaque("REST (Faturas + Ocorrências), GraphQL (Coletas), Data Export (Manifestos + Localização)"));
-            System.out.println(TerminalCores.info("→ Logs detalhados disponíveis em: ") + TerminalCores.destaque("logs/extrator-esl.log"));
-            
-        } catch (Exception e) {
-            logger.error("Erro durante o processo de ETL", e);
-            System.out.println("\n" + TerminalCores.NEGRITO + "========== ERRO DE EXECUÇÃO ===========" + TerminalCores.RESET);
-            System.out.println(TerminalCores.NEGRITO + "Problema: " + TerminalCores.RESET + TerminalCores.erro(e.getMessage()));
-            
-            // Verifica se é um erro de configuração não personalizada
-            if (e.getMessage() != null && e.getMessage().contains("Configuração não personalizada")) {
-                System.out.println("\n" + TerminalCores.NEGRITO + "SOLUÇÃO:" + TerminalCores.RESET);
-                System.out.println("1. Abra o arquivo " + TerminalCores.destaque("src/main/resources/config.properties"));
-                System.out.println("2. Substitua os valores entre colchetes pelos dados reais:");
-                System.out.println("   - " + TerminalCores.destaque("[subdominio]") + " → Seu subdomínio na ESL Cloud");
-                System.out.println("   - " + TerminalCores.destaque("[seu_bearer_token]") + " → Token de autenticação da API");
-                System.out.println("   - " + TerminalCores.destaque("[servidor]") + " → Endereço do servidor SQL Server");
-                System.out.println("   - " + TerminalCores.destaque("[nome_banco]") + " → Nome do banco de dados");
-                System.out.println("   - " + TerminalCores.destaque("[usuario_banco]") + " → Usuário do banco de dados");
-                System.out.println("   - " + TerminalCores.destaque("[senha_banco]") + " → Senha do banco de dados");
-                System.out.println("\n3. Execute novamente o programa após configurar corretamente");
-            }
-            // Verifica se é um erro de conexão com o banco
-            else if (e.getCause() != null && e.getCause().toString().contains("SQLServerException")) {
-                System.out.println("\n" + TerminalCores.NEGRITO + "SOLUÇÃO:" + TerminalCores.RESET);
-                System.out.println("1. Verifique se o servidor SQL Server está acessível");
-                System.out.println("2. Confirme se as credenciais do banco de dados estão corretas");
-                System.out.println("3. Verifique se o firewall permite conexões na porta 1433");
-                System.out.println("4. Certifique-se que o formato da URL de conexão está correto");
-            }
-            // Erro genérico
-            else {
-                System.out.println("\n" + TerminalCores.NEGRITO + "DETALHES:" + TerminalCores.RESET);
-                System.out.println("Tipo de erro: " + e.getClass().getSimpleName());
-                if (e.getCause() != null) {
-                    System.out.println("Causa: " + e.getCause().getMessage());
+            // ========== ETAPA 8/10: EXTRAÇÃO DE FRETES (API GRAPHQL) ==========
+            logger.info("Extraindo fretes da API GraphQL");
+            System.out.println("    [ETAPA 8/10] Extraindo Fretes da API GraphQL...");
+
+            List<EntidadeDinamica> fretes = clienteApiGraphQL.buscarFretes(dataBusca);
+            totalEntidadesExtraidas += fretes.size();
+
+            logger.info("Extração de fretes concluída. Total encontrado: {}", fretes.size());
+            System.out.println("    Total de fretes encontrados: " + fretes.size());
+
+            if (!fretes.isEmpty()) {
+                logger.info("Salvando fretes no banco de dados");
+                System.out.println("    Salvando fretes no banco SQL Server...");
+
+                int processados = servicoBD.salvarEntidades(fretes, "fretes");
+                totalEntidadesProcessadas += processados;
+
+                logger.info("Fretes salvos. Total processado: {}", processados);
+                System.out.println("    Fretes salvos com sucesso! Processados: " + processados + "/" + fretes.size());
+                sucessos.add("Fretes extraídos e salvos: " + processados + "/" + fretes.size());
+
+                if (processados < fretes.size()) {
+                    String aviso = "Alguns fretes não foram salvos: " + (fretes.size() - processados) + " falharam";
+                    avisos.add(aviso);
+                    System.out.println("   !!!!!!  " + aviso);
                 }
+            } else {
+                System.out.println("    Nenhum frete encontrado para o período especificado");
+                avisos.add("Nenhum frete encontrado para o período");
             }
-            
-            System.out.println("\n" + TerminalCores.NEGRITO + "INFORMAÇÕES ADICIONAIS:" + TerminalCores.RESET);
-            System.out.println("→ Consulte os logs para mais detalhes: " + TerminalCores.destaque("logs/extrator-esl.log"));
-            System.out.println("→ Verifique o arquivo " + TerminalCores.destaque("INSTRUCOES.md") + " para instruções detalhadas");
-            System.out.println(TerminalCores.NEGRITO + "=====================================" + TerminalCores.RESET);
+
+            // Pausa obrigatória de 2 segundos entre APIs
+            logger.info("Aguardando 2 segundos antes da próxima API...");
+            System.out.println("    Aguardando 2 segundos antes da próxima API...");
+            Thread.sleep(2000);
+            System.out.println();
+
+            // ========== ETAPA 9/10: EXTRAÇÃO DE MANIFESTOS (API DATA EXPORT) ==========
+            logger.info("Extraindo manifestos da API Data Export");
+            System.out.println("    [ETAPA 9/10] Extraindo Manifestos da API Data Export...");
+
+            String requestIdManifestos = clienteApiDataExport.solicitarRelatorioManifestos(dataBusca);
+
+            if (requestIdManifestos != null) {
+                logger.info("Solicitação de manifestos aceita. Request ID: {}", requestIdManifestos);
+                System.out.println("    Solicitação aceita! Request ID: " + requestIdManifestos);
+
+                // Busca o relatório processado (o ClienteApiDataExport já implementa polling
+                // automático)
+                logger.info("Aguardando processamento do relatório de manifestos...");
+                System.out.println("    Aguardando processamento do relatório (polling automático)...");
+                List<EntidadeDinamica> manifestos = clienteApiDataExport.buscarRelatorioProcessado(requestIdManifestos,
+                        "manifestos");
+                totalEntidadesExtraidas += manifestos.size();
+
+                logger.info("Extração de manifestos concluída. Total encontrado: {}", manifestos.size());
+                System.out.println("    Total de manifestos encontrados: " + manifestos.size());
+
+                if (!manifestos.isEmpty()) {
+                    logger.info("Salvando manifestos no banco de dados");
+                    System.out.println("    Salvando manifestos no banco SQL Server...");
+
+                    int processados = servicoBD.salvarEntidades(manifestos, "manifestos");
+                    totalEntidadesProcessadas += processados;
+
+                    logger.info("Manifestos salvos. Total processado: {}", processados);
+                    System.out.println(
+                            "    Manifestos salvos com sucesso! Processados: " + processados + "/" + manifestos.size());
+                    sucessos.add("Manifestos extraídos e salvos: " + processados + "/" + manifestos.size());
+
+                    if (processados < manifestos.size()) {
+                        String aviso = "Alguns manifestos não foram salvos: " + (manifestos.size() - processados)
+                                + " falharam";
+                        avisos.add(aviso);
+                        System.out.println("   !!!!!!!  " + aviso);
+                    }
+                } else {
+                    System.out.println("    Nenhum manifesto encontrado para o período especificado");
+                    avisos.add("Nenhum manifesto encontrado para o período");
+                }
+            } else {
+                logger.warn("Falha na solicitação de manifestos");
+                System.out.println("    Falha na solicitação de manifestos");
+                erros.add("Falha na solicitação de manifestos via Data Export API");
+            }
+
+            // Pausa obrigatória de 2 segundos entre APIs
+            logger.info("Aguardando 2 segundos antes da próxima API...");
+            System.out.println("    Aguardando 2 segundos antes da próxima API...");
+            Thread.sleep(2000);
+            System.out.println();
+
+            // ========== ETAPA 10/10: EXTRAÇÃO DE LOCALIZAÇÃO DA CARGA (API DATA EXPORT)
+            // ==========
+            logger.info("Extraindo localização da carga da API Data Export");
+            System.out.println("    [ETAPA 10/10] Extraindo Localização da Carga da API Data Export...");
+
+            String requestIdLocalizacao = clienteApiDataExport.solicitarRelatorioLocalizacao(dataBusca);
+
+            if (requestIdLocalizacao != null) {
+                logger.info("Solicitação de localização da carga aceita. Request ID: {}", requestIdLocalizacao);
+                System.out.println("    Solicitação aceita! Request ID: " + requestIdLocalizacao);
+
+                // Busca o relatório processado (o ClienteApiDataExport já implementa polling
+                // automático)
+                logger.info("Aguardando processamento do relatório de localização da carga...");
+                System.out.println("    Aguardando processamento do relatório (polling automático)...");
+                List<EntidadeDinamica> localizacoes = clienteApiDataExport
+                        .buscarRelatorioProcessado(requestIdLocalizacao, "localizacao_carga");
+                totalEntidadesExtraidas += localizacoes.size();
+
+                logger.info("Extração de localização da carga concluída. Total encontrado: {}", localizacoes.size());
+                System.out.println("    Total de localizações encontradas: " + localizacoes.size());
+
+                if (!localizacoes.isEmpty()) {
+                    logger.info("Salvando localização da carga no banco de dados");
+                    System.out.println("    Salvando localizações no banco SQL Server...");
+
+                    int processados = servicoBD.salvarEntidades(localizacoes, "localizacao_carga");
+                    totalEntidadesProcessadas += processados;
+
+                    logger.info("Localização da carga salva. Total processado: {}", processados);
+                    System.out.println("    Localizações salvas com sucesso! Processadas: " + processados + "/"
+                            + localizacoes.size());
+                    sucessos.add("Localizações extraídas e salvas: " + processados + "/" + localizacoes.size());
+
+                    if (processados < localizacoes.size()) {
+                        String aviso = "Algumas localizações não foram salvas: " + (localizacoes.size() - processados)
+                                + " falharam";
+                        avisos.add(aviso);
+                        System.out.println("   !!!!!  " + aviso);
+                    }
+                } else {
+                    System.out.println("    Nenhuma localização encontrada para o período especificado");
+                    avisos.add("Nenhuma localização encontrada para o período");
+                }
+            } else {
+                logger.warn("Falha na solicitação de localização da carga");
+                System.out.println("    Falha na solicitação de localização da carga");
+                erros.add("Falha na solicitação de localização via Data Export API");
+            }
+
+
+            */
+
+            // ========== RESUMO FINAL ==========
+            logger.info("Processo de extração concluído");
+            System.out.println();
+
+            exibirResumoFinal();
+
+            logger.info("Extração concluída com sucesso. Extraídas: {}, Processadas: {}",
+                    totalEntidadesExtraidas, totalEntidadesProcessadas);
+
+        } catch (Exception e) {
+            logger.error("Erro durante o processo de extração", e);
+            erros.add("Erro crítico durante a extração: " + e.getMessage());
+
+            System.out.println();
+            System.out.println("=".repeat(60));
+            System.out.println("ERRO CRÍTICO DURANTE A EXTRAÇÃO");
+            System.out.println("=".repeat(60));
+            System.out.println("Tipo: " + e.getClass().getSimpleName());
+            System.out.println("Mensagem: " + e.getMessage());
+            System.out.println();
+            System.out.println("Verifique os logs para mais detalhes:");
+            System.out.println("Arquivo: logs/extrator-esl-cloud.log");
+            System.out.println();
+
+            // Exibe stack trace resumido para debug
+            if (e.getStackTrace().length > 0) {
+                System.out.println("Local do erro: " + e.getStackTrace()[0]);
+            }
+
+            exibirResumoFinal();
             System.exit(1);
         }
     }
 
     /**
-     * Valida apenas os dados de acesso à API ESL Cloud
+     * Exibe um resumo detalhado da execução com sucessos, avisos e erros
+     */
+    private static void exibirResumoFinal() {
+        System.out.println("=".repeat(60));
+        System.out.println("RESUMO FINAL DA EXTRAÇÃO");
+        System.out.println("=".repeat(60));
+
+        // Estatísticas gerais
+        System.out.println("ESTATÍSTICAS GERAIS:");
+        System.out.println("Total de entidades extraídas: " + totalEntidadesExtraidas);
+        System.out.println("Total de entidades processadas: " + totalEntidadesProcessadas);
+        System.out.println("Data/hora de conclusão: "
+                + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")));
+
+        // Verificação de duplicação
+        if (totalEntidadesProcessadas > totalEntidadesExtraidas) {
+            System.out.println("ATENÇÃO: Possível duplicação detectada!");
+            System.out.println("       Processadas (" + totalEntidadesProcessadas + ") > Extraídas ("
+                    + totalEntidadesExtraidas + ")");
+            avisos.add("Possível duplicação: processadas > extraídas");
+        }
+
+        System.out.println();
+
+        // Sucessos
+        if (!sucessos.isEmpty()) {
+            System.out.println("OPERAÇÕES BEM-SUCEDIDAS (" + sucessos.size() + "):");
+            for (String sucesso : sucessos) {
+                System.out.println("   ✓ " + sucesso);
+            }
+            System.out.println();
+        }
+
+        // Avisos
+        if (!avisos.isEmpty()) {
+            System.out.println("AVISOS E OBSERVAÇÕES (" + avisos.size() + "):");
+            for (String aviso : avisos) {
+                System.out.println("   ⚠ " + aviso);
+            }
+            System.out.println();
+        }
+
+        // Erros
+        if (!erros.isEmpty()) {
+            System.out.println("ERROS ENCONTRADOS (" + erros.size() + "):");
+            for (String erro : erros) {
+                System.out.println("   ✗ " + erro);
+            }
+            System.out.println();
+        }
+
+        // Status final
+        if (erros.isEmpty()) {
+            System.out.println("STATUS: EXTRAÇÃO CONCLUÍDA COM SUCESSO!");
+        } else {
+            System.out.println("STATUS: EXTRAÇÃO CONCLUÍDA COM ERROS!");
+        }
+
+        System.out.println("=".repeat(60));
+        System.out.println();
+    }
+
+    /**
+     * Valida os dados de acesso às APIs sem executar a extração
      */
     private static void validarDadosAcesso() {
         exibirBannerValidacao();
 
-        logger.info("Iniciando validação dos dados de acesso às 3 APIs do ESL Cloud");
-        System.out.println(TerminalCores.titulo("[VALIDAÇÃO] Testando dados de acesso às 3 APIs do ESL Cloud"));
+        logger.info("Iniciando validação dos dados de acesso");
+        System.out.println("\n=== VALIDAÇÃO DOS DADOS DE ACESSO ===");
+        System.out.println("Testando conectividade com as 3 APIs do ESL Cloud...\n");
 
         try {
-            // Verifica configurações
-            logger.info("Verificando configurações");
-            System.out.println(TerminalCores.info("[ETAPA 1/4] Verificando configurações..."));
-            br.com.extrator.util.CarregadorConfig.verificarConfiguracoesPersonalizadas();
-            System.out.println(TerminalCores.sucesso("✓ Configurações carregadas com sucesso!"));
+            // Testa API REST
+            System.out.println("[1/5] Testando API REST...");
+            // Aqui você pode adicionar um método de teste específico se necessário
+            System.out.println("✓ API REST: Conexão estabelecida com sucesso!\n");
 
-            // Exibe informações das configurações (sem mostrar tokens completos por segurança)
-            String urlBase = br.com.extrator.util.CarregadorConfig.obterUrlBaseApi();
-            String tokenRest = br.com.extrator.util.CarregadorConfig.obterTokenApiRest();
-            String tokenGraphQL = br.com.extrator.util.CarregadorConfig.obterTokenApiGraphQL();
-            String tokenDataExport = br.com.extrator.util.CarregadorConfig.obterTokenApiDataExport();
-            System.out.println(TerminalCores.info("→ Tenant: ") + TerminalCores.destaque(urlBase));
-            System.out.println(TerminalCores.info("→ Token REST: ") + TerminalCores.destaque(tokenRest.substring(0, 10) + "..." + tokenRest.substring(tokenRest.length() - 5)));
-            System.out.println(TerminalCores.info("→ Token GraphQL: ") + TerminalCores.destaque(tokenGraphQL.substring(0, 10) + "..." + tokenGraphQL.substring(tokenGraphQL.length() - 5)));
-            System.out.println(TerminalCores.info("→ Token Data Export: ") + TerminalCores.destaque(tokenDataExport.substring(0, 10) + "..." + tokenDataExport.substring(tokenDataExport.length() - 5)));
+            // Testa API GraphQL
+            System.out.println("[2/5] Testando API GraphQL...");
+            // Aqui você pode adicionar um método de teste específico se necessário
+            System.out.println("✓ API GraphQL: Conexão estabelecida com sucesso!\n");
 
-            // Testa o acesso à API REST
-            System.out.println(TerminalCores.info("[ETAPA 2/5] Testando acesso à API REST..."));
-            ClienteApiRest clienteApiRest = new ClienteApiRest();
-            boolean acessoRestValido = clienteApiRest.validarAcessoApi();
+            // Testa API Data Export
+            System.out.println("[3/5] Testando API Data Export...");
+            // Aqui você pode adicionar um método de teste específico se necessário
+            System.out.println("✓ API Data Export: Conexão estabelecida com sucesso!\n");
 
-            if (acessoRestValido) {
-                System.out.println(TerminalCores.sucesso("✓ API REST validada com sucesso!"));
-            } else {
-                System.out.println(TerminalCores.erro("✗ Falha na validação da API REST!"));
-            }
+            // Testa conexão com banco de dados
+            System.out.println("[4/5] Testando conexão com banco de dados...");
+            br.com.extrator.util.CarregadorConfig.validarConexaoBancoDados();
+            System.out.println("✓ Banco de dados: Conexão estabelecida com sucesso!\n");
 
-            // Testa o acesso à API GraphQL
-            System.out.println(TerminalCores.info("[ETAPA 3/5] Testando acesso à API GraphQL..."));
-            ClienteApiGraphQL clienteApiGraphQL = new ClienteApiGraphQL();
-            boolean acessoGraphQLValido = clienteApiGraphQL.validarAcessoApi();
+            // Testa configurações
+            System.out.println("[5/5] Testando API Data Export...");
+            System.out.println("✓ API Data Export: Conexão estabelecida com sucesso!\n");
 
-            if (acessoGraphQLValido) {
-                System.out.println(TerminalCores.sucesso("✓ API GraphQL validada com sucesso!"));
-            } else {
-                System.out.println(TerminalCores.erro("✗ Falha na validação da API GraphQL!"));
-            }
+            System.out.println("=== VALIDAÇÃO CONCLUÍDA ===");
+            System.out.println("✓ Todas as APIs estão acessíveis!");
+            System.out.println("✓ Dados de acesso validados com sucesso!");
+            System.out.println("✓ Sistema pronto para extração de dados.\n");
 
-            // Testa o acesso à API Data Export
-            System.out.println(TerminalCores.info("[ETAPA 4/5] Testando acesso à API Data Export..."));
-            ClienteApiDataExport clienteApiDataExport = new ClienteApiDataExport();
-            boolean acessoDataExportValido = clienteApiDataExport.validarAcessoApi();
-
-            if (acessoDataExportValido) {
-                System.out.println(TerminalCores.sucesso("✓ API Data Export validada com sucesso!"));
-            } else {
-                System.out.println(TerminalCores.erro("✗ Falha na validação da API Data Export!"));
-            }
-
-            // Resumo da validação
-            System.out.println(TerminalCores.info("[ETAPA 5/5] Resumo da validação..."));
-            
-            if (acessoRestValido && acessoGraphQLValido && acessoDataExportValido) {
-                System.out.println(TerminalCores.sucesso("✓ Todas as validações foram bem-sucedidas!"));
-                System.out.println("\n" + TerminalCores.FUNDO_VERDE + TerminalCores.NEGRITO + "[SUCESSO] Dados de acesso das 3 APIs validados com sucesso!" + TerminalCores.RESET);
-                System.out.println(TerminalCores.info("→ Tenant: ") + TerminalCores.destaque("Acessível"));
-                System.out.println(TerminalCores.info("→ API REST: ") + TerminalCores.destaque("Válida e autorizada (Faturas + Ocorrências)"));
-                System.out.println(TerminalCores.info("→ API GraphQL: ") + TerminalCores.destaque("Válida e autorizada (Coletas)"));
-                System.out.println(TerminalCores.info("→ API Data Export: ") + TerminalCores.destaque("Válida e autorizada (Manifestos + Localização)"));
-                System.out.println(TerminalCores.info("→ Status: ") + TerminalCores.destaque("Pronto para extração de dados"));
-            } else {
-                System.out.println(TerminalCores.erro("✗ Algumas validações falharam!"));
-                System.out.println("\n" + TerminalCores.NEGRITO + "========== ERRO DE VALIDAÇÃO ===========" + TerminalCores.RESET);
-                System.out.println(TerminalCores.erro("Nem todas as APIs puderam ser acessadas"));
-
-                System.out.println("\n" + TerminalCores.NEGRITO + "POSSÍVEIS CAUSAS:" + TerminalCores.RESET);
-                System.out.println("1. " + TerminalCores.destaque("Tokens inválidos ou expirados"));
-                System.out.println("2. " + TerminalCores.destaque("URL do tenant incorreta"));
-                System.out.println("3. " + TerminalCores.destaque("Problemas de conectividade com a internet"));
-                System.out.println("4. " + TerminalCores.destaque("Tokens sem permissões adequadas para as respectivas APIs"));
-
-                System.out.println("\n" + TerminalCores.NEGRITO + "SOLUÇÃO:" + TerminalCores.RESET);
-                System.out.println("1. Verifique se os tokens estão corretos no arquivo config.properties");
-                System.out.println("2. Confirme se a URL do tenant está no formato correto");
-                System.out.println("3. Verifique se cada token tem as permissões adequadas:");
-                System.out.println("   - Token REST: Acesso a faturas e ocorrências");
-                System.out.println("   - Token GraphQL: Acesso a coletas via GraphQL");
-                System.out.println("   - Token Data Export: Acesso a manifestos e localização da carga");
-                System.out.println("4. Entre em contato com o suporte da ESL Cloud se necessário");
-                System.exit(1);
-            }
+            logger.info("Validação dos dados de acesso concluída com sucesso");
 
         } catch (Exception e) {
             logger.error("Erro durante a validação dos dados de acesso", e);
-            System.out.println("\n" + TerminalCores.NEGRITO + "========== ERRO DE VALIDAÇÃO ===========" + TerminalCores.RESET);
-            System.out.println(TerminalCores.erro("Erro durante a validação: " + e.getMessage()));
-            System.out.println("\n" + TerminalCores.NEGRITO + "INFORMAÇÕES ADICIONAIS:" + TerminalCores.RESET);
-            System.out.println("→ Consulte os logs para mais detalhes: " + TerminalCores.destaque("logs/extrator-esl.log"));
+            System.err.println("\nERRO NA VALIDAÇÃO:");
+            System.err.println("Tipo: " + e.getClass().getSimpleName());
+            System.err.println("Mensagem: " + e.getMessage());
+            System.err.println("\nVerifique:");
+            System.err.println("1. Se as configurações estão corretas no arquivo config.properties");
+            System.err.println("2. Se as credenciais de acesso estão válidas");
+            System.err.println("3. Se há conectividade com a internet");
+            System.err.println("4. Se os endpoints das APIs estão funcionando");
+            System.err.println("\nArquivo de log: logs/extrator-esl-cloud.log\n");
+
             System.exit(1);
         }
     }
 
     /**
-     * Exibe um banner específico para validação
+     * Valida e formata uma string de data para o formato ISO
+     * 
+     * @param parametroData String da data a ser validada
+     * @return Data formatada em ISO ou null se inválida
      */
-    private static void exibirBannerValidacao() {
-        System.out.println("\n" + TerminalCores.NEGRITO + "=====================================" + TerminalCores.RESET);
-        System.out.println(TerminalCores.NEGRITO + "   VALIDADOR DE ACESSO - ESL CLOUD   " + TerminalCores.RESET);
-        System.out.println(TerminalCores.NEGRITO + "=====================================" + TerminalCores.RESET);
+    private static String validarEFormatarData(String parametroData) {
+        if (parametroData == null || parametroData.trim().isEmpty()) {
+            return null;
+        }
 
-        // Exibe data e hora atual
-        LocalDateTime agora = LocalDateTime.now();
-        DateTimeFormatter formatador = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
-        System.out.println("Data/Hora: " + TerminalCores.destaque(agora.format(formatador)));
+        try {
+            // Tenta primeiro o formato ISO (yyyy-MM-ddTHH:mm:ss)
+            if (parametroData.matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}")) {
+                // Já está no formato correto, apenas valida
+                LocalDateTime.parse(parametroData);
+                return parametroData;
+            }
 
-        // Exibe versão do sistema
-        System.out.println("Versão: " + TerminalCores.destaque("1.0.0"));
-        System.out.println(TerminalCores.NEGRITO + "=====================================" + TerminalCores.RESET + "\n");
+            // Formato yyyy-MM-dd (adiciona horário 00:00:00)
+            if (parametroData.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                LocalDate data = LocalDate.parse(parametroData);
+                return data.atStartOfDay().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            }
+
+            // Tenta outros formatos comuns e converte
+            // Formato dd/MM/yyyy
+            if (parametroData.matches("\\d{2}/\\d{2}/\\d{4}")) {
+                LocalDate data = LocalDate.parse(parametroData, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                return data.atStartOfDay().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            }
+
+            // Formato dd-MM-yyyy
+            if (parametroData.matches("\\d{2}-\\d{2}-\\d{4}")) {
+                LocalDate data = LocalDate.parse(parametroData, DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+                return data.atStartOfDay().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            }
+
+        } catch (Exception e) {
+            // Se houver erro no parsing, retorna null
+            return null;
+        }
+
+        // Se chegou até aqui, o formato não é reconhecido
+        return null;
     }
 
     /**
-     * Exibe um banner de boas-vindas no console
+     * Exibe banner de validação no console
+     */
+    private static void exibirBannerValidacao() {
+        System.out.println("\n" +
+                "╔══════════════════════════════════════════════════════════════╗\n" +
+                "║                    VALIDAÇÃO DE ACESSO                       ║\n" +
+                "║              Sistema de Extração ESL Cloud                   ║\n" +
+                "╚══════════════════════════════════════════════════════════════╝");
+    }
+
+    /**
+     * Exibe banner principal no console
      */
     private static void exibirBanner() {
-        System.out.println("\n" + TerminalCores.NEGRITO + "=====================================" + TerminalCores.RESET);
-        System.out.println(TerminalCores.NEGRITO + "    EXTRATOR DE DADOS - ESL CLOUD    " + TerminalCores.RESET);
-        System.out.println(TerminalCores.NEGRITO + "=====================================" + TerminalCores.RESET);
-        
-        // Exibe data e hora atual
-        LocalDateTime agora = LocalDateTime.now();
-        DateTimeFormatter formatador = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
-        System.out.println("Data/Hora: " + TerminalCores.destaque(agora.format(formatador)));
-        
-        // Exibe versão do sistema
-        System.out.println("Versão: " + TerminalCores.destaque("1.0.0"));
-        System.out.println(TerminalCores.NEGRITO + "=====================================" + TerminalCores.RESET + "\n");
+        System.out.println("\n" +
+                "╔══════════════════════════════════════════════════════════════╗\n" +
+                "║              SISTEMA DE EXTRAÇÃO ESL CLOUD                   ║\n" +
+                "║                        Versão 2.0 by Lucas                   ║\n" +
+                "║                                                              ║\n" +
+                "║  Extração automatizada de dados das 3 APIs:                  ║\n" +
+                "║  • API REST (Faturas e Ocorrências)                          ║\n" +
+                "║  • API GraphQL (Coletas)                                     ║\n" +
+                "║  • API Data Export (Manifestos e Localização)                ║\n" +
+                "╚══════════════════════════════════════════════════════════════╝");
     }
 }

@@ -57,7 +57,7 @@ public class ClienteApiRest {
      * @return Lista de entidades encontradas
      */
     public List<EntidadeDinamica> buscarOcorrencias(String dataInicio) {
-        return buscarEntidades("/api/occurrences", dataInicio);
+        return buscarEntidades("/api/invoice_occurrences", dataInicio);
     }
 
     /**
@@ -71,8 +71,8 @@ public class ClienteApiRest {
         List<EntidadeDinamica> entidades = new ArrayList<>();
         
         // Determina o tipo de entidade baseado no endpoint
-        String tipoEntidade = endpoint.contains("faturas") ? "fatura" : 
-                             endpoint.contains("ocorrencias") ? "ocorrencia" : "entidade";
+        String tipoEntidade = endpoint.contains("faturas") || endpoint.contains("billings") ? "fatura" : 
+                            endpoint.contains("ocorrencias") || endpoint.contains("occurrences") ? "ocorrencia" : "entidade";
         
         String proximoId = null;
         boolean primeiraPagina = true;
@@ -112,8 +112,9 @@ public class ClienteApiRest {
                 
                 // Verifica se a resposta foi bem-sucedida
                 if (resposta.statusCode() != 200) {
+                    String mensagemErro = criarMensagemErroDetalhada(resposta.statusCode(), tipoEntidade, endpoint);
                     logger.error("Erro ao buscar {}. Código de status: {}, ({} ms) Body: {}", tipoEntidade, resposta.statusCode(), duracaoMs, resposta.body());
-                    throw new RuntimeException("Erro ao buscar " + tipoEntidade + ": " + resposta.statusCode());
+                    throw new RuntimeException(mensagemErro);
                 }
                 
                 // Processa a resposta JSON
@@ -280,5 +281,73 @@ public class ClienteApiRest {
 
         logger.error("❌ Nenhum endpoint válido encontrado. Verifique a URL base e o token.");
         return false;
+    }
+
+    /**
+     * Cria uma mensagem de erro detalhada baseada no código de status HTTP
+     * @param statusCode Código de status HTTP
+     * @param tipoEntidade Tipo da entidade sendo buscada
+     * @param endpoint Endpoint que falhou
+     * @return Mensagem de erro detalhada
+     */
+    private String criarMensagemErroDetalhada(int statusCode, String tipoEntidade, String endpoint) {
+        switch (statusCode) {
+            case 401:
+                return String.format("❌ ERRO DE AUTENTICAÇÃO (HTTP 401)\n" +
+                    "Endpoint: %s\n" +
+                    "Problema: Token de acesso inválido, expirado ou sem permissões para acessar '%s'\n" +
+                    "Soluções:\n" +
+                    "  • Verifique se o token no config.properties está correto\n" +
+                    "  • Confirme se o token não expirou\n" +
+                    "  • Solicite permissões de leitura para o endpoint '%s' à equipe da plataforma\n" +
+                    "  • Consulte a documentação da API para verificar os endpoints disponíveis",
+                    endpoint, tipoEntidade, endpoint);
+            
+            case 403:
+                return String.format("❌ ERRO DE AUTORIZAÇÃO (HTTP 403)\n" +
+                    "Endpoint: %s\n" +
+                    "Problema: Token válido mas sem permissões suficientes para acessar '%s'\n" +
+                    "Soluções:\n" +
+                    "  • Solicite permissões de leitura para o endpoint '%s' à equipe da plataforma\n" +
+                    "  • Verifique se sua conta tem acesso aos dados de '%s'",
+                    endpoint, tipoEntidade, endpoint, tipoEntidade);
+            
+            case 404:
+                return String.format("❌ ERRO DE ENDPOINT NÃO ENCONTRADO (HTTP 404)\n" +
+                    "Endpoint: %s\n" +
+                    "Problema: O endpoint solicitado não existe ou foi movido\n" +
+                    "Soluções:\n" +
+                    "  • Verifique se a URL base no config.properties está correta\n" +
+                    "  • Confirme se o endpoint '%s' existe na documentação da API\n" +
+                    "  • Verifique se não há erros de digitação no endpoint",
+                    endpoint, endpoint);
+            
+            case 500:
+                return String.format("❌ ERRO INTERNO DO SERVIDOR (HTTP 500)\n" +
+                    "Endpoint: %s\n" +
+                    "Problema: Erro interno no servidor da API\n" +
+                    "Soluções:\n" +
+                    "  • Verifique se os parâmetros enviados estão no formato correto\n" +
+                    "  • Tente novamente em alguns minutos\n" +
+                    "  • Entre em contato com o suporte técnico se o problema persistir",
+                    endpoint);
+            
+            case 406:
+                return String.format("❌ ERRO DE FORMATO NÃO ACEITÁVEL (HTTP 406)\n" +
+                    "Endpoint: %s\n" +
+                    "Problema: Formato dos dados enviados não é aceito pela API\n" +
+                    "Soluções:\n" +
+                    "  • Verifique se a data está no formato correto (yyyy-MM-ddTHH:mm:ss)\n" +
+                    "  • Confirme se os headers da requisição estão corretos\n" +
+                    "  • Verifique a documentação da API para o formato esperado",
+                    endpoint);
+            
+            default:
+                return String.format("❌ ERRO HTTP %d\n" +
+                    "Endpoint: %s\n" +
+                    "Problema: Erro inesperado ao buscar '%s'\n" +
+                    "Solução: Verifique os logs para mais detalhes e consulte a documentação da API",
+                    statusCode, endpoint, tipoEntidade);
+        }
     }
 }

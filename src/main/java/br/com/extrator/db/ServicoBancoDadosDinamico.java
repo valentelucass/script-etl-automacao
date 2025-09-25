@@ -107,23 +107,31 @@ public class ServicoBancoDadosDinamico {
         EntidadeDinamica primeiraEntidade = lote.get(0);
         Set<String> campos = primeiraEntidade.getNomesCampos();
 
-        // Constrói o SQL de inserção
+        // Constrói o SQL de inserção simples para SQL Server
         StringBuilder sqlCampos = new StringBuilder();
         StringBuilder sqlValores = new StringBuilder();
 
         for (String campo : campos) {
+            String campoNormalizado = normalizarNomeCampo(campo);
+            
             if (sqlCampos.length() > 0) {
                 sqlCampos.append(", ");
                 sqlValores.append(", ");
             }
-            sqlCampos.append(normalizarNomeCampo(campo));
+            
+            sqlCampos.append(campoNormalizado);
             sqlValores.append("?");
         }
 
+        // Usa INSERT simples - duplicatas serão tratadas pela chave primária
         String sql = "INSERT INTO " + nomeTabela + " (" + sqlCampos + ") VALUES (" + sqlValores + ")";
+        
         logger.debug("SQL de inserção: {}", sql);
 
+        int totalProcessados = 0;
         int totalInseridos = 0;
+        int totalDuplicatas = 0;
+        
         try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
             for (EntidadeDinamica entidade : lote) {
                 int indice = 1;
@@ -133,15 +141,34 @@ public class ServicoBancoDadosDinamico {
                 }
 
                 try {
-                    stmt.executeUpdate();
-                    totalInseridos++;
+                    int resultado = stmt.executeUpdate();
+                    if (resultado > 0) {
+                        totalProcessados++;
+                        totalInseridos++;
+                    }
+                    
                 } catch (SQLException e) {
-                    logger.warn("Erro ao inserir entidade: {}", e.getMessage());
+                    // Verifica se é erro de chave primária duplicada (SQL Server error code 2627)
+                    if (e.getErrorCode() == 2627 || e.getMessage().contains("PRIMARY KEY constraint") || 
+                        e.getMessage().contains("duplicate key")) {
+                        totalDuplicatas++;
+                        logger.debug("Registro duplicado ignorado na tabela {}", nomeTabela);
+                    } else {
+                        logger.warn("Erro ao processar entidade na tabela {}: {} (Código: {})", 
+                                nomeTabela, e.getMessage(), e.getErrorCode());
+                    }
                 }
             }
         }
 
-        return totalInseridos;
+        if (totalDuplicatas > 0) {
+            logger.info("Lote processado na tabela {}: {} inserções novas, {} duplicatas ignoradas", 
+                    nomeTabela, totalInseridos, totalDuplicatas);
+        } else {
+            logger.debug("Lote processado na tabela {}: {} inserções novas", nomeTabela, totalInseridos);
+        }
+
+        return totalProcessados;
     }
 
     /**

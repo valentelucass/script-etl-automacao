@@ -5,6 +5,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.Properties;
 
 /**
@@ -36,6 +39,60 @@ public class CarregadorConfig {
             }
         }
         return propriedades;
+    }
+
+    /**
+     * Valida a conexão com o banco de dados
+     * Testa se é possível conectar com as credenciais configuradas
+     * @throws RuntimeException Se não conseguir conectar ao banco
+     */
+    public static void validarConexaoBancoDados() {
+        logger.info("Validando conexão com o banco de dados...");
+        
+        String url = obterUrlBancoDados();
+        String usuario = obterUsuarioBancoDados();
+        String senha = obterSenhaBancoDados();
+        
+        if (url == null || url.trim().isEmpty()) {
+            logger.error("URL do banco de dados não configurada");
+            throw new RuntimeException("Configuração inválida: URL do banco de dados não pode estar vazia");
+        }
+        
+        if (usuario == null || usuario.trim().isEmpty()) {
+            logger.error("Usuário do banco de dados não configurado");
+            throw new RuntimeException("Configuração inválida: Usuário do banco de dados não pode estar vazio");
+        }
+        
+        if (senha == null || senha.trim().isEmpty()) {
+            logger.error("Senha do banco de dados não configurada");
+            throw new RuntimeException("Configuração inválida: Senha do banco de dados não pode estar vazia");
+        }
+        
+        try (Connection conexao = DriverManager.getConnection(url, usuario, senha)) {
+            // Testa se a conexão é válida
+            if (conexao.isValid(5)) { // timeout de 5 segundos
+                logger.info("✓ Conexão com banco de dados validada com sucesso");
+            } else {
+                logger.error("Conexão com banco de dados inválida");
+                throw new RuntimeException("Falha na validação: Conexão com banco de dados inválida");
+            }
+        } catch (SQLException e) {
+            logger.error("Erro ao conectar com o banco de dados: {}", e.getMessage());
+            
+            // Mensagens de erro mais específicas baseadas no código de erro
+            String mensagemErro = "Erro de conexão com banco de dados: ";
+            if (e.getMessage().contains("Login failed")) {
+                mensagemErro += "Credenciais inválidas (usuário ou senha incorretos)";
+            } else if (e.getMessage().contains("Cannot open database")) {
+                mensagemErro += "Banco de dados não encontrado ou inacessível";
+            } else if (e.getMessage().contains("The TCP/IP connection")) {
+                mensagemErro += "Servidor de banco de dados inacessível (verifique URL e conectividade)";
+            } else {
+                mensagemErro += e.getMessage();
+            }
+            
+            throw new RuntimeException(mensagemErro, e);
+        }
     }
 
     /**

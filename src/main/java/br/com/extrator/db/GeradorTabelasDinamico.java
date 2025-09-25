@@ -58,8 +58,24 @@ public class GeradorTabelasDinamico {
      */
     private boolean verificarTabelaExiste(Connection conexao, String nomeTabela) throws SQLException {
         DatabaseMetaData metadados = conexao.getMetaData();
-        ResultSet rs = metadados.getTables(null, null, nomeTabela, new String[]{"TABLE"});
-        return rs.next();
+        
+        // SQL Server pode ser case-sensitive, então testamos ambos os casos
+        ResultSet rs = metadados.getTables(null, null, nomeTabela.toUpperCase(), new String[]{"TABLE"});
+        if (rs.next()) {
+            logger.debug("Tabela {} encontrada (uppercase)", nomeTabela);
+            return true;
+        }
+        
+        rs = metadados.getTables(null, null, nomeTabela.toLowerCase(), new String[]{"TABLE"});
+        if (rs.next()) {
+            logger.debug("Tabela {} encontrada (lowercase)", nomeTabela);
+            return true;
+        }
+        
+        rs = metadados.getTables(null, null, nomeTabela, new String[]{"TABLE"});
+        boolean existe = rs.next();
+        logger.debug("Tabela {} {} (case original)", nomeTabela, existe ? "encontrada" : "não encontrada");
+        return existe;
     }
     
     /**
@@ -85,8 +101,9 @@ public class GeradorTabelasDinamico {
             }
             primeiro = false;
             
-            // Normaliza o nome do campo para SQL (substitui caracteres especiais)
-            String nomeCampoSQL = normalizarNomeCampo(campo.getKey());
+            // O nome do campo já está normalizado no mapearTiposCampos
+            // Não precisa normalizar novamente aqui
+            String nomeCampoSQL = campo.getKey();
             sql.append("  ").append(nomeCampoSQL).append(" ").append(campo.getValue());
         }
         
@@ -122,7 +139,8 @@ public class GeradorTabelasDinamico {
         // Verifica se há novos campos para adicionar
         List<String> camposParaAdicionar = new ArrayList<>();
         for (Map.Entry<String, String> campo : tiposCampos.entrySet()) {
-            String nomeCampoSQL = normalizarNomeCampo(campo.getKey());
+            // O nome do campo já está normalizado no mapearTiposCampos
+            String nomeCampoSQL = campo.getKey();
             if (!camposExistentes.containsKey(nomeCampoSQL)) {
                 camposParaAdicionar.add(nomeCampoSQL + " " + campo.getValue());
             }
@@ -181,14 +199,22 @@ public class GeradorTabelasDinamico {
         // Primeiro, coleta todos os campos de todas as entidades
         for (EntidadeDinamica entidade : entidades) {
             for (String nomeCampo : entidade.getNomesCampos()) {
-                if (!tiposCampos.containsKey(nomeCampo)) {
+                // Normaliza o nome do campo ANTES de usar como chave
+                // Isso evita duplicatas quando campos como "id", "ID", "Id" são normalizados para "id"
+                String nomeCampoNormalizado = normalizarNomeCampo(nomeCampo);
+                
+                if (!tiposCampos.containsKey(nomeCampoNormalizado)) {
                     Object valor = entidade.getCampo(nomeCampo);
                     String tipoSQL = inferirTipoSQL(valor);
-                    tiposCampos.put(nomeCampo, tipoSQL);
+                    tiposCampos.put(nomeCampoNormalizado, tipoSQL);
+                    logger.debug("Campo mapeado: '{}' -> '{}' (tipo: {})", nomeCampo, nomeCampoNormalizado, tipoSQL);
+                } else {
+                    logger.debug("Campo '{}' já mapeado como '{}', ignorando duplicata", nomeCampo, nomeCampoNormalizado);
                 }
             }
         }
         
+        logger.info("Total de campos únicos mapeados: {}", tiposCampos.size());
         return tiposCampos;
     }
     

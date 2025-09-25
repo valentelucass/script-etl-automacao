@@ -46,6 +46,17 @@
 
     <build>
         <plugins>
+            <!-- Plugin para executar a aplicação -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.1</version>
+                <configuration>
+                    <mainClass>br.com.extrator.Main</mainClass>
+                </configuration>
+            </plugin>
+            
+            <!-- Plugin para gerar JAR com dependências -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>

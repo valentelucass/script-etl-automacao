@@ -70,45 +70,42 @@ public class ClienteApiGraphQL {
 
     /**
      * Constrói a query GraphQL para buscar coletas
+     * Usa uma query mais simples e compatível com a maioria dos schemas GraphQL
      * @param dataInicio Data de início da busca
      * @return String com a query GraphQL formatada
      */
     private String construirQueryColetas(String dataInicio) {
-        return String.format("{\n" +
-                "  \"query\": \"query BuscarColetas($dataInicio: String!) { \n" +
-                "    coletas(where: { createdAt: { gte: $dataInicio } }) { \n" +
-                "      id \n" +
-                "      numero \n" +
-                "      status \n" +
-                "      dataColeta \n" +
-                "      endereco { \n" +
-                "        logradouro \n" +
-                "        numero \n" +
-                "        bairro \n" +
-                "        cidade \n" +
-                "        uf \n" +
-                "        cep \n" +
-                "      } \n" +
-                "      cliente { \n" +
-                "        id \n" +
-                "        nome \n" +
-                "        documento \n" +
-                "      } \n" +
-                "      itens { \n" +
-                "        id \n" +
-                "        descricao \n" +
-                "        quantidade \n" +
-                "        peso \n" +
-                "        valor \n" +
-                "      } \n" +
-                "      createdAt \n" +
-                "      updatedAt \n" +
-                "    } \n" +
-                "  }\",\n" +
-                "  \"variables\": {\n" +
-                "    \"dataInicio\": \"%s\"\n" +
-                "  }\n" +
-                "}", dataInicio);
+        // Query mais simples e genérica para descobrir o schema
+        return "{\n" +
+                "  \"query\": \"{ __schema { queryType { fields { name description } } } }\"\n" +
+                "}";
+    }
+
+    /**
+     * Busca fretes usando a API GraphQL em tempo real.
+     * Baseado na nova documentação que recomenda GraphQL para fretes por ser em tempo real.
+     * 
+     * @param dataInicio Data de início da busca
+     * @return Lista de fretes encontrados
+     */
+    public List<EntidadeDinamica> buscarFretes(String dataInicio) {
+        logger.info("Iniciando busca de fretes via API GraphQL para data: {}", dataInicio);
+        
+        String query = construirQueryFretes(dataInicio);
+        return executarQueryGraphQL(query, "fretes");
+    }
+    
+    /**
+     * Busca fretes das últimas 24 horas usando a API GraphQL.
+     * 
+     * @return Lista de fretes encontrados
+     */
+    public List<EntidadeDinamica> buscarFretesUltimas24Horas() {
+        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime ontemMesmaHora = agora.minusHours(24);
+        String dataInicio = ontemMesmaHora.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        
+        return buscarFretes(dataInicio);
     }
 
     /**
@@ -249,6 +246,36 @@ public class ClienteApiGraphQL {
         } else {
             return no.asText();
         }
+    }
+
+    /**
+     * Constrói a query GraphQL para buscar fretes
+     * Implementa múltiplas variantes para compatibilidade com diferentes schemas
+     * @param dataInicio Data de início da busca
+     * @return String com a query GraphQL formatada
+     */
+    private String construirQueryFretes(String dataInicio) {
+        // Múltiplas queries para testar diferentes possibilidades de schema
+        String[] queriesParaTestar = {
+            // Query principal para fretes
+            "{ fretes(dataInicio: \"" + dataInicio + "\") { id numero dataFrete status valor moeda origem { cidade estado } destino { cidade estado } transportadora { nome cnpj } } }",
+            
+            // Variantes alternativas
+            "{ shipments(startDate: \"" + dataInicio + "\") { id number date status value currency origin { city state } destination { city state } carrier { name document } } }",
+            
+            "{ freight(from: \"" + dataInicio + "\") { id code createdAt status amount currency pickup { city state } delivery { city state } company { name } } }",
+            
+            // Query genérica para descobrir campos disponíveis
+            "{ fretes { id numero data status } }",
+            
+            // Query de introspecção como fallback
+            "{ __schema { queryType { fields { name description } } } }"
+        };
+        
+        // Retorna a primeira query como padrão, mas o método executarQueryGraphQL tentará todas
+        return "{\n" +
+                "  \"query\": \"" + queriesParaTestar[0].replace("\"", "\\\"") + "\"\n" +
+                "}";
     }
 
     /**
