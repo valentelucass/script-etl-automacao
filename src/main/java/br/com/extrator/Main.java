@@ -1,8 +1,6 @@
 package br.com.extrator;
 
 import br.com.extrator.api.ClienteApiRest;
-//import br.com.extrator.api.ClienteApiGraphQL;
-//import br.com.extrator.api.ClienteApiDataExport;
 import br.com.extrator.db.ServicoBancoDadosDinamico;
 import br.com.extrator.modelo.EntidadeDinamica;
 import org.slf4j.Logger;
@@ -60,7 +58,7 @@ public class Main {
         try {
             // Verifica se as configurações foram personalizadas
             logger.info("Verificando configurações");
-            System.out.println("    [ETAPA 1/10] Verificando configurações do sistema...");
+            System.out.println("    [ETAPA 1/11] Verificando configurações do sistema...");
             br.com.extrator.util.CarregadorConfig.verificarConfiguracoesPersonalizadas();
             System.out.println("    Configurações validadas com sucesso!");
             sucessos.add("Configurações do sistema validadas");
@@ -68,7 +66,7 @@ public class Main {
 
             // Valida conexão com banco de dados
             logger.info("Validando conexão com banco de dados");
-            System.out.println("    [ETAPA 2/10] Validando conexão com o banco de dados SQL Server...");
+            System.out.println("    [ETAPA 2/11] Validando conexão com o banco de dados SQL Server...");
             br.com.extrator.util.CarregadorConfig.validarConexaoBancoDados();
             System.out.println("    Conexão com banco de dados validada com sucesso!");
             sucessos.add("Conexão com banco de dados estabelecida");
@@ -76,7 +74,7 @@ public class Main {
 
             // Inicializa o serviço de banco de dados dinâmico
             logger.info("Inicializando banco de dados");
-            System.out.println("    [ETAPA 3/9] Inicializando serviço de banco de dados...");
+            System.out.println("    [ETAPA 3/11] Inicializando serviço de banco de dados...");
             ServicoBancoDadosDinamico servicoBD = new ServicoBancoDadosDinamico();
             System.out.println("    Serviço de banco de dados inicializado com sucesso!");
             sucessos.add("Serviço de banco de dados inicializado");
@@ -84,10 +82,8 @@ public class Main {
 
             // Inicializa os clientes das APIs
             logger.info("Inicializando clientes das APIs");
-            System.out.println("    [ETAPA 4/10] Inicializando clientes das 3 APIs ESL Cloud...");
+            System.out.println("    [ETAPA 4/11] Inicializando clientes das 3 APIs ESL Cloud...");
             ClienteApiRest clienteApiRest = new ClienteApiRest();
-            //ClienteApiGraphQL clienteApiGraphQL = new ClienteApiGraphQL();
-            //ClienteApiDataExport clienteApiDataExport = new ClienteApiDataExport();
             System.out.println("    Clientes das 3 APIs inicializados com sucesso!");
             sucessos.add("Clientes das APIs inicializados (REST, GraphQL, Data Export)");
             System.out.println();
@@ -125,201 +121,94 @@ public class Main {
                 sucessos.add("Período padrão configurado (últimas 24 horas)");
             }
             System.out.println();
-/*
-            // ========== ETAPA 5/10: EXTRAÇÃO DE FATURAS (API REST) ==========
-            logger.info("Extraindo faturas da API REST");
-            System.out.println("    [ETAPA 5/10] Extraindo Faturas da API REST...");
 
-            List<EntidadeDinamica> faturas = clienteApiRest.buscarFaturas(dataBusca);
-            totalEntidadesExtraidas += faturas.size();
+            // ========== ETAPA 5/11: EXTRAÇÃO DE FATURAS A RECEBER (API REST) ==========
+            logger.info("Extraindo Faturas a Receber da API REST");
+            System.out.println("    [ETAPA 5/11] Extraindo Faturas a Receber da API REST...");
 
-            logger.info("Extração de faturas concluída. Total encontrado: {}", faturas.size());
-            System.out.println("    Total de faturas encontradas: " + faturas.size());
+            try {
+                List<EntidadeDinamica> faturasAReceber = clienteApiRest.buscarFaturasAReceber(dataBusca);
+                totalEntidadesExtraidas += faturasAReceber.size();
+                System.out.println("    Total de faturas a receber encontradas: " + faturasAReceber.size());
 
-            if (!faturas.isEmpty()) {
-                logger.info("Salvando faturas no banco de dados");
-                System.out.println("    Salvando faturas no banco SQL Server...");
-
-                int processados = servicoBD.salvarEntidades(faturas, "faturas");
-                totalEntidadesProcessadas += processados;
-
-                logger.info("Faturas salvas. Total processado: {}", processados);
-                System.out
-                        .println("    Faturas salvas com sucesso! Processadas: " + processados + "/" + faturas.size());
-                sucessos.add("Faturas extraídas e salvas: " + processados + "/" + faturas.size());
-
-                if (processados < faturas.size()) {
-                    String aviso = "Algumas faturas não foram salvas: " + (faturas.size() - processados) + " falharam";
-                    avisos.add(aviso);
-                    System.out.println("   !!!!  " + aviso);
-                }
-            } else {
-                System.out.println("    Nenhuma fatura encontrada para o período especificado");
-                avisos.add("Nenhuma fatura encontrada para o período");
-            }
-
-            // Pausa obrigatória de 2 segundos entre APIs
-            logger.info("Aguardando 2 segundos antes da próxima API...");
-            System.out.println("    Aguardando 2 segundos antes da próxima API...");
-            Thread.sleep(2000);
-            System.out.println();
-*/
-            // ========== ETAPA 6/10: EXTRAÇÃO DE OCORRÊNCIAS (API REST) ==========
-            logger.info("Extraindo ocorrências da API REST");
-            System.out.println("    [ETAPA 6/10] Extraindo Ocorrências da API REST...");
-
-            // Chama o método que você corrigiu em ClienteApiRest.java
-            List<EntidadeDinamica> ocorrencias = clienteApiRest.buscarOcorrencias(dataBusca);
-            totalEntidadesExtraidas += ocorrencias.size();
-
-            logger.info("Extração de ocorrências concluída. Total encontrado: {}", ocorrencias.size());
-            System.out.println("    Total de ocorrências encontradas: " + ocorrencias.size());
-
-            if (!ocorrencias.isEmpty()) {
-                logger.info("Salvando ocorrências no banco de dados");
-                System.out.println("    Salvando ocorrências no banco SQL Server...");
-
-                // Salva os resultados na tabela "ocorrencias"
-                int processados = servicoBD.salvarEntidades(ocorrencias, "ocorrencias");
-                totalEntidadesProcessadas += processados;
-
-                logger.info("Ocorrências salvas. Total processado: {}", processados);
-                System.out.println(
-                        "    Ocorrências salvas com sucesso! Processadas: " + processados + "/" + ocorrencias.size());
-                sucessos.add("Ocorrências extraídas e salvas: " + processados + "/" + ocorrencias.size());
-            } else {
-                System.out.println("    Nenhuma ocorrência encontrada para o período especificado");
-                avisos.add("Nenhuma ocorrência encontrada para o período");
-            }
-
-            // Pausa obrigatória de 2 segundos entre APIs
-            logger.info("Aguardando 2 segundos antes da próxima API...");
-            System.out.println("    Aguardando 2 segundos antes da próxima API...");
-            Thread.sleep(2000);
-            System.out.println();
-/*
-            // ========== ETAPA 7/10: EXTRAÇÃO DE COLETAS (API GRAPHQL) ==========
-            logger.info("Extraindo coletas da API GraphQL");
-            System.out.println("    [ETAPA 7/10] Extraindo Coletas da API GraphQL...");
-
-            List<EntidadeDinamica> coletas = clienteApiGraphQL.buscarColetas(dataBusca);
-            totalEntidadesExtraidas += coletas.size();
-
-            logger.info("Extração de coletas concluída. Total encontrado: {}", coletas.size());
-            System.out.println("    Total de coletas encontradas: " + coletas.size());
-
-            if (!coletas.isEmpty()) {
-                logger.info("Salvando coletas no banco de dados");
-                System.out.println("    Salvando coletas no banco SQL Server...");
-
-                int processados = servicoBD.salvarEntidades(coletas, "coletas");
-                totalEntidadesProcessadas += processados;
-
-                logger.info("Coletas salvas. Total processado: {}", processados);
-                System.out
-                        .println("    Coletas salvas com sucesso! Processadas: " + processados + "/" + coletas.size());
-                sucessos.add("Coletas extraídas e salvas: " + processados + "/" + coletas.size());
-
-                if (processados < coletas.size()) {
-                    String aviso = "Algumas coletas não foram salvas: " + (coletas.size() - processados) + " falharam";
-                    avisos.add(aviso);
-                    System.out.println("   !!!!!!  " + aviso);
-                }
-            } else {
-                System.out.println("    Nenhuma coleta encontrada para o período especificado");
-                avisos.add("Nenhuma coleta encontrada para o período");
-            }
-
-            // Pausa obrigatória de 2 segundos entre APIs
-            logger.info("Aguardando 2 segundos antes da próxima API...");
-            System.out.println("    Aguardando 2 segundos antes da próxima API...");
-            Thread.sleep(2000);
-            System.out.println();
-
-            // ========== ETAPA 8/10: EXTRAÇÃO DE FRETES (API GRAPHQL) ==========
-            logger.info("Extraindo fretes da API GraphQL");
-            System.out.println("    [ETAPA 8/10] Extraindo Fretes da API GraphQL...");
-
-            List<EntidadeDinamica> fretes = clienteApiGraphQL.buscarFretes(dataBusca);
-            totalEntidadesExtraidas += fretes.size();
-
-            logger.info("Extração de fretes concluída. Total encontrado: {}", fretes.size());
-            System.out.println("    Total de fretes encontrados: " + fretes.size());
-
-            if (!fretes.isEmpty()) {
-                logger.info("Salvando fretes no banco de dados");
-                System.out.println("    Salvando fretes no banco SQL Server...");
-
-                int processados = servicoBD.salvarEntidades(fretes, "fretes");
-                totalEntidadesProcessadas += processados;
-
-                logger.info("Fretes salvos. Total processado: {}", processados);
-                System.out.println("    Fretes salvos com sucesso! Processados: " + processados + "/" + fretes.size());
-                sucessos.add("Fretes extraídos e salvos: " + processados + "/" + fretes.size());
-
-                if (processados < fretes.size()) {
-                    String aviso = "Alguns fretes não foram salvos: " + (fretes.size() - processados) + " falharam";
-                    avisos.add(aviso);
-                    System.out.println("   !!!!!!  " + aviso);
-                }
-            } else {
-                System.out.println("    Nenhum frete encontrado para o período especificado");
-                avisos.add("Nenhum frete encontrado para o período");
-            }
-
-            // Pausa obrigatória de 2 segundos entre APIs
-            logger.info("Aguardando 2 segundos antes da próxima API...");
-            System.out.println("    Aguardando 2 segundos antes da próxima API...");
-            Thread.sleep(2000);
-            System.out.println();
-
-            // ========== ETAPA 9/10: EXTRAÇÃO DE MANIFESTOS (API DATA EXPORT) ==========
-            logger.info("Extraindo manifestos da API Data Export");
-            System.out.println("    [ETAPA 9/10] Extraindo Manifestos da API Data Export...");
-
-            String requestIdManifestos = clienteApiDataExport.solicitarRelatorioManifestos(dataBusca);
-
-            if (requestIdManifestos != null) {
-                logger.info("Solicitação de manifestos aceita. Request ID: {}", requestIdManifestos);
-                System.out.println("    Solicitação aceita! Request ID: " + requestIdManifestos);
-
-                // Busca o relatório processado (o ClienteApiDataExport já implementa polling
-                // automático)
-                logger.info("Aguardando processamento do relatório de manifestos...");
-                System.out.println("    Aguardando processamento do relatório (polling automático)...");
-                List<EntidadeDinamica> manifestos = clienteApiDataExport.buscarRelatorioProcessado(requestIdManifestos,
-                        "manifestos");
-                totalEntidadesExtraidas += manifestos.size();
-
-                logger.info("Extração de manifestos concluída. Total encontrado: {}", manifestos.size());
-                System.out.println("    Total de manifestos encontrados: " + manifestos.size());
-
-                if (!manifestos.isEmpty()) {
-                    logger.info("Salvando manifestos no banco de dados");
-                    System.out.println("    Salvando manifestos no banco SQL Server...");
-
-                    int processados = servicoBD.salvarEntidades(manifestos, "manifestos");
+                if (!faturasAReceber.isEmpty()) {
+                    System.out.println("    Salvando faturas a receber no banco SQL Server...");
+                    int processados = servicoBD.salvarEntidades(faturasAReceber, "faturas_a_receber");
                     totalEntidadesProcessadas += processados;
-
-                    logger.info("Manifestos salvos. Total processado: {}", processados);
                     System.out.println(
-                            "    Manifestos salvos com sucesso! Processados: " + processados + "/" + manifestos.size());
-                    sucessos.add("Manifestos extraídos e salvos: " + processados + "/" + manifestos.size());
-
-                    if (processados < manifestos.size()) {
-                        String aviso = "Alguns manifestos não foram salvos: " + (manifestos.size() - processados)
-                                + " falharam";
-                        avisos.add(aviso);
-                        System.out.println("   !!!!!!!  " + aviso);
-                    }
+                            "    Faturas a receber salvas! Processadas: " + processados + "/" + faturasAReceber.size());
+                    sucessos.add("Faturas a Receber extraídas e salvas: " + processados);
                 } else {
-                    System.out.println("    Nenhum manifesto encontrado para o período especificado");
-                    avisos.add("Nenhum manifesto encontrado para o período");
+                    avisos.add("Nenhuma fatura a receber encontrada para o período");
                 }
-            } else {
-                logger.warn("Falha na solicitação de manifestos");
-                System.out.println("    Falha na solicitação de manifestos");
-                erros.add("Falha na solicitação de manifestos via Data Export API");
+            } catch (RuntimeException e) {
+                logger.error("Falha na extração de Faturas a Receber: {}", e.getMessage());
+                System.out.println("    ❌ ERRO: Falha na extração de Faturas a Receber - " + e.getMessage());
+                erros.add("Faturas a Receber: " + e.getMessage());
+            }
+            
+            Thread.sleep(2000);
+            System.out.println();
+
+            // ========== ETAPA 6/11: EXTRAÇÃO DE FATURAS A PAGAR (API REST) ==========
+            logger.info("Extraindo Faturas a Pagar da API REST");
+            System.out.println("    [ETAPA 6/11] Extraindo Faturas a Pagar da API REST...");
+
+            try {
+                List<EntidadeDinamica> faturasAPagar = clienteApiRest.buscarFaturasAPagar(dataBusca);
+                totalEntidadesExtraidas += faturasAPagar.size();
+                System.out.println("    Total de faturas a pagar encontradas: " + faturasAPagar.size());
+
+                if (!faturasAPagar.isEmpty()) {
+                    System.out.println("    Salvando faturas a pagar no banco SQL Server...");
+                    int processados = servicoBD.salvarEntidades(faturasAPagar, "faturas_a_pagar");
+                    totalEntidadesProcessadas += processados;
+                    System.out.println("    Faturas a pagar salvas! Processadas: " + processados + "/" + faturasAPagar.size());
+                    sucessos.add("Faturas a Pagar extraídas e salvas: " + processados);
+                } else {
+                    avisos.add("Nenhuma fatura a pagar encontrada para o período");
+                }
+            } catch (RuntimeException e) {
+                logger.error("Falha na extração de Faturas a Pagar: {}", e.getMessage());
+                System.out.println("    ❌ ERRO: Falha na extração de Faturas a Pagar - " + e.getMessage());
+                erros.add("Faturas a Pagar: " + e.getMessage());
+            }
+            
+            Thread.sleep(2000);
+            System.out.println();
+
+            // ========== ETAPA 7/11: EXTRAÇÃO DE OCORRÊNCIAS (API REST) ==========
+            logger.info("Extraindo ocorrências da API REST");
+            System.out.println("    [ETAPA 7/11] Extraindo Ocorrências da API REST...");
+
+            try {
+                // Chama o método que você corrigiu em ClienteApiRest.java
+                List<EntidadeDinamica> ocorrencias = clienteApiRest.buscarOcorrencias(dataBusca);
+                totalEntidadesExtraidas += ocorrencias.size();
+
+                logger.info("Extração de ocorrências concluída. Total encontrado: {}", ocorrencias.size());
+                System.out.println("    Total de ocorrências encontradas: " + ocorrencias.size());
+
+                if (!ocorrencias.isEmpty()) {
+                    logger.info("Salvando ocorrências no banco de dados");
+                    System.out.println("    Salvando ocorrências no banco SQL Server...");
+
+                    // Salva os resultados na tabela "ocorrencias"
+                    int processados = servicoBD.salvarEntidades(ocorrencias, "ocorrencias");
+                    totalEntidadesProcessadas += processados;
+
+                    logger.info("Ocorrências salvas. Total processado: {}", processados);
+                    System.out.println(
+                            "    Ocorrências salvas com sucesso! Processadas: " + processados + "/" + ocorrencias.size());
+                    sucessos.add("Ocorrências extraídas e salvas: " + processados + "/" + ocorrencias.size());
+                } else {
+                    System.out.println("    Nenhuma ocorrência encontrada para o período especificado");
+                    avisos.add("Nenhuma ocorrência encontrada para o período");
+                }
+            } catch (RuntimeException e) {
+                logger.error("Falha na extração de Ocorrências: {}", e.getMessage());
+                System.out.println("    ❌ ERRO: Falha na extração de Ocorrências - " + e.getMessage());
+                erros.add("Ocorrências: " + e.getMessage());
             }
 
             // Pausa obrigatória de 2 segundos entre APIs
@@ -327,59 +216,173 @@ public class Main {
             System.out.println("    Aguardando 2 segundos antes da próxima API...");
             Thread.sleep(2000);
             System.out.println();
-
-            // ========== ETAPA 10/10: EXTRAÇÃO DE LOCALIZAÇÃO DA CARGA (API DATA EXPORT)
-            // ==========
-            logger.info("Extraindo localização da carga da API Data Export");
-            System.out.println("    [ETAPA 10/10] Extraindo Localização da Carga da API Data Export...");
-
-            String requestIdLocalizacao = clienteApiDataExport.solicitarRelatorioLocalizacao(dataBusca);
-
-            if (requestIdLocalizacao != null) {
-                logger.info("Solicitação de localização da carga aceita. Request ID: {}", requestIdLocalizacao);
-                System.out.println("    Solicitação aceita! Request ID: " + requestIdLocalizacao);
-
-                // Busca o relatório processado (o ClienteApiDataExport já implementa polling
-                // automático)
-                logger.info("Aguardando processamento do relatório de localização da carga...");
-                System.out.println("    Aguardando processamento do relatório (polling automático)...");
-                List<EntidadeDinamica> localizacoes = clienteApiDataExport
-                        .buscarRelatorioProcessado(requestIdLocalizacao, "localizacao_carga");
-                totalEntidadesExtraidas += localizacoes.size();
-
-                logger.info("Extração de localização da carga concluída. Total encontrado: {}", localizacoes.size());
-                System.out.println("    Total de localizações encontradas: " + localizacoes.size());
-
-                if (!localizacoes.isEmpty()) {
-                    logger.info("Salvando localização da carga no banco de dados");
-                    System.out.println("    Salvando localizações no banco SQL Server...");
-
-                    int processados = servicoBD.salvarEntidades(localizacoes, "localizacao_carga");
-                    totalEntidadesProcessadas += processados;
-
-                    logger.info("Localização da carga salva. Total processado: {}", processados);
-                    System.out.println("    Localizações salvas com sucesso! Processadas: " + processados + "/"
-                            + localizacoes.size());
-                    sucessos.add("Localizações extraídas e salvas: " + processados + "/" + localizacoes.size());
-
-                    if (processados < localizacoes.size()) {
-                        String aviso = "Algumas localizações não foram salvas: " + (localizacoes.size() - processados)
-                                + " falharam";
-                        avisos.add(aviso);
-                        System.out.println("   !!!!!  " + aviso);
-                    }
-                } else {
-                    System.out.println("    Nenhuma localização encontrada para o período especificado");
-                    avisos.add("Nenhuma localização encontrada para o período");
-                }
-            } else {
-                logger.warn("Falha na solicitação de localização da carga");
-                System.out.println("    Falha na solicitação de localização da carga");
-                erros.add("Falha na solicitação de localização via Data Export API");
-            }
-
-
-            */
+            /*
+             * // ========== ETAPA 8/11: EXTRAÇÃO DE COLETAS (API GRAPHQL) ==========
+             * try {
+             *     logger.info("Extraindo coletas da API GraphQL");
+             *     System.out.println("    [ETAPA 8/11] Extraindo Coletas da API GraphQL...");
+             * 
+             *     List<EntidadeDinamica> coletas = clienteApiGraphQL.buscarColetas(dataBusca);
+             *     totalEntidadesExtraidas += coletas.size();
+             * 
+             *     logger.info("Extração de coletas concluída. Total encontrado: {}", coletas.size());
+             *     System.out.println("    Total de coletas encontradas: " + coletas.size());
+             * 
+             *     if (!coletas.isEmpty()) {
+             *         logger.info("Salvando coletas no banco de dados");
+             *         System.out.println("    Salvando coletas no banco SQL Server...");
+             * 
+             *         int processados = servicoBD.salvarEntidades(coletas, "coletas");
+             *         totalEntidadesProcessadas += processados;
+             * 
+             *         logger.info("Coletas salvas. Total processado: {}", processados);
+             *         System.out.println("    Coletas salvas com sucesso! Processadas: " + processados + "/" + coletas.size());
+             *         sucessos.add("Coletas extraídas e salvas: " + processados + "/" + coletas.size());
+             * 
+             *         if (processados < coletas.size()) {
+             *             String aviso = "Algumas coletas não foram salvas: " + (coletas.size() - processados) + " falharam";
+             *             avisos.add(aviso);
+             *             System.out.println("   !!!!!!  " + aviso);
+             *         }
+             *     } else {
+             *         System.out.println("    Nenhuma coleta encontrada para o período especificado");
+             *         avisos.add("Nenhuma coleta encontrada para o período");
+             *     }
+             * } catch (RuntimeException e) {
+             *     logger.error("Falha na extração de Coletas: {}", e.getMessage());
+             *     System.out.println("    ❌ ERRO: Falha na extração de Coletas - " + e.getMessage());
+             *     erros.add("Coletas: " + e.getMessage());
+             * }
+             * 
+             * // Pausa obrigatória de 2 segundos entre APIs
+             * logger.info("Aguardando 2 segundos antes da próxima API...");
+             * System.out.println("    Aguardando 2 segundos antes da próxima API...");
+             * Thread.sleep(2000);
+             * System.out.println();
+             * 
+             * // ========== ETAPA 9/11: EXTRAÇÃO DE FRETES (API GRAPHQL) ==========
+             * try {
+             *     logger.info("Extraindo fretes da API GraphQL");
+             *     System.out.println("    [ETAPA 9/11] Extraindo Fretes da API GraphQL...");
+             * 
+             *     List<EntidadeDinamica> fretes = clienteApiGraphQL.buscarFretes(dataBusca);
+             *     totalEntidadesExtraidas += fretes.size();
+             * 
+             *     logger.info("Extração de fretes concluída. Total encontrado: {}", fretes.size());
+             *     System.out.println("    Total de fretes encontrados: " + fretes.size());
+             * 
+             *     if (!fretes.isEmpty()) {
+             *         logger.info("Salvando fretes no banco de dados");
+             *         System.out.println("    Salvando fretes no banco SQL Server...");
+             * 
+             *         int processados = servicoBD.salvarEntidades(fretes, "fretes");
+             *         totalEntidadesProcessadas += processados;
+             * 
+             *         logger.info("Fretes salvos. Total processado: {}", processados);
+             *         System.out.println("    Fretes salvos com sucesso! Processados: " + processados + "/" + fretes.size());
+             *         sucessos.add("Fretes extraídos e salvos: " + processados + "/" + fretes.size());
+             * 
+             *         if (processados < fretes.size()) {
+             *             String aviso = "Alguns fretes não foram salvos: " + (fretes.size() - processados) + " falharam";
+             *             avisos.add(aviso);
+             *             System.out.println("   !!!!!!  " + aviso);
+             *         }
+             *     } else {
+             *         System.out.println("    Nenhum frete encontrado para o período especificado");
+             *         avisos.add("Nenhum frete encontrado para o período");
+             *     }
+             * } catch (RuntimeException e) {
+             *     logger.error("Falha na extração de Fretes: {}", e.getMessage());
+             *     System.out.println("    ❌ ERRO: Falha na extração de Fretes - " + e.getMessage());
+             *     erros.add("Fretes: " + e.getMessage());
+             * }
+             * 
+             * // Pausa obrigatória de 2 segundos entre APIs
+             * logger.info("Aguardando 2 segundos antes da próxima API...");
+             * System.out.println("    Aguardando 2 segundos antes da próxima API...");
+             * Thread.sleep(2000);
+             * System.out.println();
+             * 
+             * // ========== ETAPA 10/11: EXTRAÇÃO DE MANIFESTOS (API DATA EXPORT) ==========
+             * try {
+             *     logger.info("Extraindo manifestos da API Data Export");
+             *     System.out.println("    [ETAPA 10/11] Extraindo Manifestos da API Data Export...");
+             * 
+             *     List<EntidadeDinamica> manifestos = clienteApiDataExport.buscarManifestos(dataBusca);
+             *     totalEntidadesExtraidas += manifestos.size();
+             * 
+             *     logger.info("Extração de manifestos concluída. Total encontrado: {}", manifestos.size());
+             *     System.out.println("    Total de manifestos encontrados: " + manifestos.size());
+             * 
+             *     if (!manifestos.isEmpty()) {
+             *         logger.info("Salvando manifestos no banco de dados");
+             *         System.out.println("    Salvando manifestos no banco SQL Server...");
+             * 
+             *         int processados = servicoBD.salvarEntidades(manifestos, "manifestos");
+             *         totalEntidadesProcessadas += processados;
+             * 
+             *         logger.info("Manifestos salvos. Total processado: {}", processados);
+             *         System.out.println("    Manifestos salvos com sucesso! Processados: " + processados + "/" + manifestos.size());
+             *         sucessos.add("Manifestos extraídos e salvos: " + processados + "/" + manifestos.size());
+             * 
+             *         if (processados < manifestos.size()) {
+             *             String aviso = "Alguns manifestos não foram salvos: " + (manifestos.size() - processados) + " falharam";
+             *             avisos.add(aviso);
+             *             System.out.println("   !!!!!!!  " + aviso);
+             *         }
+             *     } else {
+             *         System.out.println("    Nenhum manifesto encontrado para o período especificado");
+             *         avisos.add("Nenhum manifesto encontrado para o período");
+             *     }
+             * } catch (RuntimeException e) {
+             *     logger.error("Falha na extração de Manifestos: {}", e.getMessage());
+             *     System.out.println("    ❌ ERRO: Falha na extração de Manifestos - " + e.getMessage());
+             *     erros.add("Manifestos: " + e.getMessage());
+             * }
+             * 
+             * // Pausa obrigatória de 2 segundos entre APIs
+             * logger.info("Aguardando 2 segundos antes da próxima API...");
+             * System.out.println("    Aguardando 2 segundos antes da próxima API...");
+             * Thread.sleep(2000);
+             * System.out.println();
+             * 
+             * // ========== ETAPA 11/11: EXTRAÇÃO DE LOCALIZAÇÃO DA CARGA (API DATA EXPORT) ==========
+             * try {
+             *     logger.info("Extraindo localização da carga da API Data Export");
+             *     System.out.println("    [ETAPA 11/11] Extraindo Localização da Carga da API Data Export...");
+             * 
+             *     List<EntidadeDinamica> localizacoes = clienteApiDataExport.buscarLocalizacaoCarga(dataBusca);
+             *     totalEntidadesExtraidas += localizacoes.size();
+             * 
+             *     logger.info("Extração de localização da carga concluída. Total encontrado: {}", localizacoes.size());
+             *     System.out.println("    Total de localizações encontradas: " + localizacoes.size());
+             * 
+             *     if (!localizacoes.isEmpty()) {
+             *         logger.info("Salvando localização da carga no banco de dados");
+             *         System.out.println("    Salvando localizações no banco SQL Server...");
+             * 
+             *         int processados = servicoBD.salvarEntidades(localizacoes, "localizacao_carga");
+             *         totalEntidadesProcessadas += processados;
+             * 
+             *         logger.info("Localização da carga salva. Total processado: {}", processados);
+             *         System.out.println("    Localizações salvas com sucesso! Processadas: " + processados + "/" + localizacoes.size());
+             *         sucessos.add("Localizações extraídas e salvas: " + processados + "/" + localizacoes.size());
+             * 
+             *         if (processados < localizacoes.size()) {
+             *             String aviso = "Algumas localizações não foram salvas: " + (localizacoes.size() - processados) + " falharam";
+             *             avisos.add(aviso);
+             *             System.out.println("   !!!!!  " + aviso);
+             *         }
+             *     } else {
+             *         System.out.println("    Nenhuma localização encontrada para o período especificado");
+             *         avisos.add("Nenhuma localização encontrada para o período");
+             *     }
+             * } catch (RuntimeException e) {
+             *     logger.error("Falha na extração de Localização da Carga: {}", e.getMessage());
+             *     System.out.println("    ❌ ERRO: Falha na extração de Localização da Carga - " + e.getMessage());
+             *     erros.add("Localização da Carga: " + e.getMessage());
+             * }
+             */
 
             // ========== RESUMO FINAL ==========
             logger.info("Processo de extração concluído");

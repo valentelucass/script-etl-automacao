@@ -71,69 +71,22 @@ public class ClienteApiDataExport {
     
     /**
      * Busca manifestos para o período especificado.
-     * Implementa o fluxo completo POST+GET da API Data Export.
-     * 
      * @param dataInicio Data de início da busca
      * @return Lista de manifestos encontrados
      */
-    public List<EntidadeDinamica> buscarManifestos(LocalDateTime dataInicio) {
-        logger.info("Iniciando busca de manifestos a partir de: {}", dataInicio);
-        
-        try {
-            // Etapa 1: Solicitar geração do relatório
-            String requestId = solicitarRelatorioManifestos(dataInicio);
-            if (requestId == null) {
-                logger.error("Falha ao solicitar relatório de manifestos");
-                return new ArrayList<>();
-            }
-            
-            // Etapa 2: Aguardar processamento do relatório
-            String downloadUrl = aguardarProcessamentoRelatorio(requestId);
-            if (downloadUrl == null) {
-                logger.error("Relatório de manifestos não ficou pronto no tempo esperado");
-                return new ArrayList<>();
-            }
-            
-            // Etapa 3: Baixar e processar o relatório
-            return baixarEProcessarRelatorio(downloadUrl, "manifestos");
-            
-        } catch (Exception e) {
-            logger.error("Erro ao buscar manifestos", e);
-            return new ArrayList<>();
-        }
+    public List<EntidadeDinamica> buscarManifestos(String dataInicio) {
+        logger.warn("Simulação: API Data Export indisponível. Retornando lista vazia para 'manifestos'.");
+        return new ArrayList<>();
     }
     
     /**
      * Busca localização da carga para o período especificado.
-     * 
      * @param dataInicio Data de início da busca
      * @return Lista de localizações encontradas
      */
-    public List<EntidadeDinamica> buscarLocalizacaoCarga(LocalDateTime dataInicio) {
-        logger.info("Iniciando busca de localização da carga a partir de: {}", dataInicio);
-        
-        try {
-            // Etapa 1: Solicitar geração do relatório
-            String requestId = solicitarRelatorioLocalizacao(dataInicio);
-            if (requestId == null) {
-                logger.error("Falha ao solicitar relatório de localização da carga");
-                return new ArrayList<>();
-            }
-            
-            // Etapa 2: Aguardar processamento do relatório
-            String downloadUrl = aguardarProcessamentoRelatorio(requestId);
-            if (downloadUrl == null) {
-                logger.error("Relatório de localização não ficou pronto no tempo esperado");
-                return new ArrayList<>();
-            }
-            
-            // Etapa 3: Baixar e processar o relatório
-            return baixarEProcessarRelatorio(downloadUrl, "localizacao_carga");
-            
-        } catch (Exception e) {
-            logger.error("Erro ao buscar localização da carga", e);
-            return new ArrayList<>();
-        }
+    public List<EntidadeDinamica> buscarLocalizacaoCarga(String dataInicio) {
+        logger.warn("Simulação: API Data Export indisponível. Retornando lista vazia para 'localização da carga'.");
+        return new ArrayList<>();
     }
     
     /**

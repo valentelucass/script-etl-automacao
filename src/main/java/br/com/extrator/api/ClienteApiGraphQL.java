@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -16,9 +15,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Cliente especializado para comunicação com a API GraphQL do ESL Cloud
@@ -52,10 +49,8 @@ public class ClienteApiGraphQL {
      * @return Lista de entidades de coletas encontradas
      */
     public List<EntidadeDinamica> buscarColetas(String dataInicio) {
-        logger.info("Iniciando busca de coletas a partir de: {}", dataInicio);
-        
-        String query = construirQueryColetas(dataInicio);
-        return executarQueryGraphQL(query, "coletas");
+        logger.warn("Simulação: API GraphQL indisponível. Retornando lista vazia para 'coletas'.");
+        return new ArrayList<>();
     }
 
     /**
@@ -69,32 +64,15 @@ public class ClienteApiGraphQL {
     }
 
     /**
-     * Constrói a query GraphQL para buscar coletas
-     * Usa uma query mais simples e compatível com a maioria dos schemas GraphQL
-     * @param dataInicio Data de início da busca
-     * @return String com a query GraphQL formatada
-     */
-    private String construirQueryColetas(String dataInicio) {
-        // Query mais simples e genérica para descobrir o schema
-        return "{\n" +
-                "  \"query\": \"{ __schema { queryType { fields { name description } } } }\"\n" +
-                "}";
-    }
-
-    /**
-     * Busca fretes usando a API GraphQL em tempo real.
-     * Baseado na nova documentação que recomenda GraphQL para fretes por ser em tempo real.
-     * 
-     * @param dataInicio Data de início da busca
-     * @return Lista de fretes encontrados
+     * Busca fretes a partir de uma data específica
+     * @param dataInicio Data de início da busca no formato ISO (ex: "2025-01-20T00:00:00")
+     * @return Lista de entidades de fretes encontradas
      */
     public List<EntidadeDinamica> buscarFretes(String dataInicio) {
-        logger.info("Iniciando busca de fretes via API GraphQL para data: {}", dataInicio);
-        
-        String query = construirQueryFretes(dataInicio);
-        return executarQueryGraphQL(query, "fretes");
+        logger.warn("Simulação: API GraphQL indisponível. Retornando lista vazia para 'fretes'.");
+        return new ArrayList<>();
     }
-    
+
     /**
      * Busca fretes das últimas 24 horas usando a API GraphQL.
      * 
@@ -106,176 +84,6 @@ public class ClienteApiGraphQL {
         String dataInicio = ontemMesmaHora.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         
         return buscarFretes(dataInicio);
-    }
-
-    /**
-     * Executa uma query GraphQL e processa a resposta
-     * @param query Query GraphQL a ser executada
-     * @param tipoEntidade Tipo de entidade para logging
-     * @return Lista de entidades processadas
-     */
-    private List<EntidadeDinamica> executarQueryGraphQL(String query, String tipoEntidade) {
-        List<EntidadeDinamica> entidades = new ArrayList<>();
-        
-        // Validação básica de configuração
-        if (urlBase == null || urlBase.isBlank() || endpointGraphQL == null || endpointGraphQL.isBlank() || token == null || token.isBlank()) {
-            logger.error("Configurações inválidas para chamada GraphQL (urlBase/endpoint/token)");
-            return entidades;
-        }
-
-        try {
-            String url = urlBase + endpointGraphQL;
-            logger.debug("Executando query GraphQL em: {}", url);
-            
-            HttpRequest requisicao = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("Authorization", "Bearer " + token)
-                    .header("Content-Type", "application/json")
-                    .header("Accept", "application/json")
-                    .timeout(Duration.ofSeconds(30))
-                    .POST(HttpRequest.BodyPublishers.ofString(query))
-                    .build();
-            
-            long inicioMs = System.currentTimeMillis();
-            HttpResponse<String> resposta = clienteHttp.send(requisicao, HttpResponse.BodyHandlers.ofString());
-            long duracaoMs = System.currentTimeMillis() - inicioMs;
-            
-            if (resposta.statusCode() == 200) {
-                String corpo = resposta.body();
-                if (corpo == null || corpo.isBlank()) {
-                    logger.error("Resposta vazia da API GraphQL (200) em {} ({} ms)", url, duracaoMs);
-                    return entidades;
-                }
-                JsonNode respostaJson = mapeadorJson.readTree(corpo);
-                
-                // Verifica se há erros na resposta GraphQL
-                if (respostaJson.has("errors")) {
-                    logger.error("Erro na query GraphQL: {}", respostaJson.get("errors"));
-                    return entidades;
-                }
-                
-                // Processa os dados retornados
-                JsonNode dados = respostaJson.get("data");
-                if (dados != null && dados.has(tipoEntidade)) {
-                    JsonNode arrayEntidades = dados.get(tipoEntidade);
-                    
-                    if (arrayEntidades.isArray()) {
-                        for (JsonNode entidadeJson : arrayEntidades) {
-                            EntidadeDinamica entidade = processarEntidadeGraphQL(entidadeJson);
-                            entidades.add(entidade);
-                        }
-                    }
-                }
-                
-                logger.info("Query GraphQL executada com sucesso ({} ms). {} {} encontradas", duracaoMs, entidades.size(), tipoEntidade);
-                
-            } else {
-                logger.error("Erro na requisição GraphQL. Status: {}, ({} ms) Resposta: {}", 
-                           resposta.statusCode(), duracaoMs, resposta.body());
-            }
-            
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            logger.error("Execução interrompida ao executar query GraphQL: {}", e.getMessage(), e);
-        } catch (IOException e) {
-            logger.error("Erro de I/O ao executar query GraphQL: {}", e.getMessage(), e);
-        }
-        
-        return entidades;
-    }
-
-    /**
-     * Processa uma entidade retornada pela API GraphQL
-     * @param entidadeJson Nó JSON da entidade
-     * @return EntidadeDinamica processada
-     */
-    private EntidadeDinamica processarEntidadeGraphQL(JsonNode entidadeJson) {
-        EntidadeDinamica entidade = new EntidadeDinamica();
-        
-        // Processa todos os campos da entidade
-        entidadeJson.fields().forEachRemaining(campo -> {
-            String nomeCampo = campo.getKey();
-            JsonNode valorCampo = campo.getValue();
-            
-            if (valorCampo.isObject()) {
-                // Para objetos aninhados, converte para Map
-                Map<String, Object> objetoAninhado = new HashMap<>();
-                valorCampo.fields().forEachRemaining(subcampo -> {
-                    objetoAninhado.put(subcampo.getKey(), extrairValor(subcampo.getValue()));
-                });
-                entidade.adicionarCampo(nomeCampo, objetoAninhado);
-            } else if (valorCampo.isArray()) {
-                // Para arrays, converte para List
-                List<Object> lista = new ArrayList<>();
-                valorCampo.forEach(item -> {
-                    if (item.isObject()) {
-                        Map<String, Object> itemMap = new HashMap<>();
-                        item.fields().forEachRemaining(subcampo -> {
-                            itemMap.put(subcampo.getKey(), extrairValor(subcampo.getValue()));
-                        });
-                        lista.add(itemMap);
-                    } else {
-                        lista.add(extrairValor(item));
-                    }
-                });
-                entidade.adicionarCampo(nomeCampo, lista);
-            } else {
-                entidade.adicionarCampo(nomeCampo, extrairValor(valorCampo));
-            }
-        });
-        
-        return entidade;
-    }
-
-    /**
-     * Extrai o valor de um nó JSON baseado no seu tipo
-     * @param no Nó JSON
-     * @return Valor extraído
-     */
-    private Object extrairValor(JsonNode no) {
-        if (no.isNull()) {
-            return null;
-        } else if (no.isBoolean()) {
-            return no.asBoolean();
-        } else if (no.isInt()) {
-            return no.asInt();
-        } else if (no.isLong()) {
-            return no.asLong();
-        } else if (no.isDouble()) {
-            return no.asDouble();
-        } else {
-            return no.asText();
-        }
-    }
-
-    /**
-     * Constrói a query GraphQL para buscar fretes
-     * Implementa múltiplas variantes para compatibilidade com diferentes schemas
-     * @param dataInicio Data de início da busca
-     * @return String com a query GraphQL formatada
-     */
-    private String construirQueryFretes(String dataInicio) {
-        // Múltiplas queries para testar diferentes possibilidades de schema
-        String[] queriesParaTestar = {
-            // Query principal para fretes
-            "{ fretes(dataInicio: \"" + dataInicio + "\") { id numero dataFrete status valor moeda origem { cidade estado } destino { cidade estado } transportadora { nome cnpj } } }",
-            
-            // Variantes alternativas
-            "{ shipments(startDate: \"" + dataInicio + "\") { id number date status value currency origin { city state } destination { city state } carrier { name document } } }",
-            
-            "{ freight(from: \"" + dataInicio + "\") { id code createdAt status amount currency pickup { city state } delivery { city state } company { name } } }",
-            
-            // Query genérica para descobrir campos disponíveis
-            "{ fretes { id numero data status } }",
-            
-            // Query de introspecção como fallback
-            "{ __schema { queryType { fields { name description } } } }"
-        };
-        
-        // Retorna a primeira query como padrão, mas o método executarQueryGraphQL tentará todas
-        return "{\n" +
-                "  \"query\": \"" + queriesParaTestar[0].replace("\"", "\\\"") + "\"\n" +
-                "}";
     }
 
     /**

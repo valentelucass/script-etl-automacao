@@ -238,4 +238,34 @@ public class CarregadorConfig {
     public static String obterSenhaBancoDados() {
         return obterPropriedade("db.password");
     }
+
+    /**
+     * Obtém o número máximo de tentativas para a lógica de retry da API REST.
+     * Retorna 4 como valor padrão se a propriedade não for encontrada.
+     * @return O número máximo de tentativas.
+     */
+    public static int obterMaxTentativasRetry() {
+        String valor = obterPropriedade("api.rest.retry.max_tentativas");
+        try {
+            return Integer.parseInt(valor);
+        } catch (NumberFormatException | NullPointerException e) {
+            logger.warn("Propriedade 'api.rest.retry.max_tentativas' não encontrada ou inválida. Usando valor padrão: 4");
+            return 4; // Valor padrão
+        }
+    }
+
+    /**
+     * Obtém o tempo de espera base (em milissegundos) para a lógica de retry.
+     * Retorna 2000 como valor padrão se a propriedade não for encontrada.
+     * @return O tempo de delay base em ms.
+     */
+    public static long obterDelayBaseRetry() {
+        String valor = obterPropriedade("api.rest.retry.delay_base_ms");
+        try {
+            return Long.parseLong(valor);
+        } catch (NumberFormatException | NullPointerException e) {
+            logger.warn("Propriedade 'api.rest.retry.delay_base_ms' não encontrada ou inválida. Usando valor padrão: 2000ms");
+            return 2000L; // Valor padrão
+        }
+    }
 }
