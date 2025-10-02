@@ -614,6 +614,14 @@ public class Main {
 
             exibirResumoFinal();
 
+            // Salvar métricas do dia após a execução
+            try {
+                MetricasService.getInstance().salvarMetricasDoDia();
+                logger.info("Métricas do dia salvas com sucesso");
+            } catch (Exception e) {
+                logger.error("Erro ao salvar métricas do dia: {}", e.getMessage(), e);
+            }
+
             logger.info("Extração concluída com sucesso. Extraídas: {}, Processadas: {}",
                     totalEntidadesExtraidas, totalEntidadesProcessadas);
 
@@ -638,6 +646,15 @@ public class Main {
             }
 
             exibirResumoFinal();
+
+            // Salvar métricas do dia após a execução (mesmo com erros)
+            try {
+                MetricasService.getInstance().salvarMetricasDoDia();
+                logger.info("Métricas do dia salvas com sucesso");
+            } catch (Exception ex) {
+                logger.error("Erro ao salvar métricas do dia: {}", ex.getMessage(), ex);
+            }
+
             System.exit(1);
         }
     }

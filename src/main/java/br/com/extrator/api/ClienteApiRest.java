@@ -1,13 +1,5 @@
 package br.com.extrator.api;
 
-import br.com.extrator.modelo.EntidadeDinamica;
-import br.com.extrator.util.CarregadorConfig;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -18,6 +10,15 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import br.com.extrator.modelo.EntidadeDinamica;
+import br.com.extrator.util.CarregadorConfig;
 
 /**
  * Classe responsável pela comunicação com a API REST do ESL Cloud
@@ -193,11 +194,14 @@ public class ClienteApiRest {
                 long duracaoMs = System.currentTimeMillis() - inicioMs;
 
                 // Verifica se a resposta foi bem-sucedida (para outros erros que não são 429)
-                if (resposta.statusCode() != 200) {
+                if (resposta != null && resposta.statusCode() != 200) {
                     String mensagemErro = criarMensagemErroDetalhada(resposta.statusCode(), tipoEntidade, endpoint);
                     logger.error("Erro ao buscar {}. Código de status: {}, ({} ms) Body: {}", tipoEntidade,
                             resposta.statusCode(), duracaoMs, resposta.body());
                     throw new RuntimeException(mensagemErro);
+                } else if (resposta == null) {
+                    logger.error("Erro: resposta é null após {} tentativas para {}", MAX_TENTATIVAS, tipoEntidade);
+                    throw new RuntimeException("Falha na requisição: resposta é null");
                 }
 
                 // Processa a resposta JSON
@@ -346,25 +350,28 @@ public class ClienteApiRest {
                         endpoint, resposta.statusCode(), resposta.body().length());
 
                 // Verifica se a resposta foi bem-sucedida
-                if (resposta.statusCode() == 200) {
-                    logger.info("✅ Validação bem-sucedida! Endpoint funcional: {}", endpoint);
-                    return true;
-                } else if (resposta.statusCode() == 401) {
-                    logger.error("❌ Erro de autenticação! Token inválido ou expirado. Endpoint: {}", endpoint);
-                    return false;
-                } else if (resposta.statusCode() == 403) {
-                    logger.error("❌ Erro de autorização! Token sem permissões. Endpoint: {}", endpoint);
-                    return false;
-                } else if (resposta.statusCode() == 404) {
-                    logger.warn("⚠️  Endpoint não encontrado: {} (Testando próximo...)", endpoint);
-                    // Continua testando outros endpoints
-                } else if (resposta.statusCode() == 405) {
-                    logger.warn("⚠️  Método não permitido: {} (Endpoint existe, mas GET não é suportado)", endpoint);
-                    // Ainda assim, significa que a API está acessível
-                    logger.info("✅ API acessível (endpoint existe): {}", endpoint);
-                    return true;
-                } else {
-                    logger.warn("⚠️  Resposta inesperada do endpoint {}: Status={}", endpoint, resposta.statusCode());
+                switch (resposta.statusCode()) {
+                    case 200:
+                        logger.info("✅ Validação bem-sucedida! Endpoint funcional: {}", endpoint);
+                        return true;
+                    case 401:
+                        logger.error("❌ Erro de autenticação! Token inválido ou expirado. Endpoint: {}", endpoint);
+                        return false;
+                    case 403:
+                        logger.error("❌ Erro de autorização! Token sem permissões. Endpoint: {}", endpoint);
+                        return false;
+                    case 404:
+                        logger.warn("⚠️  Endpoint não encontrado: {} (Testando próximo...)", endpoint);
+                        // Continua testando outros endpoints
+                        break;
+                    case 405:
+                        logger.warn("⚠️  Método não permitido: {} (Endpoint existe, mas GET não é suportado)", endpoint);
+                        // Ainda assim, significa que a API está acessível
+                        logger.info("✅ API acessível (endpoint existe): {}", endpoint);
+                        return true;
+                    default:
+                        logger.warn("⚠️  Resposta inesperada do endpoint {}: Status={}", endpoint, resposta.statusCode());
+                        break;
                 }
 
             } catch (IOException | InterruptedException e) {

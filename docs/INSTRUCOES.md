@@ -1,53 +1,108 @@
-# Instruções para Execução do Extrator ESL Cloud
-
-## Visão Geral
-
-Este documento contém instruções detalhadas para configurar e executar o sistema de extração de dados da ESL Cloud para SQL Server. O sistema extrai faturas da API ESL Cloud e as armazena em um banco de dados SQL Server para posterior análise.
+# Guia de Instalação e Configuração
 
 ## Pré-requisitos
 
-- Java 11 ou superior instalado
-- Acesso à API ESL Cloud (token de autenticação)
-- Banco de dados SQL Server configurado
-- Permissões de escrita no banco de dados
+- Java 11+
+- Maven 3.6+
+- Node.js 16+ (para dashboard)
+- SQL Server
+- Tokens de acesso ESL Cloud
 
-## Configuração
+## Configuração Rápida
 
-### Método Recomendado: Variáveis de Ambiente
+### 1. Variáveis de Ambiente (Recomendado)
 
-**Para maior segurança, recomendamos configurar o sistema usando variáveis de ambiente.** Este método evita armazenar informações sensíveis em arquivos de código.
-
-Configure as seguintes variáveis de ambiente no seu sistema:
-
-| Variável de Ambiente | Descrição | Exemplo |
-|---------------------|-----------|---------|
-| `API_BASEURL` | URL base da API ESL Cloud | `https://rodogarcia.eslcloud.com.br` |
-| `API_REST_TOKEN` | Token para API REST (Faturas/Ocorrências) | `_Rxcmz7vrmaGvYGy6VeyJx...` |
-| `API_GRAPHQL_TOKEN` | Token para API GraphQL (Coletas) | `pGsc57wLxCHxTtbp8juDY3...` |
-| `API_GRAPHQL_ENDPOINT` | Endpoint GraphQL | `/graphql` |
-| `API_DATAEXPORT_TOKEN` | Token para API Data Export (Manifestos/Localização) | `_Rxcmz7vrmaGvYGy6VeyJx...` |
-| `DB_URL` | URL de conexão do banco SQL Server | `jdbc:sqlserver://localhost:1433;databaseName=esl_cloud;encrypt=false;` |
-| `DB_USER` | Usuário do banco de dados | `sa` |
-| `DB_PASSWORD` | Senha do banco de dados | `SqlDocker!2025` |
-
-#### Como configurar variáveis de ambiente:
-
-**Windows (PowerShell):**
 ```powershell
-$env:API_BASEURL="https://rodogarcia.eslcloud.com.br"
-$env:API_REST_TOKEN="seu_token_aqui"
-$env:API_GRAPHQL_TOKEN="seu_token_aqui"
+# Windows PowerShell
+$env:API_BASEURL="https://sua-empresa.eslcloud.com.br"
+$env:API_REST_TOKEN="seu_token_rest"
+$env:API_GRAPHQL_TOKEN="seu_token_graphql"
 $env:API_GRAPHQL_ENDPOINT="/graphql"
-$env:API_DATAEXPORT_TOKEN="seu_token_aqui"
+$env:API_DATAEXPORT_TOKEN="seu_token_dataexport"
 $env:DB_URL="jdbc:sqlserver://localhost:1433;databaseName=esl_cloud;encrypt=false;"
 $env:DB_USER="sa"
-$env:DB_PASSWORD="SqlDocker!2025"
+$env:DB_PASSWORD="sua_senha"
 ```
 
-**Linux/macOS:**
 ```bash
-export API_BASEURL="https://rodogarcia.eslcloud.com.br"
-export API_REST_TOKEN="seu_token_aqui"
+# Linux/macOS
+export API_BASEURL="https://sua-empresa.eslcloud.com.br"
+export API_REST_TOKEN="seu_token_rest"
+# ... demais variáveis
+```
+
+### 2. Arquivo de Configuração (Alternativo)
+
+Edite `src/main/resources/config.properties`:
+
+```properties
+api.baseurl=https://sua-empresa.eslcloud.com.br
+api.rest.token=seu_token_rest
+api.graphql.token=seu_token_graphql
+api.graphql.endpoint=/graphql
+api.dataexport.token=seu_token_dataexport
+db.url=jdbc:sqlserver://localhost:1433;databaseName=esl_cloud;encrypt=false;
+db.user=sa
+db.password=sua_senha
+```
+
+## Compilação e Execução
+
+### 1. Compilar
+```bash
+mvn clean package
+```
+
+### 2. Testar Configuração
+```bash
+java -jar target/extrator-script.jar --validar
+```
+
+### 3. Executar Dashboard
+```bash
+# Backend
+java -jar target/extrator-esl-cloud-1.0-SNAPSHOT-dashboard.jar
+
+# Frontend (novo terminal)
+cd dashboard-monitoramento
+npm install
+$env:PORT=3001; npm start
+```
+
+### 4. Executar Script
+```bash
+# Últimas 24h
+java -jar target/extrator-script.jar
+
+# Data específica
+java -jar target/extrator-script.jar "2024-01-01T00:00:00"
+```
+
+## Solução de Problemas
+
+### Erro de Conexão com Banco
+- Verifique se o SQL Server está rodando
+- Confirme as credenciais em `config.properties` ou variáveis de ambiente
+- Teste a conectividade: `telnet localhost 1433`
+
+### Erro de Token API
+- Verifique se os tokens não expiraram
+- Confirme as URLs base das APIs
+- Execute o teste: `java -jar target/extrator-script.jar --validar`
+
+### Porta em Uso
+```bash
+# Windows - encontrar processo na porta 7070
+netstat -ano | findstr :7070
+taskkill /PID [NUMERO_DO_PID] /F
+```
+
+## Logs e Monitoramento
+
+- **Logs do Sistema**: `logs/extrator.log`
+- **Métricas**: `metricas/metricas-YYYY-MM-DD.json`
+- **Dashboard**: http://localhost:3001
+- **API Status**: http://localhost:7070/api/status
 export API_GRAPHQL_TOKEN="seu_token_aqui"
 export API_GRAPHQL_ENDPOINT="/graphql"
 export API_DATAEXPORT_TOKEN="seu_token_aqui"
@@ -92,38 +147,30 @@ db.password=SqlDocker!2025
 1. Abra o prompt de comando (CMD) ou PowerShell
 2. Navegue até a pasta do projeto:
    ```
-   cd caminho\para\script-automacao
-   ```
-3. Execute o comando:
-   ```
-   java -jar target\extrator-esl-cloud-1.0-SNAPSHOT-jar-with-dependencies.jar
-   ```
+## Logs e Monitoramento
 
-### Método 2: Especificando uma data de início diferente
+- **Logs do Sistema**: `logs/extrator.log`
+- **Métricas**: `metricas/metricas-YYYY-MM-DD.json`
+- **Dashboard**: http://localhost:3001
+- **API Status**: http://localhost:7070/api/status
 
-Por padrão, o sistema extrai faturas das últimas 24 horas. Se você quiser especificar uma data de início diferente:
+## Estrutura do Projeto
 
 ```
-java -jar target\extrator-esl-cloud-1.0-SNAPSHOT-jar-with-dependencies.jar "2023-01-01T00:00:00"
+script-automacao/
+├── README.md                    # Guia principal
+├── pom.xml                      # Configuração Maven
+├── docs/                        # Documentação técnica
+│   ├── README.md               # Visão técnica
+│   ├── INSTRUCOES.md          # Este arquivo
+│   └── ARQUITETURA-TECNICA.md # Detalhes técnicos
+├── dashboard-monitoramento/     # Frontend React
+├── src/main/                   # Código fonte Java
+├── logs/                       # Logs de execução
+└── metricas/                   # Métricas JSON
 ```
 
-O formato da data deve ser: `yyyy-MM-dd'T'HH:mm:ss`
-
-## Verificando a Execução
-
-Durante a execução, o sistema exibirá informações no terminal sobre o progresso:
-
-1. Banner inicial do sistema
-2. Etapa 1/4: Inicialização do banco de dados
-3. Etapa 2/4: Inicialização do cliente API
-4. Etapa 3/4: Extração de dados da API
-5. Etapa 4/4: Salvamento dos dados no banco
-
-Ao final, será exibido um resumo com o total de faturas extraídas e processadas.
-
-## Logs
-
-Os logs detalhados são gerados na pasta `logs/` no mesmo diretório onde o script é executado. Você pode verificar o arquivo `extrator-esl.log` para acompanhar a execução e identificar possíveis erros.
+Os logs detalhados são gerados na pasta `logs/` no mesmo diretório onde o script é executado. Você pode verificar o arquivo `extrator.log` para acompanhar a execução e identificar possíveis erros.
 
 ## Solução de Problemas
 
@@ -163,18 +210,21 @@ Se você observar caracteres estranhos no terminal:
 1. Verifique se está usando um terminal que suporta UTF-8
 2. Execute o comando com a opção de codificação explícita:
    ```
-   java -Dfile.encoding=UTF-8 -jar target\extrator-esl-cloud-1.0-SNAPSHOT-jar-with-dependencies.jar
+   java -Dfile.encoding=UTF-8 -jar target\extrator-script.jar
    ```
 
 ### Logs de Erro
 
 Se o programa falhar, verifique os logs detalhados em:
 ```
-logs/extrator-esl.log
+logs/extrator.log
 ```
 
 Este arquivo contém informações técnicas que podem ajudar a identificar a causa do problema.
 
 ## Suporte
 
-Para dúvidas ou problemas, entre em contato com a equipe de desenvolvimento.
+Para dúvidas ou problemas, consulte:
+- **README.md** na raiz do projeto para informações gerais
+- **docs/ARQUITETURA-TECNICA.md** para detalhes técnicos
+- **Dashboard de Monitoramento** em http://localhost:3001

@@ -157,7 +157,8 @@ Retentativas
 
 ### 14. Execução
 - Build: `mvn clean package -DskipTests`
-- Run (JAR): `java -jar target/extrator-esl-cloud-1.0-SNAPSHOT-jar-with-dependencies.jar [opcional:dataInicio]`
+- Run (Dashboard): `java -jar target/extrator-esl-cloud-1.0-SNAPSHOT-dashboard.jar`
+- Run (Script): `java -jar target/extrator-script.jar [opcional:dataInicio]`
 
 ### 15. Exemplos de Entrada/Saída
 REST (resumo):

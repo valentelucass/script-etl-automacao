@@ -1,58 +1,34 @@
-# Extrator de Dados ESL Cloud
+# Documentação Técnica - Extrator ESL Cloud
 
-## Descrição do Projeto
+## Visão Geral
 
-Este projeto é um script de automação em Java que extrai dados de múltiplas APIs do sistema ESL Cloud, processa essas informações e as carrega em um banco de dados SQL Server. O objetivo principal é automatizar a atualização de painéis de Power BI, substituindo o processo manual de exportação de planilhas.
+Sistema de automação Java para extração de dados de múltiplas APIs ESL Cloud com dashboard de monitoramento.
 
-### Arquitetura Multi-API
+## Arquitetura Multi-API
 
-O sistema foi projetado para trabalhar com **3 APIs distintas** do ESL Cloud:
+### APIs Integradas
+1. **API REST**: Faturas e Ocorrências
+2. **API GraphQL**: Coletas e Fretes  
+3. **API Data Export**: Manifestos e Localização da Carga
 
-1. **API REST**: Extração de Faturas e Ocorrências
-2. **API GraphQL**: Extração de Coletas  
-3. **API Data Export**: Extração de Manifestos e Localização da Carga (fluxo POST+GET)
+### Componentes Principais
+- **Script de Extração**: Execução única via linha de comando
+- **Servidor Dashboard**: API REST + interface web de monitoramento
+- **Frontend React**: Dashboard visual em tempo real
 
-## Funcionalidades
+## Tecnologias
 
-- **Extração Multi-API**: Comunicação com 3 APIs diferentes do ESL Cloud usando HttpClient nativo do Java
-- **Processamento Especializado**: Cada API possui seu cliente específico otimizado para seu protocolo
-- **Fluxo POST+GET**: Suporte ao fluxo especial da API Data Export (solicitação + processamento + busca)
-- **Paginação Automática**: Gerenciamento automático da paginação das APIs REST e GraphQL
-- **Processamento de JSON**: Conversão de dados JSON para objetos Java usando Jackson
-- **Persistência em Banco**: Armazenamento dos dados em SQL Server usando JDBC
-- **Prevenção de Duplicatas**: Uso de comando MERGE para evitar registros duplicados
-- **Processamento em Lotes**: Inserção de dados em lotes para melhor performance
-- **Logging Completo**: Sistema de logs detalhados usando SLF4J e Logback
-- **Interface de Terminal Amigável**: Exibição clara do progresso e resultados no terminal
-- **Validação de Acesso**: Teste automático de conectividade com todas as 3 APIs
-- **Documentação Detalhada**: Instruções completas para configuração e execução
-
-## Requisitos
-
-- Java 11 ou superior
-- Maven 3.6 ou superior
-- Acesso à API ESL Cloud (URL e token de autenticação)
-- Banco de dados SQL Server
-- Acesso à internet para download das dependências
-
-## Instalação
-
-1. Clone este repositório:
-   ```
-   git clone [URL_DO_REPOSITÓRIO]
-   ```
-
-2. Navegue até a pasta do projeto:
-   ```
-   cd script-automacao
-   ```
-
-3. Compile o projeto usando Maven:
+- **Backend**: Java 11+, Spring Boot, Jackson, JDBC
+- **Frontend**: React, JavaScript ES6+
+- **Banco**: SQL Server
+- **Build**: Maven
    ```
    mvn clean package
    ```
 
-4. O processo de compilação irá gerar um arquivo JAR executável na pasta `target` com o nome `extrator-esl-cloud-1.0-SNAPSHOT-jar-with-dependencies.jar`.
+4. O processo de compilação irá gerar dois arquivos JAR executáveis na pasta `target`:
+   - `extrator-esl-cloud-1.0-SNAPSHOT-dashboard.jar` (Dashboard)
+   - `extrator-script.jar` (Script de extração)
 
 ## Configuração
 
@@ -171,7 +147,8 @@ script-automacao/
 │   │       └── logback.xml        # Configuração de logs
 │   └── test/                      # Testes unitários (se implementados)
 └── target/                        # Arquivos compilados (gerados pelo Maven)
-    └── extrator-esl-cloud-1.0-SNAPSHOT-jar-with-dependencies.jar  # JAR executável
+    ├── extrator-esl-cloud-1.0-SNAPSHOT-dashboard.jar  # JAR do Dashboard
+    └── extrator-script.jar         # JAR do Script de extração
 ```
 
 ### Descrição dos Arquivos Principais
@@ -188,25 +165,56 @@ script-automacao/
 
 ## Como Executar
 
-Após configurar o arquivo `config.properties`, você pode executar o script de duas maneiras:
+Após compilar o projeto com `mvn clean package`, dois arquivos executáveis serão gerados na pasta `target/`.
 
-### 1. Usando o JAR gerado pelo Maven (Arquitetura Multi-API)
+### 1. Para Iniciar o Servidor do Dashboard de Monitoramento
 
-```
-java -jar target/extrator-esl-cloud-1.0-SNAPSHOT-jar-with-dependencies.jar
-```
+Este comando inicia a aplicação web que serve os dados para o dashboard. O servidor ficará rodando continuamente na porta 7070.
 
-### 2. Especificando uma data de início diferente
-
-Por padrão, o script busca dados das últimas 24 horas. Se você quiser especificar uma data de início diferente:
-
-```
-java -jar target/extrator-esl-cloud-1.0-SNAPSHOT-jar-with-dependencies.jar "2023-01-01T00:00:00"
+```bash
+java -jar target/extrator-esl-cloud-1.0-SNAPSHOT-dashboard.jar
 ```
 
-O formato da data deve ser: `yyyy-MM-dd'T'HH:mm:ss`
+- **Dashboard:** Acesse em `http://localhost:3001` (após iniciar o frontend).
+- **API de Status:** Disponível em `http://localhost:7070/api/status`.
 
-### Acompanhando a Execução
+#### Iniciando o Frontend do Dashboard
+
+Em um novo terminal, navegue até a pasta do dashboard e execute:
+
+```bash
+cd dashboard-monitoramento
+
+# Instalar dependências (apenas na primeira vez)
+npm install
+
+# Iniciar o dashboard na porta 3001
+$env:PORT=3001; npm start
+```
+
+### 2. Para Executar o Script de Extração de Dados
+
+Este comando executa a extração de dados uma única vez e depois encerra.
+
+**Para buscar dados das últimas 24 horas:**
+
+```bash
+java -jar target/extrator-script.jar
+```
+
+**Para buscar dados a partir de uma data específica:**
+
+```bash
+java -jar target/extrator-script.jar "2024-01-01T00:00:00"
+```
+
+**Para executar testes isolados (ex: apenas GraphQL):**
+
+```bash
+java -jar target/extrator-script.jar --teste-graphql
+```
+
+### Acompanhando a Execução do Script
 
 Durante a execução, o sistema exibirá informações detalhadas no terminal com o processamento das 3 APIs:
 
