@@ -13,29 +13,77 @@ Este documento contém instruções detalhadas para configurar e executar o sist
 
 ## Configuração
 
-Antes de executar o sistema, é necessário configurar o arquivo `config.properties` localizado em `src/main/resources/`:
+### Método Recomendado: Variáveis de Ambiente
+
+**Para maior segurança, recomendamos configurar o sistema usando variáveis de ambiente.** Este método evita armazenar informações sensíveis em arquivos de código.
+
+Configure as seguintes variáveis de ambiente no seu sistema:
+
+| Variável de Ambiente | Descrição | Exemplo |
+|---------------------|-----------|---------|
+| `API_BASEURL` | URL base da API ESL Cloud | `https://rodogarcia.eslcloud.com.br` |
+| `API_REST_TOKEN` | Token para API REST (Faturas/Ocorrências) | `_Rxcmz7vrmaGvYGy6VeyJx...` |
+| `API_GRAPHQL_TOKEN` | Token para API GraphQL (Coletas) | `pGsc57wLxCHxTtbp8juDY3...` |
+| `API_GRAPHQL_ENDPOINT` | Endpoint GraphQL | `/graphql` |
+| `API_DATAEXPORT_TOKEN` | Token para API Data Export (Manifestos/Localização) | `_Rxcmz7vrmaGvYGy6VeyJx...` |
+| `DB_URL` | URL de conexão do banco SQL Server | `jdbc:sqlserver://localhost:1433;databaseName=esl_cloud;encrypt=false;` |
+| `DB_USER` | Usuário do banco de dados | `sa` |
+| `DB_PASSWORD` | Senha do banco de dados | `SqlDocker!2025` |
+
+#### Como configurar variáveis de ambiente:
+
+**Windows (PowerShell):**
+```powershell
+$env:API_BASEURL="https://rodogarcia.eslcloud.com.br"
+$env:API_REST_TOKEN="seu_token_aqui"
+$env:API_GRAPHQL_TOKEN="seu_token_aqui"
+$env:API_GRAPHQL_ENDPOINT="/graphql"
+$env:API_DATAEXPORT_TOKEN="seu_token_aqui"
+$env:DB_URL="jdbc:sqlserver://localhost:1433;databaseName=esl_cloud;encrypt=false;"
+$env:DB_USER="sa"
+$env:DB_PASSWORD="SqlDocker!2025"
+```
+
+**Linux/macOS:**
+```bash
+export API_BASEURL="https://rodogarcia.eslcloud.com.br"
+export API_REST_TOKEN="seu_token_aqui"
+export API_GRAPHQL_TOKEN="seu_token_aqui"
+export API_GRAPHQL_ENDPOINT="/graphql"
+export API_DATAEXPORT_TOKEN="seu_token_aqui"
+export DB_URL="jdbc:sqlserver://localhost:1433;databaseName=esl_cloud;encrypt=false;"
+export DB_USER="sa"
+export DB_PASSWORD="SqlDocker!2025"
+```
+
+### Método Alternativo: Arquivo config.properties
+
+**Para desenvolvimento local**, você pode usar o arquivo `config.properties` localizado em `src/main/resources/config.properties`. Este arquivo serve como fallback quando as variáveis de ambiente não estão configuradas.
+
+Antes de executar o sistema, é necessário configurar o arquivo:
 
 1. Abra o arquivo `config.properties` em um editor de texto
 2. Configure os seguintes parâmetros:
 
 ```properties
 # Configurações da API ESL Cloud
-api.baseurl=https://[subdominio].eslcloud.com.br
-api.token=[seu_bearer_token]
+api.baseurl=https://rodogarcia.eslcloud.com.br
 
-# Configurações do Banco de Dados SQL Server
-db.url=jdbc:sqlserver://[servidor]:1433;databaseName=[nome_banco];encrypt=true;trustServerCertificate=false;
-db.user=[usuario_banco]
-db.password=[senha_banco]
+# API REST - Token do Usuário do Sistema (Faturas e Ocorrências)
+api.rest.token=_Rxcmz7vrmaGvYGy6VeyJxHNy5qHsToRGsPdqA88zgEs3aAFQ8ycxw
+
+# API GraphQL - Token do Usuário API (Coletas)
+api.graphql.token=pGsc57wLxCHxTtbp8juDY3Q5BWpB2uurXB3-zoVkkDysMwf5taHqqw
+api.graphql.endpoint=/graphql
+
+# API Data Export - Token do Usuário do Sistema (Manifestos e Localização)
+api.dataexport.token=_Rxcmz7vrmaGvYGy6VeyJxHNy5qHsToRGsPdqA88zgEs3aAFQ8ycxw
+
+# Configurações do Banco de Dados SQL Server Local
+db.url=jdbc:sqlserver://localhost:1433;databaseName=esl_cloud;encrypt=false;
+db.user=sa
+db.password=SqlDocker!2025
 ```
-
-Substitua:
-- `[subdominio]` pelo subdomínio da sua conta ESL Cloud
-- `[seu_bearer_token]` pelo token de autenticação da API
-- `[servidor]` pelo endereço do servidor SQL Server
-- `[nome_banco]` pelo nome do banco de dados
-- `[usuario_banco]` pelo nome de usuário do banco de dados
-- `[senha_banco]` pela senha do banco de dados
 
 ## Execução do Sistema
 

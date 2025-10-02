@@ -153,6 +153,33 @@ public class CarregadorConfig {
     }
 
     /**
+     * Obtém uma configuração priorizando variáveis de ambiente sobre o arquivo config.properties
+     * 
+     * @param nomeVariavelAmbiente Nome da variável de ambiente
+     * @param nomeChaveProperties Nome da chave no arquivo config.properties
+     * @return Valor da configuração (variável de ambiente ou fallback para properties)
+     */
+    private static String obterConfiguracao(String nomeVariavelAmbiente, String nomeChaveProperties) {
+        // Tenta primeiro obter da variável de ambiente
+        String valorAmbiente = System.getenv(nomeVariavelAmbiente);
+        if (valorAmbiente != null && !valorAmbiente.trim().isEmpty()) {
+            logger.debug("Configuração '{}' obtida da variável de ambiente", nomeVariavelAmbiente);
+            return valorAmbiente;
+        }
+        
+        // Fallback para o arquivo config.properties
+        Properties props = carregarPropriedades();
+        String valorProperties = props.getProperty(nomeChaveProperties);
+        if (valorProperties == null) {
+            logger.warn("Configuração '{}' não encontrada nem em variável de ambiente '{}' nem no arquivo de configuração '{}'", 
+                       nomeChaveProperties, nomeVariavelAmbiente, nomeChaveProperties);
+        } else {
+            logger.debug("Configuração '{}' obtida do arquivo config.properties", nomeChaveProperties);
+        }
+        return valorProperties;
+    }
+
+    /**
      * Obtém uma propriedade específica do arquivo de configuração
      * 
      * @param chave Nome da propriedade
@@ -173,7 +200,7 @@ public class CarregadorConfig {
      * @return URL base da API
      */
     public static String obterUrlBaseApi() {
-        return obterPropriedade("api.baseurl");
+        return obterConfiguracao("API_BASEURL", "api.baseurl");
     }
 
     /**
@@ -182,7 +209,7 @@ public class CarregadorConfig {
      * @return Token de autenticação da API REST
      */
     public static String obterTokenApiRest() {
-        return obterPropriedade("api.rest.token");
+        return obterConfiguracao("API_REST_TOKEN", "api.rest.token");
     }
 
     /**
@@ -191,7 +218,7 @@ public class CarregadorConfig {
      * @return Token de autenticação da API GraphQL
      */
     public static String obterTokenApiGraphQL() {
-        return obterPropriedade("api.graphql.token");
+        return obterConfiguracao("API_GRAPHQL_TOKEN", "api.graphql.token");
     }
 
     /**
@@ -200,7 +227,7 @@ public class CarregadorConfig {
      * @return Endpoint da API GraphQL
      */
     public static String obterEndpointGraphQL() {
-        return obterPropriedade("api.graphql.endpoint");
+        return obterConfiguracao("API_GRAPHQL_ENDPOINT", "api.graphql.endpoint");
     }
 
     /**
@@ -209,7 +236,7 @@ public class CarregadorConfig {
      * @return Token da API Data Export
      */
     public static String obterTokenApiDataExport() {
-        return obterPropriedade("api.dataexport.token");
+        return obterConfiguracao("API_DATAEXPORT_TOKEN", "api.dataexport.token");
     }
 
     /**
@@ -218,7 +245,7 @@ public class CarregadorConfig {
      * @return URL de conexão com o banco
      */
     public static String obterUrlBancoDados() {
-        return obterPropriedade("db.url");
+        return obterConfiguracao("DB_URL", "db.url");
     }
 
     /**
@@ -227,7 +254,7 @@ public class CarregadorConfig {
      * @return Usuário do banco
      */
     public static String obterUsuarioBancoDados() {
-        return obterPropriedade("db.user");
+        return obterConfiguracao("DB_USER", "db.user");
     }
 
     /**
@@ -236,7 +263,7 @@ public class CarregadorConfig {
      * @return Senha do banco
      */
     public static String obterSenhaBancoDados() {
-        return obterPropriedade("db.password");
+        return obterConfiguracao("DB_PASSWORD", "db.password");
     }
 
     /**

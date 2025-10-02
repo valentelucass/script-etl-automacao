@@ -44,14 +44,16 @@ public class ClienteApiRest {
     }
 
     /**
-     * Busca faturas da API REST ESL Cloud com paginação
+     * Busca faturas a RECEBER da API REST.
+     * Endpoint sugerido baseado na documentação do projeto.
      * 
      * @param dataInicio Data de início para busca (formato ISO:
      *                   yyyy-MM-dd'T'HH:mm:ss)
+     * @param modoTeste  Se verdadeiro, limita a busca a 5 registros
      * @return Lista de entidades encontradas
      */
-    public List<EntidadeDinamica> buscarFaturasAReceber(String dataInicio) {
-        return buscarEntidades("/api/accounting/credit/billings", dataInicio, "faturas_a_receber");
+    public List<EntidadeDinamica> buscarFaturasAReceber(String dataInicio, boolean modoTeste) {
+        return buscarEntidades("/api/accounting/credit/billings", dataInicio, "faturas_a_receber", modoTeste);
     }
 
     /**
@@ -60,12 +62,13 @@ public class ClienteApiRest {
      * 
      * @param dataInicio Data de início para busca (formato ISO:
      *                   yyyy-MM-dd'T'HH:mm:ss)
+     * @param modoTeste  Se verdadeiro, limita a busca a 5 registros
      * @return Lista de entidades encontradas
      */
-    public List<EntidadeDinamica> buscarFaturasAPagar(String dataInicio) {
+    public List<EntidadeDinamica> buscarFaturasAPagar(String dataInicio, boolean modoTeste) {
         // Endpoint para Faturas a Pagar (ajustar se necessário conforme documentação da
         // API)
-        return buscarEntidades("/api/accounting/debit/billings", dataInicio, "faturas_a_pagar");
+        return buscarEntidades("/api/accounting/debit/billings", dataInicio, "faturas_a_pagar", modoTeste);
     }
 
     /**
@@ -73,10 +76,11 @@ public class ClienteApiRest {
      * 
      * @param dataInicio Data de início para busca (formato ISO:
      *                   yyyy-MM-dd'T'HH:mm:ss)
+     * @param modoTeste  Se verdadeiro, limita a busca a 5 registros
      * @return Lista de entidades encontradas
      */
-    public List<EntidadeDinamica> buscarOcorrencias(String dataInicio) {
-        return buscarEntidades("/api/invoice_occurrences", dataInicio, "ocorrencias");
+    public List<EntidadeDinamica> buscarOcorrencias(String dataInicio, boolean modoTeste) {
+        return buscarEntidades("/api/invoice_occurrences", dataInicio, "ocorrencias", modoTeste);
     }
 
     /**
@@ -85,10 +89,12 @@ public class ClienteApiRest {
      * @param endpoint   Endpoint específico (ex: "/api/accounting/credit/billings")
      * @param dataInicio Data de início para busca (formato ISO:
      *                   yyyy-MM-dd'T'HH:mm:ss)
+     * @param tipoEntidade Tipo da entidade para logs
+     * @param modoTeste  Se verdadeiro, limita a busca a 5 registros e desativa paginação
      * @return Lista de entidades encontradas
      */
-    public List<EntidadeDinamica> buscarEntidades(String endpoint, String dataInicio, String tipoEntidade) {
-        logger.info("Iniciando busca de {} a partir de: {}", endpoint, dataInicio);
+    public List<EntidadeDinamica> buscarEntidades(String endpoint, String dataInicio, String tipoEntidade, boolean modoTeste) {
+        logger.info("Iniciando busca de {} a partir de: {} (Modo Teste: {})", endpoint, dataInicio, modoTeste);
         List<EntidadeDinamica> entidades = new ArrayList<>();
 
         String proximoId = null;
@@ -106,9 +112,17 @@ public class ClienteApiRest {
                 String url;
                 if (primeiraPagina) {
                     url = urlBase + endpoint + "?since=" + dataInicio;
+                    // Adiciona limite se estiver em modo de teste
+                    if (modoTeste) {
+                        url += "&limit=5";
+                    }
                     primeiraPagina = false;
                 } else {
                     url = urlBase + endpoint + "?start=" + proximoId;
+                    // Adiciona limite se estiver em modo de teste
+                    if (modoTeste) {
+                        url += "&limit=5";
+                    }
                 }
 
                 logger.debug("Fazendo requisição para: {}", url);
@@ -130,12 +144,55 @@ public class ClienteApiRest {
                         .timeout(Duration.ofSeconds(30))
                         .build();
 
-                // Executa a requisição com retry para HTTP 429
+                // Executa a requisição com retry simplificado para HTTP 429
+                HttpResponse<String> resposta = null;
+                final int MAX_TENTATIVAS = CarregadorConfig.obterMaxTentativasRetry();
                 long inicioMs = System.currentTimeMillis();
-                HttpResponse<String> resposta = executarRequisicaoComRetry(requisicao, tipoEntidade, endpoint);
+                
+                for (int tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa++) {
+                    HttpResponse<String> respostaAtual = clienteHttp.send(requisicao, HttpResponse.BodyHandlers.ofString());
+                    
+                    // Se a resposta for bem-sucedida, sai do loop
+                    if (respostaAtual.statusCode() == 200) {
+                        resposta = respostaAtual;
+                        if (tentativa > 1) {
+                            logger.info("✅ Requisição bem-sucedida na tentativa {}/{} para {}", 
+                                    tentativa, MAX_TENTATIVAS, tipoEntidade);
+                        }
+                        break;
+                    }
+                    
+                    // Se for erro 429 (Too Many Requests), implementa retry com intervalo fixo
+                    if (respostaAtual.statusCode() == 429) {
+                        if (tentativa < MAX_TENTATIVAS) {
+                            logger.warn("⚠️  HTTP 429 (Too Many Requests) na tentativa {}/{}. " +
+                                    "Aguardando {} ms antes da próxima tentativa... Body: {}", 
+                                    tentativa, MAX_TENTATIVAS, CarregadorConfig.obterDelayBaseRetry(), respostaAtual.body());
+                            
+                            // Intervalo fixo de 2 segundos (conforme documentação da API)
+                            Thread.sleep(CarregadorConfig.obterDelayBaseRetry());
+                            continue;
+                        } else {
+                            // Última tentativa falhou com 429
+                            logger.error("❌ Todas as {} tentativas falharam com HTTP 429. " +
+                                    "Rate limit persistente para {}. Body: {}", 
+                                    MAX_TENTATIVAS, tipoEntidade, respostaAtual.body());
+                            throw new RuntimeException(String.format(
+                                    "Rate limit excedido após %d tentativas para %s. " +
+                                    "Verifique se há outras instâncias do aplicativo rodando ou " +
+                                    "se o rate limit da API foi alterado.", 
+                                    MAX_TENTATIVAS, tipoEntidade));
+                        }
+                    }
+                    
+                    // Para qualquer outro erro (401, 404, 500, etc.), sai do loop imediatamente
+                    resposta = respostaAtual;
+                    break;
+                }
+                
                 long duracaoMs = System.currentTimeMillis() - inicioMs;
 
-                // Verifica se a resposta foi bem-sucedida (agora só para outros erros, não 429)
+                // Verifica se a resposta foi bem-sucedida (para outros erros que não são 429)
                 if (resposta.statusCode() != 200) {
                     String mensagemErro = criarMensagemErroDetalhada(resposta.statusCode(), tipoEntidade, endpoint);
                     logger.error("Erro ao buscar {}. Código de status: {}, ({} ms) Body: {}", tipoEntidade,
@@ -195,6 +252,12 @@ public class ClienteApiRest {
                 if (entidadesNestaPagina == 0) {
                     proximoId = null; // Força a paragem do loop se não vierem mais dados
                 }
+                
+                // Se estiver em modo de teste, força a parada após a primeira página
+                if (modoTeste) {
+                    logger.info("Modo de teste ativo: parando após primeira página");
+                    proximoId = null;
+                }
 
             } while (proximoId != null);
 
@@ -219,7 +282,7 @@ public class ClienteApiRest {
     public List<EntidadeDinamica> buscarFaturasUltimas24Horas() {
         LocalDateTime dataInicio = LocalDateTime.now().minusHours(24);
         String dataInicioFormatada = dataInicio.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-        return buscarFaturasAReceber(dataInicioFormatada);
+        return buscarFaturasAReceber(dataInicioFormatada, false);
     }
 
     /**
@@ -230,7 +293,7 @@ public class ClienteApiRest {
     public List<EntidadeDinamica> buscarFaturasAPagarUltimas24Horas() {
         LocalDateTime dataInicio = LocalDateTime.now().minusHours(24);
         String dataInicioFormatada = dataInicio.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-        return buscarFaturasAPagar(dataInicioFormatada);
+        return buscarFaturasAPagar(dataInicioFormatada, false);
     }
 
     /**
@@ -241,7 +304,7 @@ public class ClienteApiRest {
     public List<EntidadeDinamica> buscarOcorrenciasUltimas24Horas() {
         LocalDateTime dataInicio = LocalDateTime.now().minusHours(24);
         String dataInicioFormatada = dataInicio.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-        return buscarOcorrencias(dataInicioFormatada);
+        return buscarOcorrencias(dataInicioFormatada, false);
     }
 
     /**
@@ -383,81 +446,5 @@ public class ClienteApiRest {
         }
     }
 
-    /**
-     * Executa uma requisição HTTP com retry automático para erros 429 (Too Many Requests)
-     * Implementa exponential backoff: 2s, 4s, 6s, 8s
-     * 
-     * @param requisicao HttpRequest a ser executada
-     * @param tipoEntidade Tipo da entidade para logging
-     * @param endpoint Endpoint para logging
-     * @return HttpResponse da requisição bem-sucedida
-     * @throws RuntimeException se todas as tentativas falharem
-     */
-    private HttpResponse<String> executarRequisicaoComRetry(HttpRequest requisicao, String tipoEntidade, String endpoint) 
-            throws IOException, InterruptedException {
-        
-        final int MAX_TENTATIVAS = CarregadorConfig.obterMaxTentativasRetry();
-        
-        for (int tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa++) {
-            try {
-                logger.debug("Tentativa {}/{} para {}", tentativa, MAX_TENTATIVAS, endpoint);
-                
-                long inicioMs = System.currentTimeMillis();
-                HttpResponse<String> resposta = clienteHttp.send(requisicao, HttpResponse.BodyHandlers.ofString());
-                long duracaoMs = System.currentTimeMillis() - inicioMs;
-                
-                // Se a resposta for bem-sucedida, retorna imediatamente
-                if (resposta.statusCode() == 200) {
-                    if (tentativa > 1) {
-                        logger.info("✅ Requisição bem-sucedida na tentativa {}/{} para {} ({} ms)", 
-                                tentativa, MAX_TENTATIVAS, tipoEntidade, duracaoMs);
-                    }
-                    return resposta;
-                }
-                
-                // Se for erro 429 (Too Many Requests), implementa retry com backoff
-                if (resposta.statusCode() == 429) {
-                    if (tentativa < MAX_TENTATIVAS) {
-                        long tempoEspera = tentativa * CarregadorConfig.obterDelayBaseRetry();
-                        logger.warn("⚠️  HTTP 429 (Too Many Requests) na tentativa {}/{}. " +
-                                "Aguardando {} ms antes da próxima tentativa... Body: {}", 
-                                tentativa, MAX_TENTATIVAS, tempoEspera, resposta.body());
-                        
-                        // Exponential backoff: 2s, 4s, 6s, 8s
-                        Thread.sleep(tempoEspera);
-                        continue;
-                    } else {
-                        // Última tentativa falhou com 429
-                        logger.error("❌ Todas as {} tentativas falharam com HTTP 429. " +
-                                "Rate limit persistente para {}. Body: {}", 
-                                MAX_TENTATIVAS, tipoEntidade, resposta.body());
-                        throw new RuntimeException(String.format(
-                                "Rate limit excedido após %d tentativas para %s. " +
-                                "Verifique se há outras instâncias do aplicativo rodando ou " +
-                                "se o rate limit da API foi alterado.", 
-                                MAX_TENTATIVAS, tipoEntidade));
-                    }
-                }
-                
-                // Para qualquer outro erro (401, 404, 500, etc.), falha imediatamente
-                logger.debug("Erro HTTP {} na tentativa {}, falhando imediatamente", 
-                        resposta.statusCode(), tentativa);
-                return resposta;
-                
-            } catch (IOException | InterruptedException e) {
-                if (tentativa == MAX_TENTATIVAS) {
-                    logger.error("Erro de I/O na última tentativa para {}: {}", tipoEntidade, e.getMessage());
-                    throw e;
-                }
-                logger.warn("Erro de I/O na tentativa {}/{} para {}: {}. Tentando novamente...", 
-                        tentativa, MAX_TENTATIVAS, tipoEntidade, e.getMessage());
-                
-                // Pequena pausa antes de tentar novamente em caso de erro de I/O
-                Thread.sleep(1000);
-            }
-        }
-        
-        // Este ponto nunca deve ser alcançado, mas incluído por segurança
-        throw new RuntimeException("Erro inesperado no retry logic para " + tipoEntidade);
-    }
+
 }

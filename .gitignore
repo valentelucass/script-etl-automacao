@@ -1,20 +1,100 @@
+# ========================================
+# ARQUIVOS DE CONFIGURAÇÃO E CREDENCIAIS
+# ========================================
 # Arquivos de configuração com informações sensíveis
 src/main/resources/config.properties
+src/main/resources/application.properties
+src/main/resources/application-*.properties
 *.properties
 *.env
 .env
+.env.*
+config/
+configuration/
 
+# Arquivos de credenciais e tokens
+credentials/
+secrets/
+keys/
+certs/
+certificates/
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.truststore
+
+# Arquivos de configuração de banco de dados
+database.properties
+db.properties
+datasource.properties
+hibernate.cfg.xml
+
+# ========================================
+# ARQUIVOS DE LOG E DADOS TEMPORÁRIOS
+# ========================================
 # Arquivos de log
 logs/
+log/
 *.log
+*.log.*
+*.out
+*.err
 
-# Arquivos de backup
+# Arquivos de backup e dados temporários
 backups/
+backup/
+dumps/
+exports/
+data/
 *.bak
 *.backup
+*.dump
+*.sql
+*.db
+*.sqlite
+*.sqlite3
 
-# Arquivos compilados
+# Cache e arquivos temporários
+temp/
+tmp/
+cache/
+*.tmp
+*.temp
+*.cache
+*~.nib
+local.properties
+
+# ========================================
+# ARQUIVOS COMPILADOS E BUILD
+# ========================================
+# Maven
 target/
+.mvn/
+mvnw
+mvnw.cmd
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Gradle
+.gradle/
+build/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# Arquivos compilados Java
 *.class
 *.jar
 *.war
@@ -23,36 +103,168 @@ target/
 *.tar.gz
 *.rar
 
-# Arquivos de IDE
+# ========================================
+# ARQUIVOS DE IDE E EDITORES
+# ========================================
+# IntelliJ IDEA
 .idea/
 *.iml
 *.iws
 *.ipr
+out/
+
+# Eclipse
 .classpath
 .project
 .settings/
-.vscode/
-
-# Arquivos do sistema operacional
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# Arquivos temporários
+.metadata/
+bin/
+tmp/
 *.tmp
 *.bak
 *.swp
 *~.nib
 local.properties
+.loadpath
+.recommenders
 
-# Arquivos Maven
-.mvn/
-mvnw
-mvnw.cmd
+# Visual Studio Code
+.vscode/
+*.code-workspace
 
-# Diretórios específicos que podem conter dados sensíveis
-credentials/
-secrets/
-temp/
-tmp/
-cache/
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ========================================
+# ARQUIVOS DO SISTEMA OPERACIONAL
+# ========================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ========================================
+# ARQUIVOS DE DESENVOLVIMENTO E TESTES
+# ========================================
+# Arquivos de teste e desenvolvimento
+test-output/
+test-results/
+coverage/
+*.coverage
+.nyc_output/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Arquivos de profiling
+*.prof
+*.hprof
+*.heap
+
+# ========================================
+# ARQUIVOS DE DEPLOYMENT E PRODUÇÃO
+# ========================================
+# Docker
+.dockerignore
+docker-compose.override.yml
+.docker/
+
+# Kubernetes
+*.kubeconfig
+kube-config
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# ========================================
+# OUTROS ARQUIVOS SENSÍVEIS
+# ========================================
+# Arquivos de configuração de serviços
+.aws/
+.azure/
+.gcp/
+.heroku/
+
+# Arquivos de monitoramento
+newrelic.yml
+elastic-apm-agent.properties
+
+# Arquivos de análise de código
+.sonar/
+sonar-project.properties
+
+# Arquivos de documentação gerados
+docs/generated/
+javadoc/
+apidoc/
+
+# Arquivos de versionamento local
+.git/
+.svn/
+.hg/
+.bzr/
+
+# Arquivos de configuração de ferramentas
+.editorconfig
+.gitattributes

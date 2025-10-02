@@ -4,6 +4,7 @@ import br.com.extrator.modelo.EntidadeDinamica;
 import br.com.extrator.util.CarregadorConfig;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Cliente especializado para comunicação com a API GraphQL do ESL Cloud
@@ -44,33 +46,260 @@ public class ClienteApiGraphQL {
     }
 
     /**
-     * Busca coletas a partir de uma data específica
-     * @param dataInicio Data de início da busca no formato ISO (ex: "2025-01-20T00:00:00")
-     * @return Lista de entidades de coletas encontradas
+     * Formata um intervalo de datas no padrão YYYY-MM-DD - YYYY-MM-DD
+     * @param dataReferencia Data de referência para calcular o intervalo
+     * @return String formatada com o intervalo de datas
      */
-    public List<EntidadeDinamica> buscarColetas(String dataInicio) {
-        logger.warn("Simulação: API GraphQL indisponível. Retornando lista vazia para 'coletas'.");
-        return new ArrayList<>();
+    private String formatarIntervaloDeDatas(LocalDateTime dataReferencia) {
+        LocalDateTime diaAnterior = dataReferencia.minusDays(1);
+        LocalDateTime diaAtual = dataReferencia;
+        
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        
+        return diaAnterior.format(formatter) + " - " + diaAtual.format(formatter);
+    }
+
+    /**
+     * Busca coletas da API GraphQL
+     * AVISO: A execução desta query depende da liberação de permissão pelo administrador da API, mas o código está pronto.
+     * @param dataInicio Data de início para filtrar as coletas
+     * @param modoTeste Se true, usa query simplificada para teste
+     * @return Lista de coletas encontradas
+     */
+    public List<EntidadeDinamica> buscarColetas(String dataInicio, boolean modoTeste) {
+        logger.info("Buscando coletas da API GraphQL...");
+        
+        try {
+            // Formatar intervalo de datas
+            LocalDateTime dataRef = LocalDateTime.now();
+            String intervaloDatas = formatarIntervaloDeDatas(dataRef);
+            
+            // Query GraphQL correta para buscar coletas
+            String query = "query Coletas($params: ColetaInput!) { Coletas(params: $params) { edges { node { id numero status dataColeta } } pageInfo { hasNextPage endCursor } } }";
+            
+            // Construir variáveis aninhadas
+            Map<String, Object> variaveis = Map.of(
+                "params", Map.of("requestDate", intervaloDatas)
+            );
+            
+            return executarQueryGraphQL(query, "Coletas", variaveis);
+            
+        } catch (Exception e) {
+            logger.error("Erro ao buscar coletas: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
     }
 
     /**
      * Busca coletas das últimas 24 horas
-     * @return Lista de entidades de coletas encontradas
+     * @return Lista de coletas das últimas 24 horas
      */
     public List<EntidadeDinamica> buscarColetasUltimas24Horas() {
-        LocalDateTime dataInicio = LocalDateTime.now().minusHours(24);
-        String dataInicioFormatada = dataInicio.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-        return buscarColetas(dataInicioFormatada);
+        LocalDateTime agora = LocalDateTime.now();
+        String dataInicio = agora.minusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        return buscarColetas(dataInicio, false);
     }
 
     /**
-     * Busca fretes a partir de uma data específica
-     * @param dataInicio Data de início da busca no formato ISO (ex: "2025-01-20T00:00:00")
-     * @return Lista de entidades de fretes encontradas
+     * Realiza introspecção GraphQL para descobrir os campos disponíveis em um tipo específico
+     * @param nomeDoTipo Nome do tipo GraphQL a ser inspecionado (ex: "FreightInput")
+     * @return Lista de campos disponíveis no tipo
      */
-    public List<EntidadeDinamica> buscarFretes(String dataInicio) {
-        logger.warn("Simulação: API GraphQL indisponível. Retornando lista vazia para 'fretes'.");
-        return new ArrayList<>();
+    public List<String> inspecionarTipoGraphQL(String nomeDoTipo) {
+        logger.info("Realizando introspecção detalhada do tipo GraphQL: {}", nomeDoTipo);
+        
+        try {
+            // Query de introspecção mais detalhada para descobrir campos de um tipo específico
+            String queryIntrospeccao = "query IntrospectType($typeName: String!) { " +
+                "__type(name: $typeName) { " +
+                    "name " +
+                    "kind " +
+                    "description " +
+                    "inputFields { " +
+                        "name " +
+                        "description " +
+                        "type { " +
+                            "name " +
+                            "kind " +
+                            "ofType { " +
+                                "name " +
+                                "kind " +
+                            "} " +
+                        "} " +
+                        "defaultValue " +
+                    "} " +
+                    "fields { " +
+                        "name " +
+                        "description " +
+                        "type { " +
+                            "name " +
+                            "kind " +
+                            "ofType { " +
+                                "name " +
+                                "kind " +
+                            "} " +
+                        "} " +
+                    "} " +
+                "} " +
+            "}";
+            
+            // Construir variáveis para a query de introspecção
+            Map<String, Object> variaveis = Map.of("typeName", nomeDoTipo);
+            
+            // Executar query de introspecção
+            String urlCompleta = urlBase + endpointGraphQL;
+            
+            ObjectNode requestBody = mapeadorJson.createObjectNode();
+            requestBody.put("query", queryIntrospeccao);
+            requestBody.set("variables", mapeadorJson.valueToTree(variaveis));
+            
+            HttpRequest requisicao = HttpRequest.newBuilder()
+                    .uri(URI.create(urlCompleta))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + token)
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
+                    .build();
+            
+            HttpResponse<String> resposta = clienteHttp.send(requisicao, HttpResponse.BodyHandlers.ofString());
+            
+            if (resposta.statusCode() != 200) {
+                logger.error("Erro HTTP na introspecção: {} - {}", resposta.statusCode(), resposta.body());
+                return new ArrayList<>();
+            }
+            
+            JsonNode jsonResposta = mapeadorJson.readTree(resposta.body());
+            
+            // Verificar se há erros GraphQL
+            if (jsonResposta.has("errors")) {
+                logger.error("Erros GraphQL na introspecção: {}", jsonResposta.get("errors"));
+                return new ArrayList<>();
+            }
+            
+            // Extrair campos do tipo
+            List<String> campos = new ArrayList<>();
+            JsonNode tipoNode = jsonResposta.path("data").path("__type");
+            
+            if (tipoNode.isNull() || tipoNode.isMissingNode()) {
+                logger.warn("Tipo '{}' não encontrado na API GraphQL", nomeDoTipo);
+                return campos;
+            }
+            
+            String tipoKind = tipoNode.path("kind").asText();
+            String tipoDescricao = tipoNode.path("description").asText("");
+            
+            logger.info("Tipo encontrado: {} (kind: {}) - {}", nomeDoTipo, tipoKind, tipoDescricao);
+            
+            // Processar inputFields (para INPUT_OBJECT)
+            if (tipoNode.has("inputFields") && !tipoNode.get("inputFields").isNull()) {
+                JsonNode inputFields = tipoNode.get("inputFields");
+                logger.info("Processando {} inputFields para {}", inputFields.size(), nomeDoTipo);
+                
+                for (JsonNode campo : inputFields) {
+                    String nomeCampo = campo.path("name").asText();
+                    String descricaoCampo = campo.path("description").asText("");
+                    String valorPadrao = campo.path("defaultValue").asText("");
+                    
+                    JsonNode tipoCampoNode = campo.path("type");
+                    String tipoCampo = obterTipoCompleto(tipoCampoNode);
+                    
+                    campos.add(nomeCampo);
+                    logger.info("  ✓ Campo: {} (tipo: {}) - {} [padrão: {}]", 
+                        nomeCampo, tipoCampo, descricaoCampo, valorPadrao);
+                }
+            }
+            
+            // Processar fields (para OBJECT)
+            if (tipoNode.has("fields") && !tipoNode.get("fields").isNull()) {
+                JsonNode fields = tipoNode.get("fields");
+                logger.info("Processando {} fields para {}", fields.size(), nomeDoTipo);
+                
+                for (JsonNode campo : fields) {
+                    String nomeCampo = campo.path("name").asText();
+                    String descricaoCampo = campo.path("description").asText("");
+                    
+                    JsonNode tipoCampoNode = campo.path("type");
+                    String tipoCampo = obterTipoCompleto(tipoCampoNode);
+                    
+                    campos.add(nomeCampo);
+                    logger.info("  ✓ Campo: {} (tipo: {}) - {}", nomeCampo, tipoCampo, descricaoCampo);
+                }
+            }
+            
+            logger.info("Introspecção concluída. Encontrados {} campos no tipo {} (kind: {})", 
+                campos.size(), nomeDoTipo, tipoKind);
+            return campos;
+            
+        } catch (Exception e) {
+            logger.error("Erro na introspecção do tipo {}: {}", nomeDoTipo, e.getMessage(), e);
+            return new ArrayList<>();
+        }
+    }
+    
+    /**
+     * Extrai o tipo completo de um nó de tipo GraphQL, incluindo tipos aninhados
+     */
+    private String obterTipoCompleto(JsonNode tipoNode) {
+        if (tipoNode.isNull() || tipoNode.isMissingNode()) {
+            return "Unknown";
+        }
+        
+        String nome = tipoNode.path("name").asText();
+        String kind = tipoNode.path("kind").asText();
+        
+        if (!nome.isEmpty()) {
+            return nome + " (" + kind + ")";
+        }
+        
+        // Se não tem nome, pode ser um tipo wrapper (NON_NULL, LIST)
+        JsonNode ofType = tipoNode.path("ofType");
+        if (!ofType.isNull() && !ofType.isMissingNode()) {
+            String tipoInterno = obterTipoCompleto(ofType);
+            if ("NON_NULL".equals(kind)) {
+                return tipoInterno + "!";
+            } else if ("LIST".equals(kind)) {
+                return "[" + tipoInterno + "]";
+            }
+            return tipoInterno + " (" + kind + ")";
+        }
+        
+        return kind;
+    }
+
+    /**
+     * Busca fretes da API GraphQL
+     * @param dataInicio Data de início para filtrar os fretes
+     * @param modoTeste Se está em modo de teste
+     * @return Lista de fretes encontradas
+     */
+    public List<EntidadeDinamica> buscarFretes(String dataInicio, boolean modoTeste) {
+        logger.info("Iniciando busca de fretes via GraphQL a partir de: {} (Modo Teste: {})", dataInicio, modoTeste);
+        
+        try {
+            // Formatação da data para o campo serviceAt
+            String intervaloDatas;
+            if (modoTeste || "--modo-teste".equals(dataInicio)) {
+                // Em modo teste, usar data atual
+                intervaloDatas = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
+            } else {
+                // Converter string para LocalDateTime e formatar
+                LocalDateTime dataReferencia = LocalDateTime.parse(dataInicio);
+                intervaloDatas = formatarIntervaloDeDatas(dataReferencia);
+            }
+            
+            // Query GraphQL correta para fretes (baseada na análise dos logs - única que funciona)
+            String query = "query BuscarFretes($params: FreightInput!) { freight(params: $params) { edges { node { id status createdAt serviceDate total } } pageInfo { hasNextPage endCursor } } }";
+            Map<String, Object> variaveis = Map.of("params", Map.of("serviceAt", intervaloDatas));
+            
+            logger.info("Executando query GraphQL para fretes com serviceAt = {}", intervaloDatas);
+            List<EntidadeDinamica> resultado = executarQueryGraphQL(query, "freight", variaveis);
+            
+            logger.info("Query GraphQL concluída para fretes. Total encontrado: {}", resultado.size());
+            return resultado;
+            
+        } catch (Exception e) {
+            logger.error("Erro ao buscar fretes: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
     }
 
     /**
@@ -83,7 +312,194 @@ public class ClienteApiGraphQL {
         LocalDateTime ontemMesmaHora = agora.minusHours(24);
         String dataInicio = ontemMesmaHora.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         
-        return buscarFretes(dataInicio);
+        return buscarFretes(dataInicio, false);
+    }
+
+    /**
+     * Executa uma query GraphQL de forma genérica e robusta
+     * @param query A query GraphQL a ser executada
+     * @param nomeEntidade Nome da entidade para logs e tratamento de erros
+     * @return Lista de entidades encontradas
+     */
+    private List<EntidadeDinamica> executarQueryGraphQL(String query, String nomeEntidade, Map<String, Object> variaveis) {
+        logger.info("Executando query GraphQL para {}", nomeEntidade);
+        List<EntidadeDinamica> entidades = new ArrayList<>();
+
+        // Validação básica de configuração
+        if (urlBase == null || urlBase.isBlank() || token == null || token.isBlank()) {
+            logger.error("Configurações inválidas para chamada GraphQL (urlBase/token)");
+            return entidades;
+        }
+
+        try {
+            // Pausa obrigatória de 2 segundos para respeitar o rate limit
+            logger.debug("Aplicando rate limit de 2 segundos antes da requisição GraphQL");
+            Thread.sleep(2000);
+
+            // Construir o corpo da requisição GraphQL usando ObjectMapper
+            ObjectNode corpoJson = mapeadorJson.createObjectNode();
+            corpoJson.put("query", query);
+            if (variaveis != null && !variaveis.isEmpty()) {
+                corpoJson.set("variables", mapeadorJson.valueToTree(variaveis));
+            }
+            String corpoRequisicao = mapeadorJson.writeValueAsString(corpoJson);
+
+            // Construir a requisição HTTP
+            String url = urlBase + endpointGraphQL;
+            HttpRequest requisicao = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("Authorization", "Bearer " + token)
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(corpoRequisicao))
+                    .timeout(Duration.ofSeconds(30))
+                    .build();
+
+            logger.debug("Enviando requisição GraphQL para: {}", url);
+
+            // Executar a requisição
+            HttpResponse<String> resposta = clienteHttp.send(requisicao, HttpResponse.BodyHandlers.ofString());
+            int statusCode = resposta.statusCode();
+
+            logger.debug("Resposta recebida com status: {}", statusCode);
+
+            // Verificar se a resposta foi bem-sucedida
+            if (statusCode != 200) {
+                logger.error("Erro HTTP {} ao buscar {}: {}", statusCode, nomeEntidade, resposta.body());
+                return entidades; // Retorna lista vazia em caso de erro
+            }
+
+            // Processar a resposta JSON
+            JsonNode respostaJson = mapeadorJson.readTree(resposta.body());
+
+            // Verificar se há erros na resposta GraphQL
+            if (respostaJson.has("errors")) {
+                JsonNode erros = respostaJson.get("errors");
+                logger.error("Erros GraphQL ao buscar {}: {}", nomeEntidade, erros.toString());
+                return entidades; // Retorna lista vazia em caso de erro
+            }
+
+            // Verificar se há dados na resposta
+            if (!respostaJson.has("data")) {
+                logger.warn("Resposta GraphQL sem campo 'data' para {}", nomeEntidade);
+                return entidades;
+            }
+
+            JsonNode dados = respostaJson.get("data");
+
+            // Tentar encontrar os dados da entidade (pode ter nomes diferentes)
+            JsonNode dadosEntidade = null;
+            String[] possiveisNomes = {nomeEntidade, nomeEntidade + "s", 
+                                     nomeEntidade.toLowerCase(), nomeEntidade.toLowerCase() + "s"};
+            
+            for (String nome : possiveisNomes) {
+                if (dados.has(nome)) {
+                    dadosEntidade = dados.get(nome);
+                    break;
+                }
+            }
+
+            if (dadosEntidade == null) {
+                logger.warn("Campo '{}' não encontrado na resposta GraphQL. Campos disponíveis: {}", 
+                           nomeEntidade, dados.fieldNames());
+                return entidades;
+            }
+
+            // Verificar se a resposta segue o padrão paginado com edges/node
+            if (dadosEntidade.has("edges")) {
+                logger.debug("Processando resposta paginada com edges/node para {}", nomeEntidade);
+                JsonNode edges = dadosEntidade.get("edges");
+                
+                if (edges.isArray()) {
+                    for (JsonNode edge : edges) {
+                        if (edge.has("node")) {
+                            JsonNode node = edge.get("node");
+                            try {
+                                // Cria uma nova entidade dinâmica
+                                EntidadeDinamica entidade = new EntidadeDinamica();
+                                entidade.setTipoEntidade(nomeEntidade);
+
+                                // Processa cada campo do node
+                                node.fields().forEachRemaining(campo -> {
+                                    String nomeCampo = campo.getKey();
+                                    JsonNode valorCampo = campo.getValue();
+
+                                    // Converte o valor do campo para o tipo apropriado
+                                    Object valor;
+                                    if (valorCampo.isTextual()) {
+                                        valor = valorCampo.asText();
+                                    } else if (valorCampo.isNumber()) {
+                                        valor = valorCampo.isInt() ? valorCampo.asInt() : valorCampo.asDouble();
+                                    } else if (valorCampo.isBoolean()) {
+                                        valor = valorCampo.asBoolean();
+                                    } else if (valorCampo.isObject() || valorCampo.isArray()) {
+                                        // Para objetos aninhados, converte para string JSON
+                                        valor = valorCampo.toString();
+                                    } else {
+                                        valor = valorCampo.toString();
+                                    }
+
+                                    entidade.adicionarCampo(nomeCampo, valor);
+                                });
+
+                                entidades.add(entidade);
+                            } catch (Exception e) {
+                                logger.warn("Erro ao processar node de {}: {}", nomeEntidade, e.getMessage());
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Processar resposta no formato antigo (array direto) para compatibilidade
+                logger.debug("Processando resposta no formato antigo (array direto) para {}", nomeEntidade);
+                
+                if (dadosEntidade.isArray()) {
+                    for (JsonNode item : dadosEntidade) {
+                        try {
+                            // Cria uma nova entidade dinâmica
+                            EntidadeDinamica entidade = new EntidadeDinamica();
+                            entidade.setTipoEntidade(nomeEntidade);
+
+                            // Processa cada campo do JSON
+                            item.fields().forEachRemaining(campo -> {
+                                String nomeCampo = campo.getKey();
+                                JsonNode valorCampo = campo.getValue();
+
+                                // Converte o valor do campo para o tipo apropriado
+                                Object valor;
+                                if (valorCampo.isTextual()) {
+                                    valor = valorCampo.asText();
+                                } else if (valorCampo.isNumber()) {
+                                    valor = valorCampo.isInt() ? valorCampo.asInt() : valorCampo.asDouble();
+                                } else if (valorCampo.isBoolean()) {
+                                    valor = valorCampo.asBoolean();
+                                } else if (valorCampo.isObject() || valorCampo.isArray()) {
+                                    // Para objetos aninhados (como cliente, endereco), converte para string JSON
+                                    valor = valorCampo.toString();
+                                } else {
+                                    valor = valorCampo.toString();
+                                }
+
+                                entidade.adicionarCampo(nomeCampo, valor);
+                            });
+
+                            entidades.add(entidade);
+                        } catch (Exception e) {
+                            logger.warn("Erro ao processar item de {}: {}", nomeEntidade, e.getMessage());
+                        }
+                    }
+                }
+            }
+
+            logger.info("Query GraphQL concluída para {}. Total encontrado: {}", nomeEntidade, entidades.size());
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logger.error("Thread interrompida durante execução da query GraphQL para {}", nomeEntidade);
+        } catch (Exception e) {
+            logger.error("Erro durante execução da query GraphQL para {}: {}", nomeEntidade, e.getMessage(), e);
+        }
+
+        return entidades;
     }
 
     /**
@@ -95,16 +511,19 @@ public class ClienteApiGraphQL {
         
         try {
             // Query simples para testar a conectividade
-            String queryTeste = "{\n" +
-                    "  \"query\": \"{ __schema { queryType { name } } }\"\n" +
-                    "}";
+            String queryTeste = "{ __schema { queryType { name } } }";
+            
+            // Construir o corpo da requisição GraphQL usando ObjectMapper
+            ObjectNode corpoJson = mapeadorJson.createObjectNode();
+            corpoJson.put("query", queryTeste);
+            String corpoRequisicao = mapeadorJson.writeValueAsString(corpoJson);
             
             String url = urlBase + endpointGraphQL;
             HttpRequest requisicao = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header("Authorization", "Bearer " + token)
                     .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(queryTeste))
+                    .POST(HttpRequest.BodyPublishers.ofString(corpoRequisicao))
                     .build();
             
             HttpResponse<String> resposta = clienteHttp.send(requisicao, HttpResponse.BodyHandlers.ofString());
