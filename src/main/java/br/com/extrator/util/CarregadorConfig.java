@@ -44,30 +44,31 @@ public class CarregadorConfig {
     /**
      * Valida a conexão com o banco de dados
      * Testa se é possível conectar com as credenciais configuradas
+     * 
      * @throws RuntimeException Se não conseguir conectar ao banco
      */
     public static void validarConexaoBancoDados() {
         logger.info("Validando conexão com o banco de dados...");
-        
+
         String url = obterUrlBancoDados();
         String usuario = obterUsuarioBancoDados();
         String senha = obterSenhaBancoDados();
-        
+
         if (url == null || url.trim().isEmpty()) {
             logger.error("URL do banco de dados não configurada");
             throw new RuntimeException("Configuração inválida: URL do banco de dados não pode estar vazia");
         }
-        
+
         if (usuario == null || usuario.trim().isEmpty()) {
             logger.error("Usuário do banco de dados não configurado");
             throw new RuntimeException("Configuração inválida: Usuário do banco de dados não pode estar vazio");
         }
-        
+
         if (senha == null || senha.trim().isEmpty()) {
             logger.error("Senha do banco de dados não configurada");
             throw new RuntimeException("Configuração inválida: Senha do banco de dados não pode estar vazia");
         }
-        
+
         try (Connection conexao = DriverManager.getConnection(url, usuario, senha)) {
             // Testa se a conexão é válida
             if (conexao.isValid(5)) { // timeout de 5 segundos
@@ -78,7 +79,7 @@ public class CarregadorConfig {
             }
         } catch (SQLException e) {
             logger.error("Erro ao conectar com o banco de dados: {}", e.getMessage());
-            
+
             // Mensagens de erro mais específicas baseadas no código de erro
             String mensagemErro = "Erro de conexão com banco de dados: ";
             if (e.getMessage().contains("Login failed")) {
@@ -90,74 +91,44 @@ public class CarregadorConfig {
             } else {
                 mensagemErro += e.getMessage();
             }
-            
+
             throw new RuntimeException(mensagemErro, e);
         }
     }
 
     /**
-     * Verifica se as configurações ainda estão com valores padrão
-     * Lança exceção se encontrar valores que precisam ser personalizados
+     * Obtém uma configuração obrigatória exclusivamente de variáveis de ambiente.
+     * Implementa lógica de fail-fast para dados sensíveis.
+     * 
+     * @param nomeVariavelAmbiente Nome da variável de ambiente obrigatória
+     * @return Valor da variável de ambiente
+     * @throws IllegalStateException Se a variável de ambiente não existir ou estiver vazia
      */
-    public static void verificarConfiguracoesPersonalizadas() {
-        // Garante que as propriedades foram carregadas
-        if (propriedades == null) {
-            carregarPropriedades();
+    private static String obterConfiguracaoObrigatoria(String nomeVariavelAmbiente) {
+        String valor = System.getenv(nomeVariavelAmbiente);
+        
+        if (valor == null || valor.trim().isEmpty()) {
+            String mensagem = String.format(
+                "Variável de ambiente obrigatória '%s' não encontrada ou está vazia. " +
+                "Configure esta variável de ambiente antes de executar a aplicação.",
+                nomeVariavelAmbiente
+            );
+            logger.error(mensagem);
+            throw new IllegalStateException(mensagem);
         }
-
-        // Verifica configurações da API REST
-        String tokenRest = propriedades.getProperty("api.rest.token");
-        if (tokenRest != null && tokenRest.contains("[seu_bearer_token]")) {
-            logger.error("Configuração da API REST não personalizada: api.rest.token");
-            throw new RuntimeException(
-                    "Configuração não personalizada: Substitua [seu_bearer_token] no arquivo config.properties");
-        }
-
-        // Verifica configurações da API GraphQL
-        String tokenGraphQL = propriedades.getProperty("api.graphql.token");
-        if (tokenGraphQL != null && tokenGraphQL.contains("[seu_bearer_token]")) {
-            logger.error("Configuração da API GraphQL não personalizada: api.graphql.token");
-            throw new RuntimeException(
-                    "Configuração não personalizada: Substitua [seu_bearer_token] no arquivo config.properties");
-        }
-
-        // Verifica configurações da API Data Export
-        String tokenDataExport = propriedades.getProperty("api.dataexport.token");
-        if (tokenDataExport != null && tokenDataExport.contains("[seu_bearer_token]")) {
-            logger.error("Configuração da API Data Export não personalizada: api.dataexport.token");
-            throw new RuntimeException(
-                    "Configuração não personalizada: Substitua [seu_bearer_token] no arquivo config.properties");
-        }
-
-        // Verifica configurações do banco de dados
-        String dbUrl = propriedades.getProperty("db.url");
-        if (dbUrl != null && (dbUrl.contains("[servidor]") || dbUrl.contains("[nome_banco]"))) {
-            logger.error("Configuração do banco de dados não personalizada: db.url");
-            throw new RuntimeException(
-                    "Configuração não personalizada: Substitua [servidor] e [nome_banco] no arquivo config.properties");
-        }
-
-        String dbUser = propriedades.getProperty("db.user");
-        if (dbUser != null && dbUser.contains("[usuario_banco]")) {
-            logger.error("Configuração do banco de dados não personalizada: db.user");
-            throw new RuntimeException(
-                    "Configuração não personalizada: Substitua [usuario_banco] no arquivo config.properties");
-        }
-
-        String dbPassword = propriedades.getProperty("db.password");
-        if (dbPassword != null && dbPassword.contains("[senha_banco]")) {
-            logger.error("Configuração do banco de dados não personalizada: db.password");
-            throw new RuntimeException(
-                    "Configuração não personalizada: Substitua [senha_banco] no arquivo config.properties");
-        }
+        
+        logger.debug("Configuração sensível '{}' obtida da variável de ambiente", nomeVariavelAmbiente);
+        return valor;
     }
 
     /**
-     * Obtém uma configuração priorizando variáveis de ambiente sobre o arquivo config.properties
+     * Obtém uma configuração priorizando variáveis de ambiente sobre o arquivo
+     * config.properties. Para configurações não-sensíveis.
      * 
      * @param nomeVariavelAmbiente Nome da variável de ambiente
-     * @param nomeChaveProperties Nome da chave no arquivo config.properties
-     * @return Valor da configuração (variável de ambiente ou fallback para properties)
+     * @param nomeChaveProperties  Nome da chave no arquivo config.properties
+     * @return Valor da configuração (variável de ambiente ou fallback para
+     *         properties)
      */
     private static String obterConfiguracao(String nomeVariavelAmbiente, String nomeChaveProperties) {
         // Tenta primeiro obter da variável de ambiente
@@ -166,13 +137,14 @@ public class CarregadorConfig {
             logger.debug("Configuração '{}' obtida da variável de ambiente", nomeVariavelAmbiente);
             return valorAmbiente;
         }
-        
+
         // Fallback para o arquivo config.properties
         Properties props = carregarPropriedades();
         String valorProperties = props.getProperty(nomeChaveProperties);
         if (valorProperties == null) {
-            logger.warn("Configuração '{}' não encontrada nem em variável de ambiente '{}' nem no arquivo de configuração '{}'", 
-                       nomeChaveProperties, nomeVariavelAmbiente, nomeChaveProperties);
+            logger.warn(
+                    "Configuração '{}' não encontrada nem em variável de ambiente '{}' nem no arquivo de configuração '{}'",
+                    nomeChaveProperties, nomeVariavelAmbiente, nomeChaveProperties);
         } else {
             logger.debug("Configuração '{}' obtida do arquivo config.properties", nomeChaveProperties);
         }
@@ -207,18 +179,20 @@ public class CarregadorConfig {
      * Obtém o token de autenticação da API REST
      * 
      * @return Token de autenticação da API REST
+     * @throws IllegalStateException Se a variável de ambiente API_REST_TOKEN não estiver configurada
      */
     public static String obterTokenApiRest() {
-        return obterConfiguracao("API_REST_TOKEN", "api.rest.token");
+        return obterConfiguracaoObrigatoria("API_REST_TOKEN");
     }
 
     /**
      * Obtém o token de autenticação da API GraphQL
      * 
      * @return Token de autenticação da API GraphQL
+     * @throws IllegalStateException Se a variável de ambiente API_GRAPHQL_TOKEN não estiver configurada
      */
     public static String obterTokenApiGraphQL() {
-        return obterConfiguracao("API_GRAPHQL_TOKEN", "api.graphql.token");
+        return obterConfiguracaoObrigatoria("API_GRAPHQL_TOKEN");
     }
 
     /**
@@ -234,65 +208,102 @@ public class CarregadorConfig {
      * Obtém o token da API Data Export.
      * 
      * @return Token da API Data Export
+     * @throws IllegalStateException Se a variável de ambiente API_DATAEXPORT_TOKEN não estiver configurada
      */
     public static String obterTokenApiDataExport() {
-        return obterConfiguracao("API_DATAEXPORT_TOKEN", "api.dataexport.token");
+        return obterConfiguracaoObrigatoria("API_DATAEXPORT_TOKEN");
     }
 
     /**
      * Obtém a URL de conexão com o banco de dados
      * 
      * @return URL de conexão com o banco
+     * @throws IllegalStateException Se a variável de ambiente DB_URL não estiver configurada
      */
     public static String obterUrlBancoDados() {
-        return obterConfiguracao("DB_URL", "db.url");
+        return obterConfiguracaoObrigatoria("DB_URL");
     }
 
     /**
      * Obtém o usuário do banco de dados
      * 
      * @return Usuário do banco
+     * @throws IllegalStateException Se a variável de ambiente DB_USER não estiver configurada
      */
     public static String obterUsuarioBancoDados() {
-        return obterConfiguracao("DB_USER", "db.user");
+        return obterConfiguracaoObrigatoria("DB_USER");
     }
 
     /**
      * Obtém a senha do banco de dados
      * 
      * @return Senha do banco
+     * @throws IllegalStateException Se a variável de ambiente DB_PASSWORD não estiver configurada
      */
     public static String obterSenhaBancoDados() {
-        return obterConfiguracao("DB_PASSWORD", "db.password");
+        return obterConfiguracaoObrigatoria("DB_PASSWORD");
     }
 
     /**
-     * Obtém o número máximo de tentativas para a lógica de retry da API REST.
-     * Retorna 4 como valor padrão se a propriedade não for encontrada.
+     * Obtém o tempo de espaçamento padrão (throttling) entre requisições em
+     * milissegundos.
+     * 
+     * @return O tempo de throttling em ms.
+     */
+    public static long obterThrottlingPadrao() {
+        String valor = obterConfiguracao("API_THROTTLING_PADRAO_MS", "api.throttling.padrao_ms");
+        try {
+            return Long.parseLong(valor);
+        } catch (NumberFormatException | NullPointerException e) {
+            logger.warn(
+                    "Propriedade 'api.throttling.padrao_ms' não encontrada ou inválida. Usando valor padrão: 2000ms");
+            return 2000L; // Valor padrão de 2 segundos
+        }
+    }
+
+    /**
+     * Obtém o número máximo de tentativas para a lógica de retry.
+     * 
      * @return O número máximo de tentativas.
      */
     public static int obterMaxTentativasRetry() {
-        String valor = obterPropriedade("api.rest.retry.max_tentativas");
+        String valor = obterConfiguracao("API_RETRY_MAX_TENTATIVAS", "api.retry.max_tentativas");
         try {
             return Integer.parseInt(valor);
         } catch (NumberFormatException | NullPointerException e) {
-            logger.warn("Propriedade 'api.rest.retry.max_tentativas' não encontrada ou inválida. Usando valor padrão: 4");
-            return 4; // Valor padrão
+            logger.warn("Propriedade 'api.retry.max_tentativas' não encontrada ou inválida. Usando valor padrão: 5");
+            return 5; // Valor padrão
         }
     }
 
     /**
      * Obtém o tempo de espera base (em milissegundos) para a lógica de retry.
-     * Retorna 2000 como valor padrão se a propriedade não for encontrada.
+     * 
      * @return O tempo de delay base em ms.
      */
     public static long obterDelayBaseRetry() {
-        String valor = obterPropriedade("api.rest.retry.delay_base_ms");
+        String valor = obterConfiguracao("API_RETRY_DELAY_BASE_MS", "api.retry.delay_base_ms");
         try {
             return Long.parseLong(valor);
         } catch (NumberFormatException | NullPointerException e) {
-            logger.warn("Propriedade 'api.rest.retry.delay_base_ms' não encontrada ou inválida. Usando valor padrão: 2000ms");
-            return 2000L; // Valor padrão
+            logger.warn(
+                    "Propriedade 'api.retry.delay_base_ms' não encontrada ou inválida. Usando valor padrão: 2000ms");
+            return 2000L; // Valor padrão de 2 segundos
+        }
+    }
+
+    /**
+     * Obtém o multiplicador para a estratégia de backoff exponencial.
+     * 
+     * @return O multiplicador.
+     */
+    public static double obterMultiplicadorRetry() {
+        String valor = obterConfiguracao("API_RETRY_MULTIPLICADOR", "api.retry.multiplicador");
+        try {
+            return Double.parseDouble(valor);
+        } catch (NumberFormatException | NullPointerException e) {
+            logger.warn("Propriedade 'api.retry.multiplicador' não encontrada ou inválida. Usando valor padrão: 2.0");
+            return 2.0; // Valor padrão
         }
     }
 }

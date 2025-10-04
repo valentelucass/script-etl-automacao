@@ -1,28 +1,9 @@
 {
-  "registrosPorEntidade" : {
-    "fretes" : 20,
-    "ocorrencias" : 1
-  },
+  "registrosPorEntidade" : { },
   "requisicoesHttpPorApi" : { },
   "data" : "2025-10-02",
-  "duracaoOperacoesMilis" : {
-    "extracao_coletas" : 2961,
-    "extracao_manifestos" : 142,
-    "extracao_localizacao_carga" : 192,
-    "extracao_ocorrencias_rest" : 4819,
-    "extracao_faturas_pagar" : 2317,
-    "extracao_faturas_receber" : 7807,
-    "extracao_fretes_graphql" : 2528
-  },
+  "duracaoOperacoesMilis" : { },
   "falhasPorApi" : { },
-  "inicioColeta" : "2025-10-02T16:44:29.259239100",
-  "sucessosPorApi" : {
-    "API_REST_Faturas_Pagar" : 1,
-    "API_REST_Ocorrencias" : 1,
-    "API_GraphQL_Fretes" : 1,
-    "API_GraphQL_Coletas" : 1,
-    "API_DataExport_Manifestos" : 2,
-    "API_DataExport_Localizacao" : 2,
-    "API_REST_Faturas_Receber" : 1
-  }
+  "inicioColeta" : "2025-10-02T23:17:22.442210",
+  "sucessosPorApi" : { }
 }

@@ -28,8 +28,8 @@ public class ServicoBancoDadosDinamico {
      */
     public ServicoBancoDadosDinamico() {
         this.urlConexao = CarregadorConfig.obterUrlBancoDados();
-        this.usuario = CarregadorConfig.obterPropriedade("db.user");
-        this.senha = CarregadorConfig.obterPropriedade("db.password");
+        this.usuario = CarregadorConfig.obterUsuarioBancoDados();
+        this.senha = CarregadorConfig.obterSenhaBancoDados();
         this.geradorTabelas = new GeradorTabelasDinamico();
     }
 

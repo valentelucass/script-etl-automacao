@@ -87,14 +87,17 @@ public class ClienteApiRest {
     /**
      * Busca entidades de um endpoint específico da API REST ESL Cloud com paginação
      * 
-     * @param endpoint   Endpoint específico (ex: "/api/accounting/credit/billings")
-     * @param dataInicio Data de início para busca (formato ISO:
-     *                   yyyy-MM-dd'T'HH:mm:ss)
+     * @param endpoint     Endpoint específico (ex:
+     *                     "/api/accounting/credit/billings")
+     * @param dataInicio   Data de início para busca (formato ISO:
+     *                     yyyy-MM-dd'T'HH:mm:ss)
      * @param tipoEntidade Tipo da entidade para logs
-     * @param modoTeste  Se verdadeiro, limita a busca a 5 registros e desativa paginação
+     * @param modoTeste    Se verdadeiro, limita a busca a 5 registros e desativa
+     *                     paginação
      * @return Lista de entidades encontradas
      */
-    public List<EntidadeDinamica> buscarEntidades(String endpoint, String dataInicio, String tipoEntidade, boolean modoTeste) {
+    public List<EntidadeDinamica> buscarEntidades(String endpoint, String dataInicio, String tipoEntidade,
+            boolean modoTeste) {
         logger.info("Iniciando busca de {} a partir de: {} (Modo Teste: {})", endpoint, dataInicio, modoTeste);
         List<EntidadeDinamica> entidades = new ArrayList<>();
 
@@ -129,69 +132,38 @@ public class ClienteApiRest {
                 logger.debug("Fazendo requisição para: {}", url);
 
                 // Pausa obrigatória de 2 segundos ANTES de cada requisição
-                try {
-                    Thread.sleep(2000);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    logger.warn("Interrupção durante pausa pré-requisição", e);
-                }
 
-                // Cria a requisição HTTP
-                HttpRequest requisicao = HttpRequest.newBuilder()
-                        .uri(URI.create(url))
+                long inicioMs = System.currentTimeMillis();
+
+                // Cria a requisição HTTP como um Supplier para ser passada ao utilitário de
+                // retry
+                final String finalUrl = url; // Variável precisa ser final ou efetivamente final para ser usada na
+                                             // lambda
+                java.util.function.Supplier<HttpRequest> fornecedorRequisicao = () -> HttpRequest.newBuilder()
+                        .uri(URI.create(finalUrl))
                         .header("Authorization", "Bearer " + token)
                         .header("Accept", "application/json")
                         .GET()
                         .timeout(Duration.ofSeconds(30))
                         .build();
 
-                // Executa a requisição com retry simplificado para HTTP 429
-                HttpResponse<String> resposta = null;
-                final int MAX_TENTATIVAS = CarregadorConfig.obterMaxTentativasRetry();
-                long inicioMs = System.currentTimeMillis();
-                
-                for (int tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa++) {
-                    HttpResponse<String> respostaAtual = clienteHttp.send(requisicao, HttpResponse.BodyHandlers.ofString());
-                    
-                    // Se a resposta for bem-sucedida, sai do loop
-                    if (respostaAtual.statusCode() == 200) {
-                        resposta = respostaAtual;
-                        if (tentativa > 1) {
-                            logger.info("✅ Requisição bem-sucedida na tentativa {}/{} para {}", 
-                                    tentativa, MAX_TENTATIVAS, tipoEntidade);
-                        }
-                        break;
-                    }
-                    
-                    // Se for erro 429 (Too Many Requests), implementa retry com intervalo fixo
-                    if (respostaAtual.statusCode() == 429) {
-                        if (tentativa < MAX_TENTATIVAS) {
-                            logger.warn("⚠️  HTTP 429 (Too Many Requests) na tentativa {}/{}. " +
-                                    "Aguardando {} ms antes da próxima tentativa... Body: {}", 
-                                    tentativa, MAX_TENTATIVAS, CarregadorConfig.obterDelayBaseRetry(), respostaAtual.body());
-                            
-                            // Intervalo fixo de 2 segundos (conforme documentação da API)
-                            Thread.sleep(CarregadorConfig.obterDelayBaseRetry());
-                            continue;
-                        } else {
-                            // Última tentativa falhou com 429
-                            logger.error("❌ Todas as {} tentativas falharam com HTTP 429. " +
-                                    "Rate limit persistente para {}. Body: {}", 
-                                    MAX_TENTATIVAS, tipoEntidade, respostaAtual.body());
-                            throw new RuntimeException(String.format(
-                                    "Rate limit excedido após %d tentativas para %s. " +
-                                    "Verifique se há outras instâncias do aplicativo rodando ou " +
-                                    "se o rate limit da API foi alterado.", 
-                                    MAX_TENTATIVAS, tipoEntidade));
-                        }
-                    }
-                    
-                    // Para qualquer outro erro (401, 404, 500, etc.), sai do loop imediatamente
-                    resposta = respostaAtual;
-                    break;
-                }
-                
+                // Executa a requisição usando o novo utilitário com throttling e backoff
+                // exponencial
+                HttpResponse<String> resposta = br.com.extrator.util.UtilitarioHttpRetry.executarComRetry(
+                        this.clienteHttp,
+                        fornecedorRequisicao,
+                        tipoEntidade);
+
                 long duracaoMs = System.currentTimeMillis() - inicioMs;
+
+                // A verificação de erro para resposta nula foi corrigida para não usar a
+                // variável inexistente.
+                if (resposta == null) {
+                    logger.error(
+                            "Erro irrecuperável: a resposta da requisição é nula para {} após todas as tentativas.",
+                            tipoEntidade);
+                    throw new RuntimeException("Falha na requisição: resposta é null após todas as tentativas.");
+                }
 
                 // Verifica se a resposta foi bem-sucedida (para outros erros que não são 429)
                 if (resposta != null && resposta.statusCode() != 200) {
@@ -199,9 +171,6 @@ public class ClienteApiRest {
                     logger.error("Erro ao buscar {}. Código de status: {}, ({} ms) Body: {}", tipoEntidade,
                             resposta.statusCode(), duracaoMs, resposta.body());
                     throw new RuntimeException(mensagemErro);
-                } else if (resposta == null) {
-                    logger.error("Erro: resposta é null após {} tentativas para {}", MAX_TENTATIVAS, tipoEntidade);
-                    throw new RuntimeException("Falha na requisição: resposta é null");
                 }
 
                 // Processa a resposta JSON
@@ -224,7 +193,7 @@ public class ClienteApiRest {
                             EntidadeDinamica entidade = new EntidadeDinamica(tipoEntidade);
 
                             // Processa cada campo do JSON
-                            entidadeJson.fields().forEachRemaining(campo -> {
+                            entidadeJson.properties().forEach(campo -> {
                                 String nomeCampo = campo.getKey();
                                 JsonNode valorCampo = campo.getValue();
 
@@ -256,7 +225,7 @@ public class ClienteApiRest {
                 if (entidadesNestaPagina == 0) {
                     proximoId = null; // Força a paragem do loop se não vierem mais dados
                 }
-                
+
                 // Se estiver em modo de teste, força a parada após a primeira página
                 if (modoTeste) {
                     logger.info("Modo de teste ativo: parando após primeira página");
@@ -365,12 +334,14 @@ public class ClienteApiRest {
                         // Continua testando outros endpoints
                         break;
                     case 405:
-                        logger.warn("⚠️  Método não permitido: {} (Endpoint existe, mas GET não é suportado)", endpoint);
+                        logger.warn("⚠️  Método não permitido: {} (Endpoint existe, mas GET não é suportado)",
+                                endpoint);
                         // Ainda assim, significa que a API está acessível
                         logger.info("✅ API acessível (endpoint existe): {}", endpoint);
                         return true;
                     default:
-                        logger.warn("⚠️  Resposta inesperada do endpoint {}: Status={}", endpoint, resposta.statusCode());
+                        logger.warn("⚠️  Resposta inesperada do endpoint {}: Status={}", endpoint,
+                                resposta.statusCode());
                         break;
                 }
 
@@ -452,6 +423,5 @@ public class ClienteApiRest {
                         statusCode, endpoint, tipoEntidade);
         }
     }
-
 
 }

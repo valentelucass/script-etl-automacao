@@ -7,6 +7,7 @@ Dashboard React para monitoramento em tempo real das extrações de dados ESL Cl
 ### 1. Iniciar Backend
 Na pasta raiz do projeto (`script-automacao`):
 ```bash
+mvn package
 java -jar target/extrator-esl-cloud-1.0-SNAPSHOT-dashboard.jar
 ```
 

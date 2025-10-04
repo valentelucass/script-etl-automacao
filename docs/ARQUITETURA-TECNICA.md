@@ -3,12 +3,14 @@
 Este documento descreve a arquitetura e o comportamento do sistema em nível operacional e de protocolo, priorizando precisão técnica para consumo por pessoas e por IA.
 
 ### 1. Stack e Dependências
-- **Linguagem**: Java 11+
+- **Linguagem**: Java 17 (LTS)
+- **Framework**: Spring Boot 3.5.6
 - **Build**: Maven
 - **HTTP**: java.net.http.HttpClient (blocking)
-- **JSON**: Jackson (ObjectMapper)
+- **JSON**: Jackson (ObjectMapper) - com correções de depreciação
 - **Logs**: SLF4J + Logback
-- **Persistência**: JDBC (SQL Server) via serviços internos
+- **Persistência**: JDBC (SQL Server) via SQL Server JDBC Driver 13.2.0.jre11
+- **Frontend**: React 18+ (dashboard de monitoramento)
 
 ### 2. Módulos e Responsabilidades
 - `br.com.extrator.api.ClienteApiRest`
@@ -155,10 +157,17 @@ Retentativas
 - Novos campos: conversores já tratam objetos/arrays arbitrários
 - Novas APIs: criar novo cliente sob `br.com.extrator.api` e reutilizar utilitários
 
-### 14. Execução
+### 14. Execução e Scripts de Automação
 - Build: `mvn clean package -DskipTests`
-- Run (Dashboard): `java -jar target/extrator-esl-cloud-1.0-SNAPSHOT-dashboard.jar`
-- Run (Script): `java -jar target/extrator-script.jar [opcional:dataInicio]`
+- **Scripts de Automação (.bat)**:
+  - `01_iniciar_dashboard_completo.bat`: Inicia backend + frontend
+  - `02_extrair_dados_24h.bat`: Extração das últimas 24 horas
+  - `03_extrair_dados_por_data.bat`: Extração por data específica
+  - `04_testar_api_24h.bat`: Teste das APIs (24h)
+  - `05_testar_api_por_data.bat`: Teste das APIs (data específica)
+- **Execução Manual**:
+  - Dashboard: `java -jar target/extrator-esl-cloud-1.0-SNAPSHOT-dashboard.jar`
+  - Script: `java -jar target/extrator-script.jar [opcional:dataInicio]`
 
 ### 15. Exemplos de Entrada/Saída
 REST (resumo):
@@ -191,5 +200,37 @@ Data Export (download):
 - GraphQL `errors`? revisar query e permissões
 - Data Export travado? verificar `MAX_TENTATIVAS_STATUS` e intervalos
 - Banco OK? conferir credenciais e conectividade (porta 1433)
+- Java/Spring Boot OK? Verificar compatibilidade Java 17 + Spring Boot 3.5.6
+- Scripts .bat OK? Usar scripts de automação para operações padronizadas
+
+### 18. Atualizações Técnicas Recentes (2025)
+
+#### 18.1 Upgrade de Dependências
+- **Spring Boot**: 3.3.6 → 3.5.6 (suporte estendido até 2026)
+- **Java**: 11+ → 17 (LTS, melhor performance e recursos)
+- **SQL Server JDBC**: 12.8.1.jre17 → 13.2.0.jre11 (compatibilidade Java 17)
+
+#### 18.2 Correções de Depreciação
+- **Jackson JsonNode**: `fields()` → `properties()` 
+- **Método de Iteração**: `forEachRemaining()` → `forEach()`
+- **Arquivos Afetados**:
+  - `ClienteApiDataExport.java` (linha 671)
+  - `ClienteApiGraphQL.java` (linhas 442, 483)
+  - `ClienteApiRest.java` (linha 196)
+
+#### 18.3 Limpeza de Código
+- **Métodos Removidos** (não utilizados):
+  - `buscarDadosTemplate()` e `solicitarRelatorioFluxoTradicional()` (ClienteApiDataExport)
+  - `extrairTemplateIdDoEndpoint()`, `obterIdNumericoTemplate()`, `determinarTipoRelatorio()`, `gerarEndpointsAlternativos()` (ClienteApiDataExport)
+
+#### 18.4 Melhorias de Automação
+- **Scripts .bat**: 5 scripts para operações padronizadas
+- **Métricas Aprimoradas**: Coleta automática de performance em JSON
+- **Monitoramento**: Taxa de sucesso objetivo 100% em todas as APIs
+
+#### 18.5 Compatibilidade e Performance
+- **Compatibilidade**: Totalmente compatível com Spring Boot 3.x e Java 17
+- **Performance**: Melhorias na iteração de propriedades JSON
+- **Estabilidade**: Remoção de código não utilizado reduz complexidade
 
 

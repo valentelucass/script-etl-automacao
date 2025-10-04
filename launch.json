@@ -1,0 +1,40 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "▶️ Executar em MODO NORMAL (Produção)",
+            "request": "launch",
+            "mainClass": "br.com.extrator.Main",
+            "projectName": "extrator-esl-cloud",
+            "args": "", // Sem argumentos, executa o fluxo completo
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "🧪 Executar TESTE COMPLETO (pede a data)",
+            "request": "launch",
+            "mainClass": "br.com.extrator.Main",
+            "projectName": "extrator-esl-cloud",
+            "args": "--teste ${input:askForDate}", // Pergunta a data antes de executar
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "🔗 Executar VALIDAÇÃO RÁPIDA",
+            "request": "launch",
+            "mainClass": "br.com.extrator.Main",
+            "projectName": "extrator-esl-cloud",
+            "args": "--validar", // Executa apenas a validação das conexões
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "askForDate",
+            "type": "promptString",
+            "description": "Digite a data de início (formato YYYY-MM-DD)",
+            "default": "2025-10-01"
+        }
+    ]
+}

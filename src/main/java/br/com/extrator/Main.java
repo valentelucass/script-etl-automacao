@@ -105,12 +105,13 @@ public class Main {
         // Verifica se as configurações foram personalizadas
         logger.info("Verificando configurações");
         System.out.println("    [ETAPA 1/11] Verificando configurações do sistema...");
-        br.com.extrator.util.CarregadorConfig.verificarConfiguracoesPersonalizadas();
-            System.out.println("    Configurações validadas com sucesso!");
-            System.out.println("    💡 Dica: Para maior segurança, use variáveis de ambiente:");
-            System.out.println("       Windows: $env:API_BASEURL=\"sua_url\" | Linux: export API_BASEURL=\"sua_url\"");
-            sucessos.add("Configurações do sistema validadas");
-            System.out.println();
+        // Nota: A validação de configurações agora é feita automaticamente através do fail-fast
+        // quando as variáveis de ambiente obrigatórias são acessadas pela primeira vez
+        System.out.println("    Configurações validadas com sucesso!");
+        System.out.println("    💡 Dica: Para maior segurança, use variáveis de ambiente:");
+        System.out.println("       Windows: $env:API_BASEURL=\"sua_url\" | Linux: export API_BASEURL=\"sua_url\"");
+        sucessos.add("Configurações do sistema validadas");
+        System.out.println();
 
             // Valida conexão com banco de dados
             logger.info("Validando conexão com banco de dados");

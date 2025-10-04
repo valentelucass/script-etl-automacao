@@ -57,6 +57,12 @@ data/
 *.sqlite
 *.sqlite3
 
+# Arquivos de métricas e monitoramento específicos do projeto
+metricas/*.json
+metricas/metricas-*.json
+relatorios-execucao/
+historico-execucoes/
+
 # Cache e arquivos temporários
 temp/
 tmp/

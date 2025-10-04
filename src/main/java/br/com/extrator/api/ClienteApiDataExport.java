@@ -2,6 +2,7 @@ package br.com.extrator.api;
 
 import br.com.extrator.modelo.EntidadeDinamica;
 import br.com.extrator.util.CarregadorConfig;
+import br.com.extrator.util.UtilitarioHttpRetry;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,6 +19,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * Cliente especializado para a API Data Export do ESL Cloud.
@@ -50,9 +52,7 @@ public class ClienteApiDataExport {
     private static final int INTERVALO_VERIFICACAO_MS = 10000; // 10 segundos entre verificações
     private static final int TIMEOUT_REQUISICAO_SEGUNDOS = 60;
     
-    // Rate limiting para evitar erro HTTP 429
-    private static final int RATE_LIMIT_MS = 2000; // 2 segundos entre requisições
-    private static long ultimaRequisicao = 0;
+
     
     /**
      * Construtor do cliente da API Data Export.
@@ -93,7 +93,7 @@ public class ClienteApiDataExport {
         try {
             // Passo 1: Solicitar a geração do relatório
             logger.info("Passo 1/3: Solicitando geração do relatório de manifestos...");
-            String requestId = solicitarRelatorio("TEMPLATE_MANIFESTOS", dataInicio);
+            String requestId = solicitarRelatorio(TEMPLATE_ID_MANIFESTOS, dataInicio);
             
             if (requestId == null || requestId.trim().isEmpty()) {
                 logger.error("Falha ao solicitar relatório de manifestos. RequestId não obtido.");
@@ -150,7 +150,7 @@ public class ClienteApiDataExport {
         try {
             // Passo 1: Solicitar a geração do relatório
             logger.info("Passo 1/3: Solicitando geração do relatório de localização da carga...");
-            String requestId = solicitarRelatorio("TEMPLATE_LOCALIZACAO_CARGA", dataInicio);
+            String requestId = solicitarRelatorio(TEMPLATE_ID_LOCALIZACAO, dataInicio);
             
             if (requestId == null || requestId.trim().isEmpty()) {
                 logger.error("Falha ao solicitar relatório de localização da carga. RequestId não obtido.");
@@ -195,21 +195,20 @@ public class ClienteApiDataExport {
      */
     private String solicitarRelatorio(String templateId, String dataInicio) {
         try {
-            // Aplica rate limiting antes da requisição
-            aplicarRateLimiting();
-            
             // Formata a data para o padrão esperado pela API
             String dataFormatada = formatarDataParaApi(dataInicio);
             
             // Constrói o corpo da requisição JSON
             String requestBody = construirCorpoRequisicao(templateId, dataFormatada);
             
-            // Constrói a URL do endpoint de solicitação
-            String url = urlBase + "/api/data-export/request";
+            // Constrói a URL do endpoint específico baseado no template
+            String endpoint = obterEndpointPorTemplate(templateId);
+            String url = urlBase + endpoint;
             
             logger.info("Solicitando geração de relatório: template={}, data={}", templateId, dataFormatada);
             
-            HttpRequest request = HttpRequest.newBuilder()
+            // Encapsula a criação do HttpRequest em um Supplier
+            Supplier<HttpRequest> fornecedorRequisicao = () -> HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header("Authorization", "Bearer " + token)
                     .header("Content-Type", "application/json")
@@ -218,7 +217,12 @@ public class ClienteApiDataExport {
                     .timeout(Duration.ofSeconds(TIMEOUT_REQUISICAO_SEGUNDOS))
                     .build();
             
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            // Executa a requisição usando o utilitário centralizado
+            HttpResponse<String> response = UtilitarioHttpRetry.executarComRetry(
+                    httpClient, 
+                    fornecedorRequisicao, 
+                    "solicitarRelatorio-" + templateId
+            );
             
             if (response.statusCode() == 200 || response.statusCode() == 202) {
                 // Extrai o requestId da resposta JSON
@@ -242,6 +246,25 @@ public class ClienteApiDataExport {
         }
     }
     
+    /**
+     * Obtém o endpoint específico baseado no template ID conforme a documentação da API.
+     */
+    private String obterEndpointPorTemplate(String templateId) {
+        switch (templateId) {
+            case TEMPLATE_ID_MANIFESTOS:
+                return "/api/data-export/manifestos";
+            case TEMPLATE_ID_LOCALIZACAO:
+                return "/api/data-export/localizacao-carga";
+            case TEMPLATE_ID_COTACOES:
+                return "/api/data-export/cotacoes";
+            case TEMPLATE_ID_FRETES:
+                return "/api/data-export/fretes";
+            default:
+                // Fallback para templates não mapeados
+                return "/api/data-export/" + templateId;
+        }
+    }
+
     /**
      * Formata a data de início para o padrão esperado pela API.
      */
@@ -325,16 +348,14 @@ public class ClienteApiDataExport {
         
         for (int tentativa = 1; tentativa <= MAX_TENTATIVAS_STATUS; tentativa++) {
             try {
-                // Aplica rate limiting antes de cada verificação
-                aplicarRateLimiting();
-                
                 // Constrói a URL do endpoint de status
                 String url = urlBase + "/api/data-export/status/" + requestId;
                 
                 logger.debug("Verificando status do relatório (tentativa {}/{}): {}", 
                            tentativa, MAX_TENTATIVAS_STATUS, requestId);
                 
-                HttpRequest request = HttpRequest.newBuilder()
+                // Encapsula a criação do HttpRequest em um Supplier
+                Supplier<HttpRequest> fornecedorRequisicao = () -> HttpRequest.newBuilder()
                         .uri(URI.create(url))
                         .header("Authorization", "Bearer " + token)
                         .header("Accept", "application/json")
@@ -342,7 +363,12 @@ public class ClienteApiDataExport {
                         .timeout(Duration.ofSeconds(TIMEOUT_REQUISICAO_SEGUNDOS))
                         .build();
                 
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                // Executa a requisição usando o utilitário centralizado
+                HttpResponse<String> response = UtilitarioHttpRetry.executarComRetry(
+                        httpClient, 
+                        fornecedorRequisicao, 
+                        "aguardarProcessamento-" + requestId
+                );
                 
                 if (response.statusCode() == 200) {
                     String status = extrairStatusDaResposta(response.body());
@@ -515,12 +541,9 @@ public class ClienteApiDataExport {
         }
         
         try {
-            // Aplica rate limiting antes do download
-            aplicarRateLimiting();
-            
             logger.info("Iniciando download do relatório: {} (tipo: {})", urlDownload, tipoEntidade);
             
-            HttpRequest request = HttpRequest.newBuilder()
+            Supplier<HttpRequest> requestSupplier = () -> HttpRequest.newBuilder()
                     .uri(URI.create(urlDownload))
                     .header("Authorization", "Bearer " + token)
                     .header("Accept", "application/json")
@@ -528,7 +551,11 @@ public class ClienteApiDataExport {
                     .timeout(Duration.ofSeconds(TIMEOUT_REQUISICAO_SEGUNDOS))
                     .build();
             
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = UtilitarioHttpRetry.executarComRetry(
+                    httpClient, 
+                    requestSupplier, 
+                    "descarregarRelatorio-" + tipoEntidade
+            );
             
             if (response.statusCode() == 200) {
                 String conteudoJson = response.body();
@@ -641,7 +668,7 @@ public class ClienteApiDataExport {
             entidade.setTipoEntidade(tipoEntidade);
             
             // Itera sobre todos os campos do JSON e adiciona à entidade
-            itemNode.fields().forEachRemaining(entry -> {
+            itemNode.properties().forEach(entry -> {
                 String campo = entry.getKey();
                 JsonNode valorNode = entry.getValue();
                 
@@ -767,219 +794,40 @@ public class ClienteApiDataExport {
      * Baseado na nova documentação: GET /api/analytics/reports/{ID_TEMPLATE}/data
      */
     private String solicitarRelatorioComTemplate(String templateId, LocalDateTime dataInicio, String tipoRelatorio) throws IOException, InterruptedException {
-        // Primeiro, tenta buscar diretamente os dados do template
-        String endpointDireto = "/api/analytics/reports/" + templateId + "/data";
+        // Usa apenas o fluxo documentado POST+GET conforme ARQUITETURA-TECNICA.md
+        logger.info("Solicitando relatório {} usando fluxo POST+GET documentado", tipoRelatorio);
         
-        try {
-            List<EntidadeDinamica> dados = buscarDadosTemplate(endpointDireto, dataInicio);
-            if (!dados.isEmpty()) {
-                logger.info("Dados obtidos diretamente do template {} para {}: {} registros", templateId, tipoRelatorio, dados.size());
-                // Para compatibilidade com o fluxo existente, retornamos um ID fictício
-                return "direct-" + templateId + "-" + System.currentTimeMillis();
-            }
-        } catch (Exception e) {
-            logger.debug("Busca direta do template {} falhou, tentando fluxo tradicional: {}", templateId, e.getMessage());
-        }
-        
-        // Se a busca direta falhar, tenta o fluxo tradicional POST+GET
-        return solicitarRelatorioFluxoTradicional(templateId, dataInicio, tipoRelatorio);
-    }
-    
-    /**
-     * Busca dados diretamente do template usando o endpoint correto da nova documentação.
-     * Primeiro tenta obter o ID numérico do template, depois busca os dados.
-     */
-    private List<EntidadeDinamica> buscarDadosTemplate(String endpoint, LocalDateTime dataInicio) throws IOException, InterruptedException {
-        // Aplica rate limiting antes da requisição
-        aplicarRateLimiting();
-        
-        // Extrai o template ID do endpoint (ex: "/api/analytics/reports/relacao-manifestos-detalhada/data")
-        String templateId = extrairTemplateIdDoEndpoint(endpoint);
-        
-        // Primeiro, tenta obter o ID numérico do template
-        String idNumerico = obterIdNumericoTemplate(templateId);
-        if (idNumerico == null) {
-            logger.debug("Não foi possível obter ID numérico para template: {}", templateId);
-            return new ArrayList<>();
-        }
-        
-        // Constrói a URL correta usando o ID numérico
-        String dataFormatada = dataInicio.format(DateTimeFormatter.ISO_LOCAL_DATE);
-        String url = urlBase + "/api/analytics/reports/" + idNumerico + "/data?since=" + dataFormatada + "&format=json";
-        
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Authorization", "Bearer " + token)
-                .header("Accept", "application/json")
-                .GET()
-                .timeout(Duration.ofSeconds(TIMEOUT_REQUISICAO_SEGUNDOS))
-                .build();
-        
-        logger.debug("Buscando dados do template (ID: {}): {}", idNumerico, url);
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        
-        // Tratamento específico para erro 429
-        if (response.statusCode() == 429) {
-            logger.warn("Rate limit excedido ao buscar template (HTTP 429). Aguardando...");
-            Thread.sleep(RATE_LIMIT_MS * 2);
-            
-            // Tenta novamente após aguardar
-            aplicarRateLimiting();
-            response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        }
-        
-        if (response.statusCode() == 200) {
-            String tipoRelatorio = determinarTipoRelatorio(templateId);
-            return processarJsonRelatorio(response.body(), tipoRelatorio);
-        } else {
-            logger.debug("Template não retornou dados. Status: {}, Body: {}", response.statusCode(), response.body());
-            return new ArrayList<>();
-        }
-    }
-    
-    /**
-     * Extrai o template ID do endpoint fornecido
-     */
-    private String extrairTemplateIdDoEndpoint(String endpoint) {
-        // Ex: "/api/analytics/reports/relacao-manifestos-detalhada/data" -> "relacao-manifestos-detalhada"
-        String[] partes = endpoint.split("/");
-        for (int i = 0; i < partes.length - 1; i++) {
-            if ("reports".equals(partes[i]) && i + 1 < partes.length) {
-                return partes[i + 1];
-            }
-        }
-        return endpoint.substring(endpoint.lastIndexOf("/") + 1);
-    }
-    
-    /**
-     * Obtém o ID numérico do template baseado no nome/identificador
-     */
-    private String obterIdNumericoTemplate(String templateId) {
-        try {
-            // Aplica rate limiting antes da requisição
-            aplicarRateLimiting();
-            
-            String url = urlBase + "/api/analytics/reports";
-            
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("Authorization", "Bearer " + token)
-                    .header("Accept", "application/json")
-                    .GET()
-                    .timeout(Duration.ofSeconds(TIMEOUT_REQUISICAO_SEGUNDOS))
-                    .build();
-            
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            
-            if (response.statusCode() == 200) {
-                JsonNode jsonResponse = objectMapper.readTree(response.body());
-                
-                // Procura pelo template com o ID correspondente
-                if (jsonResponse.isArray()) {
-                    for (JsonNode template : jsonResponse) {
-                        String nome = template.has("name") ? template.get("name").asText() : "";
-                        String identificador = template.has("identifier") ? template.get("identifier").asText() : "";
-                        
-                        if (templateId.equals(nome) || templateId.equals(identificador)) {
-                            return template.has("id") ? template.get("id").asText() : null;
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            logger.debug("Erro ao obter ID numérico do template {}: {}", templateId, e.getMessage());
-        }
-        
-        return null;
-    }
-    
-    /**
-     * Determina o tipo de relatório baseado no template ID
-     */
-    private String determinarTipoRelatorio(String templateId) {
-        if (templateId.contains("manifestos")) return "manifestos";
-        if (templateId.contains("localizacao") || templateId.contains("cargas")) return "localizacao_carga";
-        if (templateId.contains("cotacoes")) return "cotacoes";
-        if (templateId.contains("fretes")) return "fretes";
-        return "dados";
-    }
-
-    /**
-     * Fluxo tradicional POST+GET para compatibilidade com versões antigas da API
-     */
-    private String solicitarRelatorioFluxoTradicional(String templateId, LocalDateTime dataInicio, String tipoRelatorio) throws IOException, InterruptedException {
-        // Endpoints alternativos baseados no template ID
-        String[] endpointsParaTestar = gerarEndpointsAlternativos(templateId, tipoRelatorio);
-        
+        // Formata a data para o padrão esperado pela API
         String dataFormatada = dataInicio.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         
+        // Constrói o corpo da requisição conforme documentação
         String requestBody = String.format("{\n" +
-                "    \"templateId\": \"%s\",\n" +
                 "    \"dataInicio\": \"%s\",\n" +
                 "    \"formato\": \"json\",\n" +
                 "    \"incluirDetalhes\": true\n" +
-                "}", templateId, dataFormatada);
+                "}", dataFormatada);
         
-        // Tenta cada endpoint até encontrar um que funcione
-        for (String endpoint : endpointsParaTestar) {
-            try {
-                String result = enviarSolicitacaoRelatorio(endpoint, requestBody);
-                if (result != null) {
-                    logger.info("Endpoint funcional encontrado para {}: {}", tipoRelatorio, endpoint);
-                    return result;
-                }
-            } catch (Exception e) {
-                logger.debug("Endpoint {} não funcionou para {}: {}", endpoint, tipoRelatorio, e.getMessage());
-            }
-        }
+        // Usa o endpoint específico baseado no template
+        String endpoint = obterEndpointPorTemplate(templateId);
         
-        logger.error("Nenhum endpoint válido encontrado para {} (template: {})", tipoRelatorio, templateId);
-        return null;
+        return enviarSolicitacaoRelatorio(endpoint, requestBody);
     }
     
-    /**
-     * Gera endpoints alternativos baseados no template ID e tipo de relatório
-     */
-    private String[] gerarEndpointsAlternativos(String templateId, String tipoRelatorio) {
-        if ("manifestos".equals(tipoRelatorio)) {
-            return new String[]{
-                "/api/analytics/reports/" + templateId + "/generate",
-                "/api/data-export/manifestos",
-                "/api/reports/manifests",
-                "/api/export/manifests", 
-                "/api/data/manifests",
-                "/api/v1/reports/manifests"
-            };
-        } else if ("localizacao".equals(tipoRelatorio)) {
-            return new String[]{
-                "/api/analytics/reports/" + templateId + "/generate",
-                "/api/data-export/localizacao-carga",
-                "/api/reports/tracking",
-                "/api/export/tracking",
-                "/api/data/tracking", 
-                "/api/reports/location",
-                "/api/export/location"
-            };
-        } else {
-            return new String[]{
-                "/api/analytics/reports/" + templateId + "/generate",
-                "/api/data-export/" + tipoRelatorio,
-                "/api/reports/" + tipoRelatorio,
-                "/api/export/" + tipoRelatorio
-            };
-        }
-    }
+
+    
+
+    
+
+
+
 
     /**
      * Envia a solicitação POST para gerar o relatório.
      */
     private String enviarSolicitacaoRelatorio(String endpoint, String requestBody) throws IOException, InterruptedException {
-        // Aplica rate limiting antes da requisição
-        aplicarRateLimiting();
-        
         String url = urlBase + endpoint;
         
-        HttpRequest request = HttpRequest.newBuilder()
+        Supplier<HttpRequest> requestSupplier = () -> HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Authorization", "Bearer " + token)
                 .header("Content-Type", "application/json")
@@ -988,17 +836,11 @@ public class ClienteApiDataExport {
                 .build();
         
         logger.debug("Enviando solicitação POST para: {}", url);
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        
-        // Tratamento específico para erro 429 (Too Many Requests)
-        if (response.statusCode() == 429) {
-            logger.warn("Rate limit excedido (HTTP 429). Aguardando antes de tentar novamente...");
-            Thread.sleep(RATE_LIMIT_MS * 2); // Aguarda o dobro do tempo normal
-            
-            // Tenta novamente após aguardar
-            aplicarRateLimiting();
-            response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        }
+        HttpResponse<String> response = UtilitarioHttpRetry.executarComRetry(
+                httpClient, 
+                requestSupplier, 
+                "enviarSolicitacaoRelatorio-" + endpoint
+        );
         
         if (response.statusCode() == 202) { // Accepted
             JsonNode jsonResponse = objectMapper.readTree(response.body());
@@ -1021,24 +863,18 @@ public class ClienteApiDataExport {
         for (int tentativa = 1; tentativa <= MAX_TENTATIVAS_STATUS; tentativa++) {
             logger.debug("Verificando status do relatório (tentativa {}/{}): {}", tentativa, MAX_TENTATIVAS_STATUS, requestId);
             
-            // Aplica rate limiting antes da requisição
-            aplicarRateLimiting();
-            
-            HttpRequest request = HttpRequest.newBuilder()
+            Supplier<HttpRequest> requestSupplier = () -> HttpRequest.newBuilder()
                     .uri(URI.create(statusUrl))
                     .header("Authorization", "Bearer " + token)
                     .GET()
                     .timeout(Duration.ofSeconds(TIMEOUT_REQUISICAO_SEGUNDOS))
                     .build();
             
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            
-            // Tratamento específico para erro 429
-            if (response.statusCode() == 429) {
-                logger.warn("Rate limit excedido ao verificar status (HTTP 429). Aguardando...");
-                Thread.sleep(RATE_LIMIT_MS * 2);
-                continue; // Tenta novamente na próxima iteração
-            }
+            HttpResponse<String> response = UtilitarioHttpRetry.executarComRetry(
+                    httpClient, 
+                    requestSupplier, 
+                    "aguardarProcessamentoRelatorio-" + requestId
+            );
             
             if (response.statusCode() == 200) {
                 JsonNode jsonResponse = objectMapper.readTree(response.body());
@@ -1082,27 +918,18 @@ public class ClienteApiDataExport {
     private List<EntidadeDinamica> baixarEProcessarRelatorio(String downloadUrl, String tipoRelatorio) throws IOException, InterruptedException {
         logger.info("Baixando relatório de {}: {}", tipoRelatorio, downloadUrl);
         
-        // Aplica rate limiting antes da requisição
-        aplicarRateLimiting();
-        
-        HttpRequest request = HttpRequest.newBuilder()
+        Supplier<HttpRequest> requestSupplier = () -> HttpRequest.newBuilder()
                 .uri(URI.create(downloadUrl))
                 .header("Authorization", "Bearer " + token)
                 .GET()
                 .timeout(Duration.ofSeconds(TIMEOUT_REQUISICAO_SEGUNDOS))
                 .build();
         
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        
-        // Tratamento específico para erro 429
-        if (response.statusCode() == 429) {
-            logger.warn("Rate limit excedido ao baixar relatório (HTTP 429). Aguardando...");
-            Thread.sleep(RATE_LIMIT_MS * 2);
-            
-            // Tenta novamente após aguardar
-            aplicarRateLimiting();
-            response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        }
+        HttpResponse<String> response = UtilitarioHttpRetry.executarComRetry(
+                httpClient, 
+                requestSupplier, 
+                "baixarEProcessarRelatorio-" + tipoRelatorio
+        );
         
         if (response.statusCode() == 200) {
             return processarJsonRelatorio(response.body(), tipoRelatorio);
@@ -1142,7 +969,7 @@ public class ClienteApiDataExport {
             try {
                 String url = urlBase + endpoint;
                 
-                HttpRequest requisicao = HttpRequest.newBuilder()
+                Supplier<HttpRequest> requestSupplier = () -> HttpRequest.newBuilder()
                         .uri(URI.create(url))
                         .header("Authorization", "Bearer " + token)
                         .header("Accept", "application/json")
@@ -1150,7 +977,11 @@ public class ClienteApiDataExport {
                         .timeout(Duration.ofSeconds(10))
                         .build();
                 
-                HttpResponse<String> resposta = httpClient.send(requisicao, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> resposta = UtilitarioHttpRetry.executarComRetry(
+                        httpClient, 
+                        requestSupplier, 
+                        "validarAcessoApi-" + endpoint
+                );
                 
                 if (resposta.statusCode() == 200 || resposta.statusCode() == 404) {
                     logger.info("API Data Export respondeu no endpoint {}: status {}", endpoint, resposta.statusCode());
@@ -1185,7 +1016,7 @@ public class ClienteApiDataExport {
             try {
                 String url = urlBase + endpoint;
                 
-                HttpRequest request = HttpRequest.newBuilder()
+                Supplier<HttpRequest> requestSupplier = () -> HttpRequest.newBuilder()
                         .uri(URI.create(url))
                         .header("Authorization", "Bearer " + token)
                         .header("Accept", "application/json")
@@ -1193,7 +1024,11 @@ public class ClienteApiDataExport {
                         .timeout(Duration.ofSeconds(TIMEOUT_REQUISICAO_SEGUNDOS))
                         .build();
                 
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> response = UtilitarioHttpRetry.executarComRetry(
+                        httpClient, 
+                        requestSupplier, 
+                        "listarTemplatesDisponiveis-" + endpoint
+                );
                 
                 if (response.statusCode() == 200) {
                     logger.info("Templates encontrados no endpoint {}", endpoint);
@@ -1276,7 +1111,7 @@ public class ClienteApiDataExport {
         String url = urlBase + endpoint;
         
         try {
-            HttpRequest request = HttpRequest.newBuilder()
+            Supplier<HttpRequest> requestSupplier = () -> HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header("Authorization", "Bearer " + token)
                     .header("Accept", "application/json")
@@ -1284,7 +1119,11 @@ public class ClienteApiDataExport {
                     .timeout(Duration.ofSeconds(10))
                     .build();
             
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = UtilitarioHttpRetry.executarComRetry(
+                    httpClient, 
+                    requestSupplier, 
+                    "verificarTemplateExiste-" + templateId
+            );
             
             if (response.statusCode() == 200) {
                 logger.info("Template {} confirmado como existente", templateId);
@@ -1351,21 +1190,4 @@ public class ClienteApiDataExport {
      * Aplica rate limiting para evitar erro HTTP 429.
      * Garante que haja pelo menos 2 segundos entre requisições consecutivas.
      */
-    private void aplicarRateLimiting() {
-        long agora = System.currentTimeMillis();
-        long tempoDecorrido = agora - ultimaRequisicao;
-        
-        if (tempoDecorrido < RATE_LIMIT_MS) {
-            long tempoEspera = RATE_LIMIT_MS - tempoDecorrido;
-            try {
-                logger.debug("Aplicando rate limiting: aguardando {} ms", tempoEspera);
-                Thread.sleep(tempoEspera);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                logger.warn("Rate limiting interrompido: {}", e.getMessage());
-            }
-        }
-        
-        ultimaRequisicao = System.currentTimeMillis();
-    }
 }
