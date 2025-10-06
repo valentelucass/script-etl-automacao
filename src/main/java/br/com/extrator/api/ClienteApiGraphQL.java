@@ -73,7 +73,8 @@ public class ClienteApiGraphQL {
         logger.info("Buscando coletas da API GraphQL...");
 
         try {
-            // Formatação da data para o campo serviceAt (seguindo o padrão que funciona para fretes)
+            // Formatação da data para o campo serviceAt (seguindo o padrão que funciona
+            // para fretes)
             String intervaloDatas;
             if (modoTeste || "--modo-teste".equals(dataInicio)) {
                 // Em modo teste, usar data atual
@@ -84,12 +85,56 @@ public class ClienteApiGraphQL {
                 intervaloDatas = formatarIntervaloDeDatas(dataReferencia);
             }
 
-            // Query GraphQL correta para coletas (baseada no padrão que funciona para fretes)
-            String query = "query BuscarColetas($params: CollectionInput!) { collection(params: $params) { edges { node { id status createdAt serviceDate } } pageInfo { hasNextPage endCursor } } }";
-            Map<String, Object> variaveis = Map.of("params", Map.of("serviceAt", intervaloDatas));
+            // Query GraphQL correta para coletas (baseada na descoberta da estrutura real
+            // da API)
+            String query = """
+                    query BuscarColetas($params: PickInput!, $after: String) {
+                        pick(params: $params, after: $after, first: 100) {
+                        edges {
+                            cursor
+                            node {
+                            id
+                            agentId
+                            cancellationReason
+                            cancellationUserId
+                            cargoClassificationId
+                            comments
+                            costCenterId
+                            destroyReason
+                            destroyUserId
+                            invoicesCubedWeight
+                            invoicesValue
+                            invoicesVolumes
+                            invoicesWeight
+                            lunchBreakEndHour
+                            lunchBreakStartHour
+                            notificationEmail
+                            notificationPhone
+                            pickTypeId
+                            pickupLocationId
+                            requestDate
+                            requestHour
+                            requester
+                            sequenceCode
+                            serviceDate
+                            serviceEndHour
+                            serviceStartHour
+                            status
+                            statusUpdatedAt
+                            taxedWeight
+                            vehicleTypeId
+                            }
+                        }
+                        pageInfo {
+                            hasNextPage
+                            endCursor
+                        }
+                        }
+                    }""";
+            Map<String, Object> variaveis = Map.of("params", Map.of("requestDate", intervaloDatas));
 
             logger.info("Executando query GraphQL para coletas com serviceAt = {}", intervaloDatas);
-            List<EntidadeDinamica> resultado = executarQueryGraphQL(query, "collection", variaveis);
+            List<EntidadeDinamica> resultado = executarQueryGraphQL(query, "pick", variaveis);
 
             logger.info("Query GraphQL concluída para coletas. Total encontrado: {}", resultado.size());
             return resultado;
@@ -304,7 +349,88 @@ public class ClienteApiGraphQL {
 
             // Query GraphQL correta para fretes (baseada na análise dos logs - única que
             // funciona)
-            String query = "query BuscarFretes($params: FreightInput!) { freight(params: $params) { edges { node { id status createdAt serviceDate total } } pageInfo { hasNextPage endCursor } } }";
+            String query = """
+                    query BuscarFretes($params: FreightInput!, $after: String) {
+                        freight(params: $params, after: $after, first: 100) {
+                        edges {
+                            cursor
+                            node {
+                            id
+                            accountingCreditId
+                            accountingCreditInstallmentId
+                            adValoremSubtotal
+                            additionalsSubtotal
+                            admFeeSubtotal
+                            calculationType
+                            collectSubtotal
+                            comments
+                            corporationId
+                            costCenterId
+                            createdAt
+                            cubagesCubedWeight
+                            customerPriceTableId
+                            deliveryDeadlineInDays
+                            deliveryPredictionDate
+                            deliveryPredictionHour
+                            deliveryRegionId
+                            deliverySubtotal
+                            destinationCityId
+                            dispatchSubtotal
+                            draftEmissionAt
+                            emergencySubtotal
+                            emissionType
+                            finishedAt
+                            freightClassificationId
+                            freightCubagesCount
+                            freightInvoicesCount
+                            freightWeightSubtotal
+                            globalized
+                            globalizedType
+                            grisSubtotal
+                            insuranceAccountableType
+                            insuranceEnabled
+                            insuranceId
+                            insuredValue
+                            invoicesTotalVolumes
+                            invoicesValue
+                            invoicesWeight
+                            itrSubtotal
+                            km
+                            modal
+                            modalCte
+                            nfseNumber
+                            nfseSeries
+                            otherFees
+                            paymentAccountableType
+                            paymentType
+                            previousDocumentType
+                            priceTableAccountableType
+                            productsValue
+                            realWeight
+                            redispatchSubtotal
+                            referenceNumber
+                            secCatSubtotal
+                            serviceAt
+                            serviceDate
+                            serviceType
+                            status
+                            subtotal
+                            suframaSubtotal
+                            taxedWeight
+                            tdeSubtotal
+                            tollSubtotal
+                            total
+                            totalCubicVolume
+                            trtSubtotal
+                            type
+                            }
+                        }
+                        pageInfo {
+                            hasNextPage
+                            endCursor
+                        }
+                        }
+                    }""";
             Map<String, Object> variaveis = Map.of("params", Map.of("serviceAt", intervaloDatas));
 
             logger.info("Executando query GraphQL para fretes com serviceAt = {}", intervaloDatas);

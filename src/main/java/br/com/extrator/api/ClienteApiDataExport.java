@@ -1187,6 +1187,53 @@ public class ClienteApiDataExport {
     }
 
     /**
+     * Busca fretes detalhados a partir de uma data específica.
+     * Orquestra o fluxo assíncrono completo: solicitar → aguardar → descarregar.
+     * 
+     * @param dataInicio Data de início para busca dos fretes
+     * @return Lista de fretes encontrados ou lista vazia se falhar
+     */
+    public List<EntidadeDinamica> buscarFretesDetalhados(LocalDateTime dataInicio) {
+        logger.info("Iniciando busca de fretes detalhados via API Data Export para data: {}", dataInicio);
+        
+        try {
+            String requestId = solicitarRelatorioFretesDetalhados(dataInicio);
+            if (requestId != null) {
+                return buscarRelatorioProcessado(requestId, "fretes_detalhados");
+            } else {
+                logger.error("Falha ao solicitar relatório de fretes detalhados");
+                return new ArrayList<>();
+            }
+        } catch (Exception e) {
+            logger.error("Erro ao buscar fretes detalhados", e);
+            return new ArrayList<>();
+        }
+    }
+    
+    /**
+     * Solicita a geração do relatório de fretes detalhados via POST (versão pública).
+     * 
+     * @param dataInicio Data de início da busca (formato ISO: yyyy-MM-dd'T'HH:mm:ss)
+     * @return Request ID do relatório ou null se falhar
+     */
+    public String solicitarRelatorioFretesDetalhados(String dataInicio) {
+        try {
+            LocalDateTime dataInicioDateTime = LocalDateTime.parse(dataInicio);
+            return solicitarRelatorioFretesDetalhados(dataInicioDateTime);
+        } catch (Exception e) {
+            logger.error("Erro ao solicitar relatório de fretes detalhados", e);
+            return null;
+        }
+    }
+
+    /**
+     * Solicita a geração do relatório de fretes detalhados via POST.
+     */
+    private String solicitarRelatorioFretesDetalhados(LocalDateTime dataInicio) throws IOException, InterruptedException {
+        return solicitarRelatorioComTemplate(TEMPLATE_ID_FRETES, dataInicio, "fretes_detalhados");
+    }
+
+    /**
      * Aplica rate limiting para evitar erro HTTP 429.
      * Garante que haja pelo menos 2 segundos entre requisições consecutivas.
      */

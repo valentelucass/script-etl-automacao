@@ -85,7 +85,7 @@ public class Main {
         exibirBanner();
 
         logger.info("Iniciando processo de extração de dados das 3 APIs do ESL Cloud (Modo Teste: {})", 
-                   testeModo.isModoTesteAtivo());
+                testeModo.isModoTesteAtivo());
         System.out.println("\n" + "=".repeat(60));
         System.out.println("INICIANDO PROCESSO DE EXTRAÇÃO DE DADOS");
         System.out.println("=".repeat(60));
@@ -503,99 +503,7 @@ public class Main {
                 System.out.println();
             }
             
-            // ========== ETAPA 12/11: EXTRAÇÃO DE MANIFESTOS (API DATA EXPORT) ==========
-            if (testeModo.isTestarDataExport() || testeModo.isModoNormal()) {
-                logger.info("Extraindo manifestos da API Data Export");
-                System.out.println("    [ETAPA 12/11] Extraindo Manifestos da API Data Export...");
 
-                try {
-                    metricasService.iniciarTimer("extracao_manifestos");
-                    List<EntidadeDinamica> manifestos = clienteApiDataExport.buscarManifestos(dataBusca, modoTeste);
-                    metricasService.pararTimer("extracao_manifestos");
-                    
-                    totalEntidadesExtraidas += manifestos.size();
-
-                    logger.info("Extração de manifestos concluída. Total encontrado: {}", manifestos.size());
-                    System.out.println("    Total de manifestos encontrados: " + manifestos.size());
-
-                    if (!manifestos.isEmpty()) {
-                        logger.info("Salvando manifestos no banco de dados");
-                        System.out.println("    Salvando manifestos no banco SQL Server...");
-
-                        int processados = servicoBD.salvarEntidades(manifestos, "manifestos");
-                        totalEntidadesProcessadas += processados;
-                        metricasService.adicionarRegistrosProcessados("manifestos", processados);
-
-                        logger.info("Manifestos salvos. Total processado: {}", processados);
-                        System.out.println(
-                                "    Manifestos salvos com sucesso! Processados: " + processados + "/" + manifestos.size());
-                        sucessos.add("Manifestos extraídos e salvos: " + processados + "/" + manifestos.size());
-                    } else {
-                        System.out.println("    Nenhum manifesto encontrado para o período especificado");
-                        avisos.add("Nenhum manifesto encontrado para o período");
-                    }
-                    
-                    metricasService.registrarSucesso("API_DataExport_Manifestos");
-                } catch (RuntimeException e) {
-                    metricasService.registrarFalha("API_DataExport_Manifestos");
-                    logger.error("Falha na extração de Manifestos: {}", e.getMessage());
-                    System.out.println("    ❌ ERRO: Falha na extração de Manifestos - " + e.getMessage());
-                    erros.add("Manifestos: " + e.getMessage());
-                }
-
-                // Pausa obrigatória de 2 segundos entre APIs
-                logger.info("Aguardando 2 segundos antes da próxima API...");
-                System.out.println("    Aguardando 2 segundos antes da próxima API...");
-                Thread.sleep(2000);
-                System.out.println();
-            } else {
-                System.out.println("    [ETAPA 12/11] Extração de Manifestos PULADA (modo de teste específico)");
-                System.out.println();
-            }
-
-            // ========== ETAPA 13/11: EXTRAÇÃO DE LOCALIZAÇÃO DA CARGA (API DATA EXPORT) ==========
-            if (testeModo.isTestarDataExport() || testeModo.isModoNormal()) {
-                logger.info("Extraindo localização da carga da API Data Export");
-                System.out.println("    [ETAPA 13/11] Extraindo Localização da Carga da API Data Export...");
-
-                try {
-                    metricasService.iniciarTimer("extracao_localizacao_carga");
-                    List<EntidadeDinamica> localizacoes = clienteApiDataExport.buscarLocalizacaoCarga(dataBusca, modoTeste);
-                    metricasService.pararTimer("extracao_localizacao_carga");
-                    
-                    totalEntidadesExtraidas += localizacoes.size();
-
-                    logger.info("Extração de localização da carga concluída. Total encontrado: {}", localizacoes.size());
-                    System.out.println("    Total de localizações encontradas: " + localizacoes.size());
-
-                    if (!localizacoes.isEmpty()) {
-                        logger.info("Salvando localização da carga no banco de dados");
-                        System.out.println("    Salvando localizações no banco SQL Server...");
-
-                        int processados = servicoBD.salvarEntidades(localizacoes, "localizacao_carga");
-                        totalEntidadesProcessadas += processados;
-                        metricasService.adicionarRegistrosProcessados("localizacao_carga", processados);
-
-                        logger.info("Localização da carga salva. Total processado: {}", processados);
-                        System.out.println(
-                                "    Localizações salvas com sucesso! Processadas: " + processados + "/" + localizacoes.size());
-                        sucessos.add("Localizações extraídas e salvas: " + processados + "/" + localizacoes.size());
-                    } else {
-                        System.out.println("    Nenhuma localização encontrada para o período especificado");
-                        avisos.add("Nenhuma localização encontrada para o período");
-                    }
-                    
-                    metricasService.registrarSucesso("API_DataExport_Localizacao");
-                } catch (RuntimeException e) {
-                    metricasService.registrarFalha("API_DataExport_Localizacao");
-                    logger.error("Falha na extração de Localização da Carga: {}", e.getMessage());
-                    System.out.println("    ❌ ERRO: Falha na extração de Localização da Carga - " + e.getMessage());
-                    erros.add("Localização da Carga: " + e.getMessage());
-                }
-            } else {
-                System.out.println("    [ETAPA 13/11] Extração de Localização da Carga PULADA (modo de teste específico)");
-                System.out.println();
-            }
 
             // ========== RESUMO FINAL ==========
             logger.info("Processo de extração concluído");
@@ -861,7 +769,7 @@ public class Main {
             ClienteApiGraphQL clienteGraphQL = new ClienteApiGraphQL();
             
             // Lista de tipos para inspecionar
-            String[] tiposParaInspecionar = {"FreightInput", "ColetaInput", "CollectionInput"};
+            String[] tiposParaInspecionar = {"FreightInput", "ColetaInput", "PickInput"};
             
             for (String tipo : tiposParaInspecionar) {
                 System.out.println("═".repeat(60));

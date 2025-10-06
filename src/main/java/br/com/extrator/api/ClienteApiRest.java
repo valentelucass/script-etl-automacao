@@ -115,17 +115,34 @@ public class ClienteApiRest {
                 // Constrói a URL com os parâmetros adequados
                 String url;
                 if (primeiraPagina) {
-                    url = urlBase + endpoint + "?since=" + dataInicio;
+                    // --- INÍCIO DA CORREÇÃO FINAL ---
+                    // Converte a data de início para o formato YYYY-MM-DD
+                    LocalDateTime dataDeBusca = LocalDateTime.parse(dataInicio);
+                    String dataFim = dataDeBusca.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                    String dataComeco = dataDeBusca.minusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+
+                    // Lógica de parâmetros por endpoint
+                    if (endpoint.contains("credit/billings")) { // Faturas a Receber
+                        url = urlBase + endpoint + "?created_at_start=" + dataComeco + "&created_at_end=" + dataFim;
+                    } else if (endpoint.contains("debit/billings")) { // Faturas a Pagar
+                        url = urlBase + endpoint + "?issue_date_start=" + dataComeco + "&issue_date_end=" + dataFim;
+                    } else if (endpoint.contains("invoice_occurrences")) { // Ocorrências
+                        url = urlBase + endpoint + "?date_start=" + dataComeco + "&date_end=" + dataFim;
+                    } else { // Fallback para um padrão antigo, se necessário
+                        url = urlBase + endpoint + "?since=" + dataInicio;
+                    }
+                    // --- FIM DA CORREÇÃO FINAL ---
+
                     // Adiciona limite se estiver em modo de teste
                     if (modoTeste) {
-                        url += "&limit=5";
+                        url += "&per=5";
                     }
                     primeiraPagina = false;
                 } else {
                     url = urlBase + endpoint + "?start=" + proximoId;
                     // Adiciona limite se estiver em modo de teste
                     if (modoTeste) {
-                        url += "&limit=5";
+                        url += "&per=5";
                     }
                 }
 

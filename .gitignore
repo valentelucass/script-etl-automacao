@@ -32,6 +32,10 @@ db.properties
 datasource.properties
 hibernate.cfg.xml
 
+# Arquivos específicos do projeto
+last_run.properties
+last_successful_run.properties
+
 # ========================================
 # ARQUIVOS DE LOG E DADOS TEMPORÁRIOS
 # ========================================
@@ -73,6 +77,10 @@ cache/
 *~.nib
 local.properties
 
+# Arquivos específicos do sistema de métricas
+metricas_do_dia.json
+metricas-*.json
+
 # ========================================
 # ARQUIVOS COMPILADOS E BUILD
 # ========================================
@@ -108,6 +116,10 @@ gradle-app.setting
 *.zip
 *.tar.gz
 *.rar
+
+# Arquivos de build específicos
+*-script.jar
+*-dashboard.jar
 
 # ========================================
 # ARQUIVOS DE IDE E EDITORES
@@ -225,6 +237,36 @@ __pycache__/
 *.hprof
 *.heap
 
+# Arquivos de teste específicos do projeto
+testes-unitarios/
+testes-integracao/
+
+# ========================================
+# DASHBOARD REACT (Frontend)
+# ========================================
+# Dependências do npm/node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# Build do React
+/dashboard-monitoramento/build/
+/dashboard-monitoramento/dist/
+/public/build/
+
+# Ambiente do React
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Arquivos de configuração do React/Vite
+vite.config.js.timestamp-*
+*.local
+
 # ========================================
 # ARQUIVOS DE DEPLOYMENT E PRODUÇÃO
 # ========================================
@@ -274,3 +316,22 @@ apidoc/
 # Arquivos de configuração de ferramentas
 .editorconfig
 .gitattributes
+
+# ========================================
+# ARQUIVOS ESPECÍFICOS DO PROJETO
+# ========================================
+# Arquivos de execução e scripts específicos
+01_iniciar_dashboard_completo.bat
+02_extrair_dados_24h.bat
+03_extrair_dados_por_data.bat
+04_testar_api_24h.bat
+05_testar_api_por_data.bat
+
+# Arquivos de configuração específicos
+application-local.properties
+application-dev.properties
+application-prod.properties
+
+# Arquivos de métricas específicas do sistema
+sistema-metricas.json
+metricas-sistema-*.json
