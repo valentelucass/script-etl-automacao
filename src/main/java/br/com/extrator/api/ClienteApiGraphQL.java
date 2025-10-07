@@ -46,21 +46,6 @@ public class ClienteApiGraphQL {
     }
 
     /**
-     * Formata um intervalo de datas no padrão YYYY-MM-DD - YYYY-MM-DD
-     * 
-     * @param dataReferencia Data de referência para calcular o intervalo
-     * @return String formatada com o intervalo de datas
-     */
-    private String formatarIntervaloDeDatas(LocalDateTime dataReferencia) {
-        LocalDateTime diaAnterior = dataReferencia.minusDays(1);
-        LocalDateTime diaAtual = dataReferencia;
-
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-        return diaAnterior.format(formatter) + " - " + diaAtual.format(formatter);
-    }
-
-    /**
      * Busca coletas da API GraphQL
      * AVISO: A execução desta query depende da liberação de permissão pelo
      * administrador da API, mas o código está pronto.
@@ -73,17 +58,13 @@ public class ClienteApiGraphQL {
         logger.info("Buscando coletas da API GraphQL...");
 
         try {
-            // Formatação da data para o campo serviceAt (seguindo o padrão que funciona
-            // para fretes)
-            String intervaloDatas;
-            if (modoTeste || "--modo-teste".equals(dataInicio)) {
-                // Em modo teste, usar data atual
-                intervaloDatas = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
-            } else {
-                // Converter string para LocalDateTime e formatar
-                LocalDateTime dataReferencia = LocalDateTime.parse(dataInicio);
-                intervaloDatas = formatarIntervaloDeDatas(dataReferencia);
-            }
+            // Formatação da data para o campo requestDate (API de Coletas espera data única)
+            // CORREÇÃO: Sempre usar a data passada como parâmetro, independente do modo teste
+            LocalDateTime dataReferencia = LocalDateTime.parse(dataInicio);
+            
+            // Formata a data como um valor único YYYY-MM-DD para a API de Coletas
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            String dataUnica = dataReferencia.format(formatter);
 
             // Query GraphQL correta para coletas (baseada na descoberta da estrutura real
             // da API)
@@ -131,9 +112,9 @@ public class ClienteApiGraphQL {
                         }
                         }
                     }""";
-            Map<String, Object> variaveis = Map.of("params", Map.of("requestDate", intervaloDatas));
+            Map<String, Object> variaveis = Map.of("params", Map.of("requestDate", dataUnica));
 
-            logger.info("Executando query GraphQL para coletas com serviceAt = {}", intervaloDatas);
+            logger.info("Executando query GraphQL para coletas com requestDate = {}", dataUnica);
             List<EntidadeDinamica> resultado = executarQueryGraphQL(query, "pick", variaveis);
 
             logger.info("Query GraphQL concluída para coletas. Total encontrado: {}", resultado.size());
@@ -335,17 +316,18 @@ public class ClienteApiGraphQL {
     public List<EntidadeDinamica> buscarFretes(String dataInicio, boolean modoTeste) {
         logger.info("Iniciando busca de fretes via GraphQL a partir de: {} (Modo Teste: {})", dataInicio, modoTeste);
 
+        
+
         try {
-            // Formatação da data para o campo serviceAt
-            String intervaloDatas;
-            if (modoTeste || "--modo-teste".equals(dataInicio)) {
-                // Em modo teste, usar data atual
-                intervaloDatas = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
-            } else {
-                // Converter string para LocalDateTime e formatar
-                LocalDateTime dataReferencia = LocalDateTime.parse(dataInicio);
-                intervaloDatas = formatarIntervaloDeDatas(dataReferencia);
-            }
+            // Código corrigido que trata dataInicio como data final e calcula um dia anterior como data inicial
+            LocalDateTime dataReferencia = LocalDateTime.parse(dataInicio);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+            // Calcula a data inicial (um dia antes) e usa dataInicio como data final
+            LocalDateTime dataInicialCalculada = dataReferencia.minusDays(1);
+            String dataInicialFormatada = dataInicialCalculada.format(formatter);
+            String dataFinalFormatada = dataReferencia.format(formatter);
+            String intervaloDatas = dataInicialFormatada + " - " + dataFinalFormatada;
 
             // Query GraphQL correta para fretes (baseada na análise dos logs - única que
             // funciona)
@@ -431,9 +413,17 @@ public class ClienteApiGraphQL {
                         }
                         }
                     }""";
-            Map<String, Object> variaveis = Map.of("params", Map.of("serviceAt", intervaloDatas));
+            
+            // Converte o corporationId de String para Integer
+            String corporationIdStr = CarregadorConfig.obterCorporationId();
+            Integer corporationIdInt = Integer.parseInt(corporationIdStr);
 
-            logger.info("Executando query GraphQL para fretes com serviceAt = {}", intervaloDatas);
+            Map<String, Object> variaveis = Map.of("params", Map.of(
+                "serviceAt", intervaloDatas,       // Envia o intervalo de texto
+                "corporationId", corporationIdInt // Envia o ID como número
+            ));
+
+            logger.info("Executando query GraphQL para fretes com serviceAt = {} e corporationId = {}", intervaloDatas, corporationIdInt);
             List<EntidadeDinamica> resultado = executarQueryGraphQL(query, "freight", variaveis);
 
             logger.info("Query GraphQL concluída para fretes. Total encontrado: {}", resultado.size());
@@ -486,6 +476,9 @@ public class ClienteApiGraphQL {
             }
             final String corpoRequisicao = mapeadorJson.writeValueAsString(corpoJson);
 
+            logger.info("Corpo JSON exato da requisição: {}", corpoRequisicao);
+
+            
             // Cria a requisição HTTP como um Supplier para ser passada ao utilitário de
             // retry
             final String finalUrl = urlBase + endpointGraphQL;

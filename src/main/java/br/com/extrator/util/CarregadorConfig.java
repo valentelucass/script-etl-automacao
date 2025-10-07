@@ -306,4 +306,13 @@ public class CarregadorConfig {
             return 2.0; // Valor padrão
         }
     }
+
+    /**
+     * Obtém o ID da corporação para filtros GraphQL
+     * 
+     * @return ID da corporação
+     */
+    public static String obterCorporationId() {
+        return obterConfiguracao("API_CORPORATION_ID", "api.corporation.id");
+    }
 }

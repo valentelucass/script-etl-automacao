@@ -74,18 +74,17 @@ public class ClienteApiDataExport {
      * Orquestra o fluxo assíncrono completo: solicitar → aguardar → descarregar.
      * 
      * @param dataInicio Data de início para busca dos manifestos
-     * @param modoTeste Se true, pula a extração e retorna lista vazia
-     * @return Lista de manifestos encontrados ou lista vazia se falhar ou em modo teste
+     * @param modoTeste Se true, limita a busca à primeira página de resultados
+     * @return Lista de manifestos encontrados ou lista vazia se falhar
      */
     public List<EntidadeDinamica> buscarManifestos(String dataInicio, boolean modoTeste) {
-        if (modoTeste) {
-            logger.info("Modo de teste ativo - pulando extração de manifestos");
-            return new ArrayList<>();
-        }
-        
         if (dataInicio == null || dataInicio.trim().isEmpty()) {
             logger.error("Data de início não pode ser nula ou vazia para buscar manifestos");
             return new ArrayList<>();
+        }
+        
+        if (modoTeste) {
+            logger.info("Modo de teste ativo - limitando busca de manifestos à primeira página");
         }
         
         logger.info("Iniciando busca de manifestos a partir de: {}", dataInicio);
@@ -131,18 +130,17 @@ public class ClienteApiDataExport {
      * Orquestra o fluxo assíncrono completo: solicitar → aguardar → descarregar.
      * 
      * @param dataInicio Data de início para busca da localização da carga
-     * @param modoTeste Se true, pula a extração e retorna lista vazia
-     * @return Lista de localizações encontradas ou lista vazia se falhar ou em modo teste
+     * @param modoTeste Se true, limita a busca à primeira página de resultados
+     * @return Lista de localizações encontradas ou lista vazia se falhar
      */
     public List<EntidadeDinamica> buscarLocalizacaoCarga(String dataInicio, boolean modoTeste) {
-        if (modoTeste) {
-            logger.info("Modo de teste ativo - pulando extração de localização da carga");
-            return new ArrayList<>();
-        }
-        
         if (dataInicio == null || dataInicio.trim().isEmpty()) {
             logger.error("Data de início não pode ser nula ou vazia para buscar localização da carga");
             return new ArrayList<>();
+        }
+        
+        if (modoTeste) {
+            logger.info("Modo de teste ativo - limitando busca de localização da carga à primeira página");
         }
         
         logger.info("Iniciando busca de localização da carga a partir de: {}", dataInicio);

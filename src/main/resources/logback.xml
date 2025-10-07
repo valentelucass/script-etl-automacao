@@ -27,4 +27,9 @@
     
     <!-- Configurações específicas para pacotes -->
     <logger name="br.com.extrator" level="INFO" />
+    
+    <!-- Configurações de DEBUG para investigação de problemas de banco de dados -->
+    <logger name="br.com.extrator.db" level="DEBUG" />
+    <logger name="java.sql" level="DEBUG" />
+    <logger name="org.hibernate.SQL" level="DEBUG" />
 </configuration>
