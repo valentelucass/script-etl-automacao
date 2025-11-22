@@ -13,9 +13,9 @@ image: public/foto1.png
 
 # Extrator de Dados ESL Cloud
 
-**Sistema de Automação ETL (Extract, Transform, Load)** desenvolvido em Java para extrair dados de múltiplas APIs do ESL Cloud e carregá-los em SQL Server, com coleta automática de métricas de execução e sistema robusto de deduplicação.
+**Sistema de Automação ETL (Extract, Transform, Load)** desenvolvido em Java para extrair dados das APIs GraphQL e Data Export do ESL Cloud e carregá-los em SQL Server, com coleta automática de métricas de execução e sistema robusto de deduplicação.
 
-**Versão:** 2.1.0 | **Última Atualização:** 11/11/2025 | **Status:** ✅ Estável
+**Versão:** 2.2.0 | **Última Atualização:** 22/11/2025 | **Status:** ✅ Estável
 
 ---
 
@@ -41,7 +41,7 @@ image: public/foto1.png
 
 Este projeto é um **sistema de automação ETL** que:
 
-1. **Extrai dados** de 3 APIs diferentes do ESL Cloud (REST, GraphQL, Data Export)
+1. **Extrai dados** de 2 APIs do ESL Cloud (GraphQL, Data Export)
 2. **Transforma** os dados JSON em entidades estruturadas
 3. **Carrega** os dados em um banco SQL Server usando operações MERGE (UPSERT)
 4. **Garante integridade** através de sistema robusto de deduplicação
@@ -58,8 +58,9 @@ Automatizar a extração de dados operacionais do ESL Cloud (sistema de gestão 
 
 ### Características Principais
 
-- ✅ **3 APIs Integradas**: REST, GraphQL e Data Export
-- ✅ **8 Entidades Extraídas**: Faturas a Pagar, Faturas a Receber, Ocorrências, Coletas, Fretes, Manifestos, Cotações, Localização de Carga
+- ✅ **2 APIs Integradas**: GraphQL e Data Export
+- ✅ **8 Entidades Extraídas**: Contas a Pagar (Data Export), Faturas por Cliente (Data Export), Coletas, Fretes, Manifestos, Cotações, Localização de Carga, Ocorrências (Data Export)
+- ✅ **Ocorrências (Data Export)**: pasta e classes preparadas
 - ✅ **Sistema MERGE Robusto**: Previne duplicados falsos e preserva duplicados naturais
 - ✅ **Deduplicação Inteligente**: Remove duplicados da API antes de salvar
 - ✅ **Paginação Completa**: Garante 100% de cobertura dos dados
@@ -78,17 +79,15 @@ O sistema segue um **padrão de orquestração** com runners especializados:
 
 ```
 Main.java (Orquestrador)
-    ├── RestRunner.java (API REST)
-    │   ├── Faturas a Pagar
-    │   ├── Faturas a Receber
-    │   └── Ocorrências
     ├── GraphQLRunner.java (API GraphQL)
     │   ├── Coletas
     │   └── Fretes
     └── DataExportRunner.java (API Data Export)
         ├── Manifestos
         ├── Cotações
-        └── Localização de Carga
+        ├── Localização de Carga
+        ├── Contas a Pagar
+        └── Faturas por Cliente
 ```
 
 ### Componentes Principais
@@ -100,12 +99,10 @@ Main.java (Orquestrador)
 - Gerencia logging e tratamento de erros
 
 #### 2. **Runners (`runners/*.java`)**
-- **RestRunner**: Executa extração de dados via API REST
 - **GraphQLRunner**: Executa extração de dados via API GraphQL
 - **DataExportRunner**: Executa extração de dados via API Data Export
 
 #### 3. **Clientes de API (`api/*.java`)**
-- **ClienteApiRest**: Cliente HTTP para API REST
 - **ClienteApiGraphQL**: Cliente HTTP para API GraphQL
 - **ClienteApiDataExport**: Cliente HTTP para API Data Export
 - Implementam paginação, retry, timeout e tratamento de erros
@@ -142,126 +139,6 @@ Main.java (Orquestrador)
 
 ## 🔌 APIs e Entidades Completas
 
-### API REST
-
-**Autenticação:** `Authorization: Bearer {{token_rest}}`
-
-**Base URL:** `{{base_url}}/api/v1`
-
-**Cliente:** `ClienteApiRest.java`
-
-#### 1. Faturas a Pagar (`FaturaAPagarEntity`)
-
-**Endpoint:** `GET /payables`
-
-**Classes Relacionadas:**
-- **DTO**: `FaturaAPagarDTO.java` (modelo/rest/faturaspagar/)
-- **Mapper**: `FaturaAPagarMapper.java` (modelo/rest/faturaspagar/)
-- **Entity**: `FaturaAPagarEntity.java` (db/entity/)
-- **Repository**: `FaturaAPagarRepository.java` (db/repository/)
-- **DTO Auxiliar**: `ReceiverDTO.java` (modelo/rest/faturaspagar/)
-
-**Características:**
-- **Chave Primária**: `id` (BIGINT)
-- **Chave de Negócio**: `document_number` (VARCHAR)
-- **Campos Principais**: 14 campos mapeados
-- **Campos Futuros**: 10 campos preparados (placeholders)
-- **Metadata**: `header_metadata` + `installments_metadata` (JSON completo)
-- **Filtro**: Últimas 24 horas
-
-**Campos Mapeados (14):**
-1. `id` - Chave primária
-2. `document_number` - Número do documento
-3. `issue_date` - Data de emissão
-4. `due_date` - Data de vencimento
-5. `total_value` - Valor total
-6. `receiver_cnpj` - CNPJ do fornecedor
-7. `receiver_name` - Nome do fornecedor
-8. `invoice_type` - Tipo de fatura
-9. `cnpj_filial` - CNPJ da filial
-10. `filial` - Nome da filial
-11. `observacoes` - Observações
-12. `conta_contabil` - Conta contábil
-13. `centro_custo` - Centro de custo
-14. `status` - Status calculado (Pendente/Vencido)
-15. `forma_pagamento` - Forma de pagamento
-
-**Campos Futuros (10 placeholders):**
-- `sequencia`, `cheque`, `vencimento_original`, `competencia`, `data_baixa`, `data_liquidacao`, `banco_pagamento`, `conta_pagamento`, `descricao_despesa`
-
-**Repository:**
-- **MERGE**: Usa `id` como chave de matching
-- **Tabela**: `faturas_a_pagar`
-- **Criação Automática**: Sim
-
-#### 2. Faturas a Receber (`FaturaAReceberEntity`)
-
-**Endpoint:** `GET /receivables`
-
-**Classes Relacionadas:**
-- **DTO**: `FaturaAReceberDTO.java` (modelo/rest/faturasreceber/)
-- **Mapper**: `FaturaAReceberMapper.java` (modelo/rest/faturasreceber/)
-- **Entity**: `FaturaAReceberEntity.java` (db/entity/)
-- **Repository**: `FaturaAReceberRepository.java` (db/repository/)
-- **DTO Auxiliar**: `CustomerDTO.java` (modelo/rest/faturasreceber/)
-
-**Características:**
-- **Chave Primária**: `id` (BIGINT)
-- **Chave de Negócio**: `document_number` (VARCHAR)
-- **Campos Principais**: 11 campos mapeados
-- **Metadata**: `metadata` (JSON completo)
-- **Filtro**: Últimas 24 horas
-
-**Campos Mapeados (11):**
-1. `id` - Chave primária
-2. `document_number` - Número do documento
-3. `issue_date` - Data de emissão
-4. `due_date` - Data de vencimento
-5. `total_value` - Valor total
-6. `customer_cnpj` - CNPJ do cliente
-7. `customer_name` - Nome do cliente
-8. `invoice_type` - Tipo de fatura
-9. `metadata` - JSON completo
-
-**Repository:**
-- **MERGE**: Usa `id` como chave de matching
-- **Tabela**: `faturas_a_receber`
-- **Criação Automática**: Sim
-
-#### 3. Ocorrências (`OcorrenciaEntity`)
-
-**Endpoint:** `GET /occurrences`
-
-**Classes Relacionadas:**
-- **DTO**: `OcorrenciaDTO.java` (modelo/rest/ocorrencias/)
-- **Mapper**: `OcorrenciaMapper.java` (modelo/rest/ocorrencias/)
-- **Entity**: `OcorrenciaEntity.java` (db/entity/)
-- **Repository**: `OcorrenciaRepository.java` (db/repository/)
-- **DTOs Auxiliares**: 
-  - `FreightDTO.java` (modelo/rest/ocorrencias/)
-  - `InvoiceDTO.java` (modelo/rest/ocorrencias/)
-  - `OccurrenceDetailsDTO.java` (modelo/rest/ocorrencias/)
-
-**Características:**
-- **Chave Primária**: `id` (BIGINT)
-- **Campos Principais**: 8 campos mapeados
-- **Metadata**: `metadata` (JSON completo)
-- **Filtro**: Últimas 24 horas
-
-**Campos Mapeados (8):**
-1. `id` - Chave primária
-2. `occurrence_at` - Data/hora da ocorrência
-3. `occurrence_code` - Código da ocorrência
-4. `occurrence_description` - Descrição da ocorrência
-5. `freight_id` - ID do frete
-6. `cte_key` - Chave do CT-e
-7. `invoice_id` - ID da nota fiscal
-8. `invoice_key` - Chave da nota fiscal
-
-**Repository:**
-- **MERGE**: Usa `id` como chave de matching
-- **Tabela**: `ocorrencias`
-- **Criação Automática**: Sim
 
 ---
 
@@ -569,6 +446,56 @@ Main.java (Orquestrador)
 - **Criação Automática**: Sim
 - **Deduplicação**: Sim (antes de salvar)
 
+#### 9. Contas a Pagar (`ContasAPagarDataExportEntity`)
+
+**Template ID:** `8636`
+
+**Classes Relacionadas:**
+- **DTO**: `ContasAPagarDTO.java` (modelo/dataexport/contasapagar/)
+- **Mapper**: `ContasAPagarMapper.java` (modelo/dataexport/contasapagar/)
+- **Entity**: `ContasAPagarDataExportEntity.java` (db/entity/)
+- **Repository**: `ContasAPagarRepository.java` (db/repository/)
+
+**Características:**
+- **Chave Primária**: `sequence_code` (BIGINT)
+- **Campos Principais**: documento, emissão, tipo, valores (`valor_original`, `valor_a_pagar`, `valor_pago`), status_pagamento, competência (mês/ano), datas (criação, liquidação, transação), fornecedor, filial, centro de custo, conta contábil, observações
+- **Metadata**: `metadata` (JSON completo)
+- **Filtro**: Últimas 24 horas
+- **Paginação**: `page` e `per` (até 100 registros por página)
+
+**Repository:**
+- **MERGE**: Usa `sequence_code` como chave de matching
+- **Tabela**: `contas_a_pagar`
+- **Criação Automática**: Sim (com índices e view para PowerBI)
+
+#### 10. Faturas por Cliente (`FaturaPorClienteEntity`)
+
+**Template ID:** `4924`
+
+**Classes Relacionadas:**
+- **DTO**: `FaturaPorClienteDTO.java` (modelo/dataexport/faturaporcliente/)
+- **Mapper**: `FaturaPorClienteMapper.java` (modelo/dataexport/faturaporcliente/)
+- **Entity**: `FaturaPorClienteEntity.java` (db/entity/)
+- **Repository**: `FaturaPorClienteRepository.java` (db/repository/)
+
+**Características:**
+- **Chave Primária**: `unique_id` (NVARCHAR)
+- **Campos Principais**: valores (`valor_frete`, `valor_fatura`), documentos fiscais (CT-e, NFS-e), fatura (número, emissão, vencimento, baixa), classificação (filial, tipo frete, estado), envolvidos (pagador, remetente, destinatário, vendedor), listas (notas fiscais, pedidos)
+- **Metadata**: `metadata` (JSON completo)
+- **Filtro**: Últimas 24 horas
+
+**Repository:**
+- **MERGE**: Usa `unique_id` como chave de matching
+- **Tabela**: `faturas_por_cliente`
+- **Criação Automática**: Sim (com índices e view para PowerBI)
+
+#### Ocorrências (Data Export) — pendente
+- Template ID: A definir
+- Classes preparadas:
+  - `OcorrenciaDTO.java` (modelo/dataexport/ocorrencias/)
+  - `OcorrenciaMapper.java` (modelo/dataexport/ocorrencias/)
+- Observação: implementação de Entity e Repository será adicionada na próxima versão
+
 ---
 
 ## 🔄 Processo de Extração (ETL)
@@ -639,7 +566,6 @@ Main.java (Orquestrador)
 
 O sistema implementa paginação robusta para garantir 100% de cobertura:
 
-- **API REST**: Usa parâmetros `page` e `per_page`
 - **API GraphQL**: Usa `first` e `after` (cursor-based)
 - **API Data Export**: Usa `page` e `per` no corpo JSON
 
@@ -681,7 +607,7 @@ O sistema implementa **duas camadas de proteção** contra duplicados:
 
 #### Entidades sem Deduplicação
 
-**Faturas a Pagar, Faturas a Receber, Ocorrências, Coletas, Fretes**:
+**Contas a Pagar, Faturas por Cliente, Coletas, Fretes**:
 - Não aplicam deduplicação antes de salvar
 - O MERGE já previne duplicados usando a chave primária
 
@@ -689,20 +615,15 @@ O sistema implementa **duas camadas de proteção** contra duplicados:
 
 #### Entidades com MERGE Simples (Chave Primária)
 
-**Faturas a Pagar** (`FaturaAPagarRepository`):
-- **Chave de Matching**: `id`
-- **Tabela**: `faturas_a_pagar`
-- **Operação**: `MERGE ... ON target.id = source.id`
+**Contas a Pagar (Data Export)** (`ContasAPagarRepository`):
+- **Chave de Matching**: `sequence_code`
+- **Tabela**: `contas_a_pagar`
+- **Operação**: `MERGE ... ON target.sequence_code = source.sequence_code`
 
-**Faturas a Receber** (`FaturaAReceberRepository`):
-- **Chave de Matching**: `id`
-- **Tabela**: `faturas_a_receber`
-- **Operação**: `MERGE ... ON target.id = source.id`
-
-**Ocorrências** (`OcorrenciaRepository`):
-- **Chave de Matching**: `id`
-- **Tabela**: `ocorrencias`
-- **Operação**: `MERGE ... ON target.id = source.id`
+**Faturas por Cliente (Data Export)** (`FaturaPorClienteRepository`):
+- **Chave de Matching**: `unique_id`
+- **Tabela**: `faturas_por_cliente`
+- **Operação**: `MERGE ... ON target.unique_id = source.unique_id`
 
 **Coletas** (`ColetaRepository`):
 - **Chave de Matching**: `id`
@@ -791,81 +712,91 @@ O sistema usa uma **arquitetura híbrida** para cada entidade:
 
 ### Tabelas do Banco de Dados
 
-#### 1. `faturas_a_pagar`
 
-**Chave Primária**: `id` (BIGINT)
+#### 1. `contas_a_pagar`
 
-**Campos Principais**: 14 campos + 10 placeholders + 2 metadata
+**Chave Primária**: `sequence_code` (BIGINT)
 
 **Estrutura:**
 ```sql
-CREATE TABLE faturas_a_pagar (
-    id BIGINT PRIMARY KEY,
+CREATE TABLE contas_a_pagar (
+    sequence_code BIGINT PRIMARY KEY,
     document_number VARCHAR(100),
     issue_date DATE,
-    due_date DATE,
-    total_value DECIMAL(18,2),
-    receiver_cnpj VARCHAR(20),
-    receiver_name NVARCHAR(200),
-    invoice_type VARCHAR(50),
-    cnpj_filial VARCHAR(20),
-    filial NVARCHAR(200),
+    tipo_lancamento NVARCHAR(100),
+    valor_original DECIMAL(18,2),
+    valor_juros DECIMAL(18,2),
+    valor_desconto DECIMAL(18,2),
+    valor_a_pagar DECIMAL(18,2),
+    valor_pago DECIMAL(18,2),
+    status_pagamento NVARCHAR(50),
+    mes_competencia INT,
+    ano_competencia INT,
+    data_criacao DATETIMEOFFSET,
+    data_liquidacao DATE,
+    data_transacao DATE,
+    nome_fornecedor NVARCHAR(255),
+    nome_filial NVARCHAR(255),
+    nome_centro_custo NVARCHAR(255),
+    valor_centro_custo DECIMAL(18,2),
+    classificacao_contabil NVARCHAR(100),
+    descricao_contabil NVARCHAR(255),
+    valor_contabil DECIMAL(18,2),
+    area_lancamento NVARCHAR(255),
     observacoes NVARCHAR(MAX),
-    conta_contabil NVARCHAR(100),
-    centro_custo NVARCHAR(200),
-    status NVARCHAR(50),
-    forma_pagamento NVARCHAR(50),
-    header_metadata NVARCHAR(MAX),
-    installments_metadata NVARCHAR(MAX),
-    data_extracao DATETIME2 DEFAULT GETDATE()
-);
-```
-
-#### 2. `faturas_a_receber`
-
-**Chave Primária**: `id` (BIGINT)
-
-**Campos Principais**: 11 campos + 1 metadata
-
-**Estrutura:**
-```sql
-CREATE TABLE faturas_a_receber (
-    id BIGINT PRIMARY KEY,
-    document_number VARCHAR(100),
-    issue_date DATE,
-    due_date DATE,
-    total_value DECIMAL(18,2),
-    customer_cnpj VARCHAR(20),
-    customer_name NVARCHAR(200),
-    invoice_type VARCHAR(50),
+    descricao_despesa NVARCHAR(MAX),
+    nome_usuario NVARCHAR(255),
+    reconciliado BIT,
     metadata NVARCHAR(MAX),
     data_extracao DATETIME2 DEFAULT GETDATE()
 );
+CREATE INDEX IX_fp_data_export_issue_date ON contas_a_pagar(issue_date);
+CREATE INDEX IX_fp_data_export_status ON contas_a_pagar(status_pagamento);
+CREATE INDEX IX_fp_data_export_fornecedor ON contas_a_pagar(nome_fornecedor);
+CREATE INDEX IX_fp_data_export_filial ON contas_a_pagar(nome_filial);
+CREATE INDEX IX_fp_data_export_competencia ON contas_a_pagar(ano_competencia, mes_competencia);
 ```
 
-#### 3. `ocorrencias`
+#### 2. `faturas_por_cliente`
 
-**Chave Primária**: `id` (BIGINT)
-
-**Campos Principais**: 8 campos + 1 metadata
+**Chave Primária**: `unique_id` (NVARCHAR)
 
 **Estrutura:**
 ```sql
-CREATE TABLE ocorrencias (
-    id BIGINT PRIMARY KEY,
-    occurrence_at DATETIME2,
-    occurrence_code INT,
-    occurrence_description NVARCHAR(500),
-    freight_id BIGINT,
-    cte_key VARCHAR(50),
-    invoice_id BIGINT,
-    invoice_key VARCHAR(50),
+CREATE TABLE faturas_por_cliente (
+    unique_id NVARCHAR(100) PRIMARY KEY,
+    valor_frete DECIMAL(18,2),
+    valor_fatura DECIMAL(18,2),
+    numero_cte BIGINT,
+    chave_cte NVARCHAR(100),
+    numero_nfse BIGINT,
+    status_cte NVARCHAR(255),
+    data_emissao_cte DATETIMEOFFSET,
+    numero_fatura NVARCHAR(50),
+    data_emissao_fatura DATE,
+    data_vencimento_fatura DATE,
+    data_baixa_fatura DATE,
+    filial NVARCHAR(255),
+    tipo_frete NVARCHAR(100),
+    classificacao NVARCHAR(100),
+    estado NVARCHAR(50),
+    pagador_nome NVARCHAR(255),
+    pagador_documento NVARCHAR(50),
+    remetente_nome NVARCHAR(255),
+    destinatario_nome NVARCHAR(255),
+    vendedor_nome NVARCHAR(255),
+    notas_fiscais NVARCHAR(MAX),
+    pedidos_cliente NVARCHAR(MAX),
     metadata NVARCHAR(MAX),
     data_extracao DATETIME2 DEFAULT GETDATE()
 );
+CREATE INDEX IX_fpc_vencimento ON faturas_por_cliente(data_vencimento_fatura);
+CREATE INDEX IX_fpc_pagador ON faturas_por_cliente(pagador_nome);
+CREATE INDEX IX_fpc_filial ON faturas_por_cliente(filial);
+CREATE INDEX IX_fpc_chave_cte ON faturas_por_cliente(chave_cte);
 ```
 
-#### 4. `coletas`
+#### 3. `coletas`
 
 **Chave Primária**: `id` (VARCHAR)
 
@@ -901,7 +832,7 @@ CREATE TABLE coletas (
 );
 ```
 
-#### 5. `fretes`
+#### 4. `fretes`
 
 **Chave Primária**: `id` (BIGINT)
 
@@ -937,7 +868,7 @@ CREATE TABLE fretes (
 );
 ```
 
-#### 6. `manifestos`
+#### 5. `manifestos`
 
 **Chave Primária**: `id` (BIGINT, auto-incrementado)
 
@@ -999,7 +930,7 @@ CREATE INDEX IX_manifestos_sequence_code ON manifestos(sequence_code);
 
 **✅ Tipos Numéricos:** Todos os campos numéricos (valores monetários, pesos, volumes) usam `DECIMAL` para permitir análises numéricas no banco de dados.
 
-#### 7. `cotacoes`
+#### 6. `cotacoes`
 
 **Chave Primária**: `sequence_code` (BIGINT)
 
@@ -1032,7 +963,7 @@ CREATE TABLE cotacoes (
 );
 ```
 
-#### 8. `localizacao_cargas`
+#### 7. `localizacao_cargas`
 
 **Chave Primária**: `sequence_number` (BIGINT)
 
@@ -1062,7 +993,7 @@ CREATE TABLE localizacao_cargas (
 );
 ```
 
-#### 9. `log_extracoes`
+#### 8. `log_extracoes`
 
 **Chave Primária**: `id` (BIGINT, auto-incrementado)
 
@@ -1088,28 +1019,7 @@ CREATE TABLE log_extracoes (
 
 #### API REST
 
-**Faturas a Pagar:**
-- `FaturaAPagarDTO.java` - DTO da API
-- `FaturaAPagarMapper.java` - Mapper DTO → Entity
-- `FaturaAPagarEntity.java` - Entity do banco
-- `FaturaAPagarRepository.java` - Repository (persistência)
-- `ReceiverDTO.java` - DTO auxiliar (fornecedor)
-
-**Faturas a Receber:**
-- `FaturaAReceberDTO.java` - DTO da API
-- `FaturaAReceberMapper.java` - Mapper DTO → Entity
-- `FaturaAReceberEntity.java` - Entity do banco
-- `FaturaAReceberRepository.java` - Repository (persistência)
-- `CustomerDTO.java` - DTO auxiliar (cliente)
-
-**Ocorrências:**
-- `OcorrenciaDTO.java` - DTO da API
-- `OcorrenciaMapper.java` - Mapper DTO → Entity
-- `OcorrenciaEntity.java` - Entity do banco
-- `OcorrenciaRepository.java` - Repository (persistência)
-- `FreightDTO.java` - DTO auxiliar (frete)
-- `InvoiceDTO.java` - DTO auxiliar (nota fiscal)
-- `OccurrenceDetailsDTO.java` - DTO auxiliar (detalhes)
+Descontinuada. O projeto foi migrado para GraphQL e Data Export.
 
 #### API GraphQL
 
@@ -1176,17 +1086,15 @@ CREATE TABLE log_extracoes (
 
 **Tabelas Data Export (adicionais):**
 - `contas_a_pagar` (Data Export)
-- `faturas_por_cliente_data_export` (Data Export)
+- `faturas_por_cliente` (Data Export)
 
 ### Classes Comuns
 
 **Cliente de APIs:**
-- `ClienteApiRest.java` - Cliente HTTP para API REST
 - `ClienteApiGraphQL.java` - Cliente HTTP para API GraphQL
 - `ClienteApiDataExport.java` - Cliente HTTP para API Data Export
 
 **Runners:**
-- `RestRunner.java` - Runner para API REST
 - `GraphQLRunner.java` - Runner para API GraphQL
 - `DataExportRunner.java` - Runner para API Data Export
 
@@ -1254,7 +1162,6 @@ mvn clean package
 ```bash
 # PowerShell
 $env:API_BASEURL="https://sua-empresa.eslcloud.com.br"
-$env:API_REST_TOKEN="seu_token_rest"
 $env:API_GRAPHQL_TOKEN="seu_token_graphql"
 $env:API_DATAEXPORT_TOKEN="seu_token_dataexport"
 $env:DB_URL="jdbc:sqlserver://localhost:1433;databaseName=esl_cloud"
@@ -1304,35 +1211,6 @@ java -jar target/extrator.jar --ajuda
 ### 4. Validar Dados
 
 ```sql
--- Verificar faturas a pagar
-SELECT TOP 10 
-    id, 
-    document_number, 
-    filial, 
-    cnpj_filial,
-    status, 
-    total_value
-FROM faturas_a_pagar
-ORDER BY data_extracao DESC;
-
--- Verificar faturas a receber
-SELECT TOP 10 
-    id, 
-    document_number, 
-    customer_name, 
-    total_value
-FROM faturas_a_receber
-ORDER BY data_extracao DESC;
-
--- Verificar ocorrências
-SELECT TOP 10 
-    id, 
-    occurrence_at, 
-    occurrence_code, 
-    occurrence_description
-FROM ocorrencias
-ORDER BY data_extracao DESC;
-
 -- Verificar coletas
 SELECT TOP 10 
     id, 
@@ -1388,7 +1266,7 @@ SELECT TOP 10
     filial,
     data_vencimento_fatura,
     data_extracao
-FROM faturas_por_cliente_data_export
+FROM faturas_por_cliente
 ORDER BY data_extracao DESC;
 
 -- Análises numéricas (agora possível com tipos DECIMAL)
@@ -1489,31 +1367,14 @@ script-automacao/
 │   │   │   └── br/com/extrator/
 │   │   │       ├── Main.java                    # Orquestrador principal
 │   │   │       ├── api/                         # Clientes de API
-│   │   │       │   ├── ClienteApiRest.java
 │   │   │       │   ├── ClienteApiGraphQL.java
 │   │   │       │   ├── ClienteApiDataExport.java
 │   │   │       │   ├── PaginatedGraphQLResponse.java
 │   │   │       │   └── ResultadoExtracao.java
 │   │   │       ├── runners/                     # Runners especializados
-│   │   │       │   ├── RestRunner.java
 │   │   │       │   ├── GraphQLRunner.java
 │   │   │       │   └── DataExportRunner.java
 │   │   │       ├── modelo/                      # DTOs e Mappers
-│   │   │       │   ├── rest/
-│   │   │       │   │   ├── faturaspagar/
-│   │   │       │   │   │   ├── FaturaAPagarDTO.java
-│   │   │       │   │   │   ├── FaturaAPagarMapper.java
-│   │   │       │   │   │   └── ReceiverDTO.java
-│   │   │       │   │   ├── faturasreceber/
-│   │   │       │   │   │   ├── FaturaAReceberDTO.java
-│   │   │       │   │   │   ├── FaturaAReceberMapper.java
-│   │   │       │   │   │   └── CustomerDTO.java
-│   │   │       │   │   └── ocorrencias/
-│   │   │       │   │       ├── OcorrenciaDTO.java
-│   │   │       │   │       ├── OcorrenciaMapper.java
-│   │   │       │   │       ├── FreightDTO.java
-│   │   │       │   │       ├── InvoiceDTO.java
-│   │   │       │   │       └── OccurrenceDetailsDTO.java
 │   │   │       │   ├── graphql/
 │   │   │       │   │   ├── coletas/
 │   │   │       │   │   │   ├── ColetaNodeDTO.java
@@ -1545,31 +1406,38 @@ script-automacao/
 │   │   │       │       ├── cotacao/
 │   │   │       │       │   ├── CotacaoDTO.java
 │   │   │       │       │   └── CotacaoMapper.java
-│   │   │       │       └── localizacaocarga/
-│   │   │       │           ├── LocalizacaoCargaDTO.java
-│   │   │       │           └── LocalizacaoCargaMapper.java
+│   │   │       │       ├── localizacaocarga/
+│   │   │       │       │   ├── LocalizacaoCargaDTO.java
+│   │   │       │       │   └── LocalizacaoCargaMapper.java
+│   │   │       │       ├── ocorrencias/
+│   │   │       │       │   ├── OcorrenciaDTO.java
+│   │   │       │       │   └── OcorrenciaMapper.java
+│   │   │       │       ├── contasapagar/
+│   │   │       │       │   ├── ContasAPagarDTO.java
+│   │   │       │       │   └── ContasAPagarMapper.java
+│   │   │       │       └── faturaporcliente/
+│   │   │       │           ├── FaturaPorClienteDTO.java
+│   │   │       │           └── FaturaPorClienteMapper.java
 │   │   │       ├── db/
 │   │   │       │   ├── entity/                  # Entities (tabelas)
-│   │   │       │   │   ├── FaturaAPagarEntity.java
-│   │   │       │   │   ├── FaturaAReceberEntity.java
-│   │   │       │   │   ├── OcorrenciaEntity.java
 │   │   │       │   │   ├── ColetaEntity.java
-│   │   │       │   │   ├── FreteEntity.java
-│   │   │       │   │   ├── ManifestoEntity.java
+│   │   │       │   │   ├── ContasAPagarDataExportEntity.java
 │   │   │       │   │   ├── CotacaoEntity.java
+│   │   │       │   │   ├── FaturaPorClienteEntity.java
+│   │   │       │   │   ├── FreteEntity.java
 │   │   │       │   │   ├── LocalizacaoCargaEntity.java
-│   │   │       │   │   └── LogExtracaoEntity.java
+│   │   │       │   │   ├── LogExtracaoEntity.java
+│   │   │       │   │   └── ManifestoEntity.java
 │   │   │       │   └── repository/              # Repositories (persistência)
 │   │   │       │       ├── AbstractRepository.java
-│   │   │       │       ├── FaturaAPagarRepository.java
-│   │   │       │       ├── FaturaAReceberRepository.java
-│   │   │       │       ├── OcorrenciaRepository.java
 │   │   │       │       ├── ColetaRepository.java
-│   │   │       │       ├── FreteRepository.java
-│   │   │       │       ├── ManifestoRepository.java
+│   │   │       │       ├── ContasAPagarRepository.java
 │   │   │       │       ├── CotacaoRepository.java
+│   │   │       │       ├── FaturaPorClienteRepository.java
+│   │   │       │       ├── FreteRepository.java
 │   │   │       │       ├── LocalizacaoCargaRepository.java
-│   │   │       │       └── LogExtracaoRepository.java
+│   │   │       │       ├── LogExtracaoRepository.java
+│   │   │       │       └── ManifestoRepository.java
 │   │   │       ├── comandos/                    # Comandos CLI
 │   │   │       │   ├── ExecutarFluxoCompletoComando.java
 │   │   │       │   ├── ValidarManifestosComando.java
@@ -1735,8 +1603,9 @@ A documentação completa está em `docs/`:
 - Data Export: suportar `order_by` nas requisições GET
 - Data Export: tornar `per` configurável por template via `config.properties`
 - Observabilidade: incluir métricas e dashboards para novas tabelas de Data Export
-- Exportação: habilitar CSV para `contas_a_pagar` e `faturas_por_cliente_data_export`
+- Exportação: habilitar CSV para `contas_a_pagar` e `faturas_por_cliente`
 - CLI: adicionar flags dedicadas para executar apenas relatórios específicos do Data Export
+- Data Export: implementar Entity e Repository para Ocorrências
 
 ---
 
@@ -1776,6 +1645,13 @@ Para problemas ou dúvidas:
 
 ## 📝 Changelog
 
+### v2.2.0 (22/11/2025)
+- ✅ Remoção total da API REST do projeto
+- ✅ Consolidação dos fluxos em GraphQL e Data Export
+- ✅ Inclusão dos relatórios de `contas_a_pagar` (8636) e `faturas_por_cliente` (4924)
+- ✅ Atualização de variáveis de ambiente (remoção de `API_REST_TOKEN`)
+- ✅ Documentação revisada: arquitetura, ETL, paginação, classes e estrutura de arquivos
+
 ### v2.1.0 (11/11/2025)
 - ✅ Sistema de deduplicação robusto para manifestos, cotações e localização de carga
 - ✅ Correção de duplicados falsos (campos voláteis)
@@ -1803,6 +1679,6 @@ Este projeto é interno e proprietário. Todos os direitos reservados.
 
 ---
 
-**Última Atualização:** 11/11/2025  
-**Versão:** 2.1.0  
+**Última Atualização:** 22/11/2025  
+**Versão:** 2.2.0  
 **Status:** ✅ Estável
