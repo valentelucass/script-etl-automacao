@@ -271,18 +271,21 @@ public class LogExtracaoRepository {
             final String ddl;
             if (existe) {
                 ddl = """
-                    CREATE OR ALTER VIEW dbo.vw_dim_veiculos AS \
-                    SELECT DISTINCT UPPER(TRIM([Veículo/Placa])) AS Placa, \
-                    MAX(UPPER(TRIM([Tipo Veículo/Nome]))) AS TipoVeiculo, \
-                    MAX(UPPER(TRIM([Proprietário/Nome]))) AS Proprietario \
-                    FROM dbo.vw_manifestos_powerbi \
-                    WHERE [Veículo/Placa] IS NOT NULL AND TRIM([Veículo/Placa]) <> '' \
-                    GROUP BY UPPER(TRIM([Veículo/Placa]))""";
+                    CREATE OR ALTER VIEW dbo.vw_dim_veiculos AS
+                    SELECT DISTINCT
+                        UPPER(LTRIM(RTRIM([Veículo/Placa]))) AS Placa,
+                        MAX(UPPER(LTRIM(RTRIM([Tipo Veículo/Nome])))) AS TipoVeiculo,
+                        MAX(UPPER(LTRIM(RTRIM([Proprietário/Nome])))) AS Proprietario
+                    FROM dbo.vw_manifestos_powerbi
+                    WHERE [Veículo/Placa] IS NOT NULL AND LTRIM(RTRIM([Veículo/Placa])) <> ''
+                    GROUP BY UPPER(LTRIM(RTRIM([Veículo/Placa])))""";
             } else {
                 ddl = """
-                    CREATE OR ALTER VIEW dbo.vw_dim_veiculos AS \
-                    SELECT TOP 0 CAST(NULL AS NVARCHAR(50)) AS Placa, \
-                    CAST(NULL AS NVARCHAR(255)) AS TipoVeiculo, CAST(NULL AS NVARCHAR(255)) AS Proprietario FROM sys.objects""";
+                    CREATE OR ALTER VIEW dbo.vw_dim_veiculos AS
+                    SELECT TOP 0 CAST(NULL AS NVARCHAR(50)) AS Placa,
+                           CAST(NULL AS NVARCHAR(255)) AS TipoVeiculo,
+                           CAST(NULL AS NVARCHAR(255)) AS Proprietario
+                    FROM sys.objects""";
             }
             try (PreparedStatement stmt = conn.prepareStatement(ddl)) {
                 stmt.executeUpdate();
@@ -306,13 +309,17 @@ public class LogExtracaoRepository {
             final String ddl;
             if (existe) {
                 ddl = """
-                    CREATE OR ALTER VIEW dbo.vw_dim_motoristas AS \
-                    SELECT DISTINCT UPPER(TRIM([Motorista])) AS NomeMotorista \
-                    FROM dbo.vw_manifestos_powerbi \
-                    WHERE [Motorista] IS NOT NULL AND TRIM([Motorista]) <> '' AND [Motorista] NOT LIKE '%MOTORISTA%'""";
+                    CREATE OR ALTER VIEW dbo.vw_dim_motoristas AS
+                    SELECT DISTINCT UPPER(LTRIM(RTRIM([Motorista]))) AS NomeMotorista
+                    FROM dbo.vw_manifestos_powerbi
+                    WHERE [Motorista] IS NOT NULL
+                      AND LTRIM(RTRIM([Motorista])) <> ''
+                      AND [Motorista] NOT LIKE '%MOTORISTA%'""";
             } else {
-                ddl = "CREATE OR ALTER VIEW dbo.vw_dim_motoristas AS " +
-                    "SELECT TOP 0 CAST(NULL AS NVARCHAR(255)) AS NomeMotorista FROM sys.objects";
+                ddl = """
+                    CREATE OR ALTER VIEW dbo.vw_dim_motoristas AS
+                    SELECT TOP 0 CAST(NULL AS NVARCHAR(255)) AS NomeMotorista
+                    FROM sys.objects""";
             }
             try (PreparedStatement stmt = conn.prepareStatement(ddl)) {
                 stmt.executeUpdate();
@@ -336,14 +343,20 @@ public class LogExtracaoRepository {
             final String ddl;
             if (existe) {
                 ddl = """
-                    CREATE OR ALTER VIEW dbo.vw_dim_planocontas AS \
-                    SELECT DISTINCT [Conta Contábil/Classificação] AS Classificacao, \
-                    UPPER(TRIM([Conta Contábil/Descrição])) AS Descricao \
-                    FROM dbo.vw_contas_a_pagar_powerbi \
-                    WHERE [Conta Contábil/Classificação] IS NOT NULL""";
+                    CREATE OR ALTER VIEW dbo.vw_dim_planocontas AS
+                    SELECT
+                        UPPER(LTRIM(RTRIM([Conta Contábil/Descrição]))) AS Descricao,
+                        ISNULL(MAX([Conta Contábil/Classificação]), 'OUTROS / NÃO CLASSIFICADO') AS Classificacao
+                    FROM dbo.vw_contas_a_pagar_powerbi
+                    WHERE [Conta Contábil/Descrição] IS NOT NULL
+                      AND LTRIM(RTRIM([Conta Contábil/Descrição])) <> ''
+                    GROUP BY UPPER(LTRIM(RTRIM([Conta Contábil/Descrição])))""";
             } else {
-                ddl = "CREATE OR ALTER VIEW dbo.vw_dim_planocontas AS " +
-                    "SELECT TOP 0 CAST(NULL AS NVARCHAR(255)) AS Classificacao, CAST(NULL AS NVARCHAR(255)) AS Descricao FROM sys.objects";
+                ddl = """
+                    CREATE OR ALTER VIEW dbo.vw_dim_planocontas AS
+                    SELECT TOP 0 CAST(NULL AS NVARCHAR(255)) AS Descricao,
+                           CAST(NULL AS NVARCHAR(255)) AS Classificacao
+                    FROM sys.objects""";
             }
             try (PreparedStatement stmt = conn.prepareStatement(ddl)) {
                 stmt.executeUpdate();

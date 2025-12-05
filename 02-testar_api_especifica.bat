@@ -97,6 +97,9 @@ echo ================================================================
 echo TESTANDO API: %API%
 echo ================================================================
 
+call "%~dp0mvn.bat" -DskipTests clean package
+if errorlevel 1 goto :COMPILE_FAIL
+
 if not exist "target\extrator.jar" goto :NOJAR
 
 set "CMD_ARGS=--testar-api %API%"
@@ -128,6 +131,12 @@ echo ================================================================
 echo TESTE FALHOU (Exit Code: %ERRORLEVEL%)
 echo ================================================================
 goto :END
+
+:COMPILE_FAIL
+echo ERRO: Compilacao falhou
+echo.
+pause
+exit /b 1
 
 :END
 echo.
