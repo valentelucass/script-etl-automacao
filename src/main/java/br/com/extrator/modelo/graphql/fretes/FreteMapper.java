@@ -50,9 +50,7 @@ public class FreteMapper {
         entity.setValorTotal(dto.getTotalValue());
         entity.setValorNotas(dto.getInvoicesValue());
         entity.setPesoNotas(dto.getInvoicesWeight());
-        if (dto.getCorporation() != null) {
-            entity.setIdCorporacao(dto.getCorporation().getId());
-        }
+        entity.setIdCorporacao(dto.getCorporationId());
         entity.setIdCidadeDestino(dto.getDestinationCityId());
 
         // 1.1. Mapeamento dos campos expandidos (22 campos do CSV)
@@ -110,12 +108,24 @@ public class FreteMapper {
         }
 
         // Mapear campos expandidos adicionais
-        if (dto.getCorporation() != null && dto.getCorporation().getPerson() != null) {
-            final String apelido = dto.getCorporation().getPerson().getNickname();
+        if (dto.getCorporation() != null) {
+            String apelido = null;
+            String cnpj = null;
+            if (dto.getCorporation().getPerson() != null) {
+                apelido = dto.getCorporation().getPerson().getNickname();
+                cnpj = dto.getCorporation().getPerson().getCnpj();
+            }
+            if ((apelido == null || apelido.isBlank()) && dto.getCorporation().getNickname() != null) {
+                apelido = dto.getCorporation().getNickname();
+            }
+            if ((cnpj == null || cnpj.isBlank()) && dto.getCorporation().getCnpj() != null) {
+                cnpj = dto.getCorporation().getCnpj();
+            }
             if (apelido != null && !apelido.isBlank()) {
                 entity.setFilialNome(apelido);
+                entity.setFilialApelido(apelido);
             }
-            entity.setFilialCnpj(dto.getCorporation().getPerson().getCnpj());
+            entity.setFilialCnpj(cnpj);
         }
 
         if (dto.getFreightInvoices() != null && !dto.getFreightInvoices().isEmpty()) {
@@ -189,12 +199,21 @@ public class FreteMapper {
             entity.setFiscalTaxValue(dto.getFiscalDetail().getTaxValue() != null ? java.math.BigDecimal.valueOf(dto.getFiscalDetail().getTaxValue()) : null);
             entity.setFiscalPisValue(dto.getFiscalDetail().getPisValue() != null ? java.math.BigDecimal.valueOf(dto.getFiscalDetail().getPisValue()) : null);
             entity.setFiscalCofinsValue(dto.getFiscalDetail().getCofinsValue() != null ? java.math.BigDecimal.valueOf(dto.getFiscalDetail().getCofinsValue()) : null);
+            entity.setFiscalCalculationBasis(dto.getFiscalDetail().getCalculationBasis() != null ? java.math.BigDecimal.valueOf(dto.getFiscalDetail().getCalculationBasis()) : null);
+            entity.setFiscalTaxRate(dto.getFiscalDetail().getTaxRate() != null ? java.math.BigDecimal.valueOf(dto.getFiscalDetail().getTaxRate()) : null);
+            entity.setFiscalPisRate(dto.getFiscalDetail().getPisRate() != null ? java.math.BigDecimal.valueOf(dto.getFiscalDetail().getPisRate()) : null);
+            entity.setFiscalCofinsRate(dto.getFiscalDetail().getCofinsRate() != null ? java.math.BigDecimal.valueOf(dto.getFiscalDetail().getCofinsRate()) : null);
+            entity.setFiscalHasDifal(dto.getFiscalDetail().getHasDifal());
+            entity.setFiscalDifalOrigin(dto.getFiscalDetail().getDifalTaxValueOrigin() != null ? java.math.BigDecimal.valueOf(dto.getFiscalDetail().getDifalTaxValueOrigin()) : null);
+            entity.setFiscalDifalDestination(dto.getFiscalDetail().getDifalTaxValueDestination() != null ? java.math.BigDecimal.valueOf(dto.getFiscalDetail().getDifalTaxValueDestination()) : null);
         }
 
         if (dto.getCte() != null) {
             entity.setChaveCte(dto.getCte().getKey());
             entity.setNumeroCte(dto.getCte().getNumber());
             entity.setSerieCte(dto.getCte().getSeries());
+            entity.setCteEmissionType(dto.getCte().getEmissionType());
+            entity.setCteId(dto.getCte().getId());
         }
 
         // 2. Conversão segura de tipos de data e hora
@@ -207,6 +226,9 @@ public class FreteMapper {
             }
             if (dto.getCte() != null && dto.getCte().getIssuedAt() != null && !dto.getCte().getIssuedAt().trim().isEmpty()) {
                 entity.setCteIssuedAt(OffsetDateTime.parse(dto.getCte().getIssuedAt()));
+            }
+            if (dto.getCte() != null && dto.getCte().getCreatedAt() != null && !dto.getCte().getCreatedAt().trim().isEmpty()) {
+                entity.setCteCreatedAt(OffsetDateTime.parse(dto.getCte().getCreatedAt()));
             }
             if (dto.getDeliveryPredictionDate() != null && !dto.getDeliveryPredictionDate().trim().isEmpty()) {
                 entity.setDataPrevisaoEntrega(LocalDate.parse(dto.getDeliveryPredictionDate()));

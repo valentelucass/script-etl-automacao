@@ -67,6 +67,7 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                     destino_cidade NVARCHAR(255),
                     destino_uf NVARCHAR(10),
                     filial_nome NVARCHAR(255),
+                    filial_apelido NVARCHAR(255),
                     numero_nota_fiscal NVARCHAR(MAX),
                     tabela_preco_nome NVARCHAR(255),
                     classificacao_nome NVARCHAR(255),
@@ -83,6 +84,9 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                     chave_cte NVARCHAR(100),
                     numero_cte INT,
                     serie_cte INT,
+                    cte_id BIGINT,
+                    cte_emission_type NVARCHAR(50),
+                    cte_created_at DATETIMEOFFSET,
 
                     service_type INT,
                     insurance_enabled BIT,
@@ -107,6 +111,14 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                     globalized_type NVARCHAR(50),
                     price_table_accountable_type INT,
                     insurance_accountable_type INT,
+
+                    fiscal_calculation_basis DECIMAL(18, 2),
+                    fiscal_tax_rate DECIMAL(18, 6),
+                    fiscal_pis_rate DECIMAL(18, 6),
+                    fiscal_cofins_rate DECIMAL(18, 6),
+                    fiscal_has_difal BIT,
+                    fiscal_difal_origin DECIMAL(18, 2),
+                    fiscal_difal_destination DECIMAL(18, 2),
 
                     -- Coluna de Metadados para Resiliência e Completude
                     metadata NVARCHAR(MAX),
@@ -151,14 +163,17 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
     private void criarViewPowerBISeNaoExistir(final Connection conexao) throws SQLException {
         final String sqlView = """
             CREATE OR ALTER VIEW dbo.vw_fretes_powerbi AS
-            SELECT
-                id AS [ID],
-                chave_cte AS [Chave CT-e],
-                numero_cte AS [Nº CT-e],
-                serie_cte AS [Série],
-                cte_issued_at AS [CT-e Emissão],
-                servico_em AS [Data frete],
-                criado_em AS [Criado em],
+                SELECT
+                    id AS [ID],
+                    chave_cte AS [Chave CT-e],
+                    numero_cte AS [Nº CT-e],
+                    serie_cte AS [Série],
+                    cte_issued_at AS [CT-e Emissão],
+                    cte_emission_type AS [CT-e Tipo Emissão],
+                    cte_id AS [CT-e ID],
+                    cte_created_at AS [CT-e Criado em],
+                    servico_em AS [Data frete],
+                    criado_em AS [Criado em],
                 valor_total AS [Valor Total do Serviço],
                 valor_notas AS [Valor NF],
                 peso_notas AS [Kg NF],
@@ -180,9 +195,10 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                 destinatario_documento AS [Destinatario Doc],
                 destinatario_id AS [Destinatario ID],
                 destino_cidade AS [Destino],
-                destino_uf AS [UF Destino],
-                filial_nome AS [Filial],
-                filial_cnpj AS [Filial CNPJ],
+                    destino_uf AS [UF Destino],
+                    filial_nome AS [Filial],
+                    filial_apelido AS [Filial Apelido],
+                    filial_cnpj AS [Filial CNPJ],
                 tabela_preco_nome AS [Tabela de Preço],
                 classificacao_nome AS [Classificação],
                 centro_custo_nome AS [Centro de Custo],
@@ -211,10 +227,17 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                 products_value AS [Valor Produtos],
                 trt_subtotal AS [TRT],
                 fiscal_cst_type AS [ICMS CST],
-                fiscal_cfop_code AS [CFOP],
-                fiscal_tax_value AS [Valor ICMS],
-                fiscal_pis_value AS [Valor PIS],
-                fiscal_cofins_value AS [Valor COFINS],
+                    fiscal_cfop_code AS [CFOP],
+                    fiscal_tax_value AS [Valor ICMS],
+                    fiscal_pis_value AS [Valor PIS],
+                    fiscal_cofins_value AS [Valor COFINS],
+                    fiscal_calculation_basis AS [Base de Cálculo ICMS],
+                    fiscal_tax_rate AS [Alíquota ICMS %],
+                    fiscal_pis_rate AS [Alíquota PIS %],
+                    fiscal_cofins_rate AS [Alíquota COFINS %],
+                    fiscal_has_difal AS [Possui DIFAL],
+                    fiscal_difal_origin AS [DIFAL Origem],
+                    fiscal_difal_destination AS [DIFAL Destino],
                 nfse_series AS [Série NFS-e],
                 nfse_number AS [Nº NFS-e],
                 insurance_id AS [Seguro ID],
@@ -270,10 +293,14 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
         adicionarColunaSeNaoExistir(conexao, "price_table_accountable_type", "INT");
         adicionarColunaSeNaoExistir(conexao, "insurance_accountable_type", "INT");
         adicionarColunaSeNaoExistir(conexao, "filial_cnpj", "NVARCHAR(50)");
+        adicionarColunaSeNaoExistir(conexao, "filial_apelido", "NVARCHAR(255)");
         adicionarColunaSeNaoExistir(conexao, "pagador_documento", "NVARCHAR(50)");
         adicionarColunaSeNaoExistir(conexao, "remetente_documento", "NVARCHAR(50)");
         adicionarColunaSeNaoExistir(conexao, "destinatario_documento", "NVARCHAR(50)");
         adicionarColunaSeNaoExistir(conexao, "cte_issued_at", "DATETIMEOFFSET");
+        adicionarColunaSeNaoExistir(conexao, "cte_id", "BIGINT");
+        adicionarColunaSeNaoExistir(conexao, "cte_emission_type", "NVARCHAR(50)");
+        adicionarColunaSeNaoExistir(conexao, "cte_created_at", "DATETIMEOFFSET");
         adicionarColunaSeNaoExistir(conexao, "cubages_cubed_weight", "DECIMAL(18, 3)");
         adicionarColunaSeNaoExistir(conexao, "freight_weight_subtotal", "DECIMAL(18, 2)");
         adicionarColunaSeNaoExistir(conexao, "ad_valorem_subtotal", "DECIMAL(18, 2)");
@@ -284,6 +311,13 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
         adicionarColunaSeNaoExistir(conexao, "fiscal_tax_value", "DECIMAL(18, 2)");
         adicionarColunaSeNaoExistir(conexao, "fiscal_pis_value", "DECIMAL(18, 2)");
         adicionarColunaSeNaoExistir(conexao, "fiscal_cofins_value", "DECIMAL(18, 2)");
+        adicionarColunaSeNaoExistir(conexao, "fiscal_calculation_basis", "DECIMAL(18, 2)");
+        adicionarColunaSeNaoExistir(conexao, "fiscal_tax_rate", "DECIMAL(18, 6)");
+        adicionarColunaSeNaoExistir(conexao, "fiscal_pis_rate", "DECIMAL(18, 6)");
+        adicionarColunaSeNaoExistir(conexao, "fiscal_cofins_rate", "DECIMAL(18, 6)");
+        adicionarColunaSeNaoExistir(conexao, "fiscal_has_difal", "BIT");
+        adicionarColunaSeNaoExistir(conexao, "fiscal_difal_origin", "DECIMAL(18, 2)");
+        adicionarColunaSeNaoExistir(conexao, "fiscal_difal_destination", "DECIMAL(18, 2)");
     }
 
     /**
@@ -306,7 +340,11 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                 ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?,
+                ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?,
+                ?, ?
             ))
                 AS source (id, servico_em, criado_em, status, modal, tipo_frete, valor_total, valor_notas, peso_notas, id_corporacao, id_cidade_destino, data_previsao_entrega,
                            pagador_id, pagador_nome, remetente_id, remetente_nome, origem_cidade, origem_uf, destinatario_id, destinatario_nome, destino_cidade, destino_uf,
@@ -316,6 +354,8 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                            products_value, trt_subtotal, nfse_series, nfse_number, insurance_id, other_fees, km, payment_accountable_type, insured_value, globalized, sec_cat_subtotal, globalized_type, price_table_accountable_type, insurance_accountable_type,
                            pagador_documento, remetente_documento, destinatario_documento, filial_cnpj, cte_issued_at, cubages_cubed_weight, freight_weight_subtotal, ad_valorem_subtotal, toll_subtotal, itr_subtotal,
                            fiscal_cst_type, fiscal_cfop_code, fiscal_tax_value, fiscal_pis_value, fiscal_cofins_value,
+                           filial_apelido, cte_id, cte_emission_type, cte_created_at,
+                           fiscal_calculation_basis, fiscal_tax_rate, fiscal_pis_rate, fiscal_cofins_rate, fiscal_has_difal, fiscal_difal_origin, fiscal_difal_destination,
                            metadata, data_extracao)
             ON target.id = source.id
             WHEN MATCHED THEN
@@ -394,6 +434,17 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                     fiscal_tax_value = source.fiscal_tax_value,
                     fiscal_pis_value = source.fiscal_pis_value,
                     fiscal_cofins_value = source.fiscal_cofins_value,
+                    filial_apelido = source.filial_apelido,
+                    cte_id = source.cte_id,
+                    cte_emission_type = source.cte_emission_type,
+                    cte_created_at = source.cte_created_at,
+                    fiscal_calculation_basis = source.fiscal_calculation_basis,
+                    fiscal_tax_rate = source.fiscal_tax_rate,
+                    fiscal_pis_rate = source.fiscal_pis_rate,
+                    fiscal_cofins_rate = source.fiscal_cofins_rate,
+                    fiscal_has_difal = source.fiscal_has_difal,
+                    fiscal_difal_origin = source.fiscal_difal_origin,
+                    fiscal_difal_destination = source.fiscal_difal_destination,
                     metadata = source.metadata,
                     data_extracao = source.data_extracao
             WHEN NOT MATCHED THEN
@@ -405,6 +456,8 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                         products_value, trt_subtotal, nfse_series, nfse_number, insurance_id, other_fees, km, payment_accountable_type, insured_value, globalized, sec_cat_subtotal, globalized_type, price_table_accountable_type, insurance_accountable_type,
                         pagador_documento, remetente_documento, destinatario_documento, filial_cnpj, cte_issued_at, cubages_cubed_weight, freight_weight_subtotal, ad_valorem_subtotal, toll_subtotal, itr_subtotal,
                         fiscal_cst_type, fiscal_cfop_code, fiscal_tax_value, fiscal_pis_value, fiscal_cofins_value,
+                        filial_apelido, cte_id, cte_emission_type, cte_created_at,
+                        fiscal_calculation_basis, fiscal_tax_rate, fiscal_pis_rate, fiscal_cofins_rate, fiscal_has_difal, fiscal_difal_origin, fiscal_difal_destination,
                         metadata, data_extracao)
                 VALUES (source.id, source.servico_em, source.criado_em, source.status, source.modal, source.tipo_frete, source.valor_total, source.valor_notas, source.peso_notas, source.id_corporacao, source.id_cidade_destino, source.data_previsao_entrega,
                         source.pagador_id, source.pagador_nome, source.remetente_id, source.remetente_nome, source.origem_cidade, source.origem_uf, source.destinatario_id, source.destinatario_nome, source.destino_cidade, source.destino_uf,
@@ -414,6 +467,8 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                         source.products_value, source.trt_subtotal, source.nfse_series, source.nfse_number, source.insurance_id, source.other_fees, source.km, source.payment_accountable_type, source.insured_value, source.globalized, source.sec_cat_subtotal, source.globalized_type, source.price_table_accountable_type, source.insurance_accountable_type,
                         source.pagador_documento, source.remetente_documento, source.destinatario_documento, source.filial_cnpj, source.cte_issued_at, source.cubages_cubed_weight, source.freight_weight_subtotal, source.ad_valorem_subtotal, source.toll_subtotal, source.itr_subtotal,
                         source.fiscal_cst_type, source.fiscal_cfop_code, source.fiscal_tax_value, source.fiscal_pis_value, source.fiscal_cofins_value,
+                        source.filial_apelido, source.cte_id, source.cte_emission_type, source.cte_created_at,
+                        source.fiscal_calculation_basis, source.fiscal_tax_rate, source.fiscal_pis_rate, source.fiscal_cofins_rate, source.fiscal_has_difal, source.fiscal_difal_origin, source.fiscal_difal_destination,
                         source.metadata, source.data_extracao);
             """, NOME_TABELA);
 
@@ -508,6 +563,17 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
             statement.setBigDecimal(paramIndex++, frete.getFiscalTaxValue());
             statement.setBigDecimal(paramIndex++, frete.getFiscalPisValue());
             statement.setBigDecimal(paramIndex++, frete.getFiscalCofinsValue());
+            statement.setString(paramIndex++, frete.getFilialApelido());
+            if (frete.getCteId() != null) { statement.setObject(paramIndex++, frete.getCteId(), Types.BIGINT); } else { statement.setNull(paramIndex++, Types.BIGINT); }
+            statement.setString(paramIndex++, frete.getCteEmissionType());
+            statement.setObject(paramIndex++, frete.getCteCreatedAt(), Types.TIMESTAMP_WITH_TIMEZONE);
+            statement.setBigDecimal(paramIndex++, frete.getFiscalCalculationBasis());
+            statement.setBigDecimal(paramIndex++, frete.getFiscalTaxRate());
+            statement.setBigDecimal(paramIndex++, frete.getFiscalPisRate());
+            statement.setBigDecimal(paramIndex++, frete.getFiscalCofinsRate());
+            if (frete.getFiscalHasDifal() != null) { statement.setObject(paramIndex++, frete.getFiscalHasDifal(), Types.BOOLEAN); } else { statement.setNull(paramIndex++, Types.BOOLEAN); }
+            statement.setBigDecimal(paramIndex++, frete.getFiscalDifalOrigin());
+            statement.setBigDecimal(paramIndex++, frete.getFiscalDifalDestination());
             statement.setString(paramIndex++, frete.getMetadata());
             setInstantParameter(statement, paramIndex++, Instant.now());
             final int expected = statement.getParameterMetaData().getParameterCount();

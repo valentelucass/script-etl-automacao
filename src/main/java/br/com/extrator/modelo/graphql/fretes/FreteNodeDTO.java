@@ -94,6 +94,15 @@ public class FreteNodeDTO {
         @JsonProperty("issuedAt")
         private String issuedAt;
 
+        @JsonProperty("emissionType")
+        private String emissionType;
+
+        @JsonProperty("id")
+        private Long id;
+
+        @JsonProperty("createdAt")
+        private String createdAt;
+
         public String getKey() { return key; }
         public void setKey(final String key) { this.key = key; }
         public Integer getNumber() { return number; }
@@ -103,6 +112,12 @@ public class FreteNodeDTO {
 
         public String getIssuedAt() { return issuedAt; }
         public void setIssuedAt(final String issuedAt) { this.issuedAt = issuedAt; }
+        public String getEmissionType() { return emissionType; }
+        public void setEmissionType(final String emissionType) { this.emissionType = emissionType; }
+        public Long getId() { return id; }
+        public void setId(final Long id) { this.id = id; }
+        public String getCreatedAt() { return createdAt; }
+        public void setCreatedAt(final String createdAt) { this.createdAt = createdAt; }
     }
 
     @JsonProperty("cte")

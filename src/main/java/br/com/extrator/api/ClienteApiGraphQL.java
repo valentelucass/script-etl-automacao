@@ -314,7 +314,7 @@ public class ClienteApiGraphQL {
      */
     public ResultadoExtracao<FreteNodeDTO> buscarFretes(final LocalDate dataReferencia) {
         final String query = """
-                query BuscarFretes_Master_V6($params: FreightInput!, $after: String) {
+                query BuscarFretes_Master_V8($params: FreightInput!, $after: String) {
                   freight(params: $params, after: $after, first: 100) {
                     edges {
                       node {
@@ -322,7 +322,7 @@ public class ClienteApiGraphQL {
                         referenceNumber
                         serviceAt
                         createdAt
-                        cte { key number series issuedAt emissionType }
+                        cte { id key number series issuedAt createdAt emissionType }
                         total
                         subtotal
                         invoicesValue
@@ -343,10 +343,11 @@ public class ClienteApiGraphQL {
                         serviceDate
                         serviceType
                         deliveryPredictionDate
-                        corporation { name nickname cnpj }
+                        corporation { id nickname cnpj }
                         customerPriceTable { name }
                         freightClassification { name }
                         costCenter { name }
+                        
                         originCity { name state { code } }
                         destinationCity { name state { code } }
                         destinationCityId
@@ -376,7 +377,7 @@ public class ClienteApiGraphQL {
                         secCatSubtotal
                         suframaSubtotal
                         tdeSubtotal
-                        fiscalDetail { cstType cfopCode calculationBasis taxRate taxValue pisRate pisValue cofinsRate cofinsValue hasDifal }
+                        fiscalDetail { cstType cfopCode calculationBasis taxRate taxValue pisRate pisValue cofinsRate cofinsValue hasDifal difalTaxValueOrigin difalTaxValueDestination }
                         trtSubtotal
                       }
                     }

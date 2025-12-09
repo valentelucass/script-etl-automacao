@@ -14,6 +14,12 @@ public class CorporationDTO {
     @JsonProperty("name")
     private String name;
 
+    @JsonProperty("nickname")
+    private String nickname;
+
+    @JsonProperty("cnpj")
+    private String cnpj;
+
     @JsonProperty("person")
     private PersonDTO person;
 
@@ -30,6 +36,11 @@ public class CorporationDTO {
 
     public PersonDTO getPerson() { return person; }
     public void setPerson(final PersonDTO person) { this.person = person; }
+
+    public String getNickname() { return nickname; }
+    public void setNickname(final String nickname) { this.nickname = nickname; }
+    public String getCnpj() { return cnpj; }
+    public void setCnpj(final String cnpj) { this.cnpj = cnpj; }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class PersonDTO {

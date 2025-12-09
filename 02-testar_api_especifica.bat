@@ -97,7 +97,7 @@ echo ================================================================
 echo TESTANDO API: %API%
 echo ================================================================
 
-call "%~dp0mvn.bat" -DskipTests clean package
+call "%~dp0mvn.bat" -q -DskipTests package
 if errorlevel 1 goto :COMPILE_FAIL
 
 if not exist "target\extrator.jar" goto :NOJAR
@@ -113,7 +113,7 @@ goto :SUCCESS
 
 :NOJAR
 echo ERRO: Arquivo target\extrator.jar nao encontrado!
-echo Execute primeiro: mvn clean package -DskipTests
+echo Execute primeiro: mvn package -DskipTests -q
 echo.
 pause
 exit /b 1

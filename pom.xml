@@ -64,18 +64,24 @@
     <build>
         <finalName>extrator</finalName>
         <plugins>
+            <!-- Plugin de limpeza: ignora falhas de exclusão em Windows/OneDrive -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.4.1</version>
+                <configuration>
+                    <failOnError>false</failOnError>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
             <!-- Plugin do compilador com configurações de warnings -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
-                    <showWarnings>true</showWarnings>
-                    <showDeprecation>true</showDeprecation>
-                    <compilerArgs>
-                        <arg>-Xlint:all</arg>
-                        <arg>-Xlint:-processing</arg>
-                    </compilerArgs>
+                    <showWarnings>false</showWarnings>
+                    <showDeprecation>false</showDeprecation>
                 </configuration>
             </plugin>
             <!-- Plugin do Spring Boot removido - não é mais necessário para script de linha de comando -->
