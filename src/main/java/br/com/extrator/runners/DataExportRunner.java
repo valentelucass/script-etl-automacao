@@ -47,6 +47,7 @@ public final class DataExportRunner {
         br.com.extrator.util.CarregadorConfig.validarConexaoBancoDados();
 
         final ClienteApiDataExport clienteApiDataExport = new ClienteApiDataExport();
+        clienteApiDataExport.setExecutionUuid(java.util.UUID.randomUUID().toString());
         final ManifestoRepository manifestoRepository = new ManifestoRepository();
         final CotacaoRepository cotacaoRepository = new CotacaoRepository();
         final LocalizacaoCargaRepository localizacaoRepository = new LocalizacaoCargaRepository();
@@ -431,6 +432,7 @@ public final class DataExportRunner {
         br.com.extrator.util.CarregadorConfig.validarConexaoBancoDados();
 
         final ClienteApiDataExport clienteApiDataExport = new ClienteApiDataExport();
+        clienteApiDataExport.setExecutionUuid(java.util.UUID.randomUUID().toString());
         final ManifestoRepository manifestoRepository = new ManifestoRepository();
         final CotacaoRepository cotacaoRepository = new CotacaoRepository();
         final LocalizacaoCargaRepository localizacaoRepository = new LocalizacaoCargaRepository();

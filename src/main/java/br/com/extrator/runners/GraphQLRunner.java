@@ -48,7 +48,7 @@ public final class GraphQLRunner {
             final List<ColetaNodeDTO> coletasDTO = resultadoColetas.getDados();
             System.out.println("✓ Extraídas: " + coletasDTO.size() + " coletas" + 
                               (resultadoColetas.isCompleto() ? "" : " (INCOMPLETO: " + resultadoColetas.getMotivoInterrupcao() + ")"));
-            
+
             int registrosSalvos = 0;
             if (!coletasDTO.isEmpty()) {
                 final List<ColetaEntity> coletasEntities = coletasDTO.stream()
@@ -58,11 +58,10 @@ public final class GraphQLRunner {
                 System.out.println("✓ Salvas: " + registrosSalvos + "/" + coletasDTO.size() + " coletas");
             }
 
-            // Registrar no log
             final String status = resultadoColetas.isCompleto() ? "COMPLETO" : "INCOMPLETO";
-            final String mensagem = resultadoColetas.isCompleto() ? 
-                "Extração completa" : 
-                "Extração incompleta: " + resultadoColetas.getMotivoInterrupcao();
+            final int totalRecebido = coletasDTO.size();
+            final int deltaIgnorados = Math.max(0, totalRecebido - registrosSalvos);
+            final String mensagem = "API: " + totalRecebido + " recebidos | DB: " + registrosSalvos + " processados | Delta: " + deltaIgnorados + " (duplicados/ignorados)";
             
             final LogExtracaoEntity logColetas = new LogExtracaoEntity(
                 "coletas",
@@ -100,7 +99,7 @@ public final class GraphQLRunner {
             final List<FreteNodeDTO> fretesDTO = resultadoFretes.getDados();
             System.out.println("✓ Extraídos: " + fretesDTO.size() + " fretes" + 
                               (resultadoFretes.isCompleto() ? "" : " (INCOMPLETO: " + resultadoFretes.getMotivoInterrupcao() + ")"));
-            
+
             int registrosSalvos = 0;
             if (!fretesDTO.isEmpty()) {
                 final List<FreteEntity> fretesEntities = fretesDTO.stream()
@@ -110,11 +109,10 @@ public final class GraphQLRunner {
                 System.out.println("✓ Salvos: " + registrosSalvos + "/" + fretesDTO.size() + " fretes");
             }
 
-            // Registrar no log
             final String status = resultadoFretes.isCompleto() ? "COMPLETO" : "INCOMPLETO";
-            final String mensagem = resultadoFretes.isCompleto() ? 
-                "Extração completa" : 
-                "Extração incompleta: " + resultadoFretes.getMotivoInterrupcao();
+            final int totalRecebido = fretesDTO.size();
+            final int deltaIgnorados = Math.max(0, totalRecebido - registrosSalvos);
+            final String mensagem = "API: " + totalRecebido + " recebidos | DB: " + registrosSalvos + " processados | Delta: " + deltaIgnorados + " (duplicados/ignorados)";
             
             final LogExtracaoEntity logFretes = new LogExtracaoEntity(
                 "fretes",
@@ -179,9 +177,9 @@ public final class GraphQLRunner {
                     System.out.println("✓ Salvas: " + registrosSalvos + "/" + coletasDTO.size() + " coletas");
                 }
                 final String status = resultadoColetas.isCompleto() ? "COMPLETO" : "INCOMPLETO";
-                final String mensagem = resultadoColetas.isCompleto() ? 
-                    "Extração completa" : 
-                    "Extração incompleta: " + resultadoColetas.getMotivoInterrupcao();
+                final int totalRecebido = coletasDTO.size();
+                final int deltaIgnorados = Math.max(0, totalRecebido - registrosSalvos);
+                final String mensagem = "API: " + totalRecebido + " recebidos | DB: " + registrosSalvos + " processados | Delta: " + deltaIgnorados + " (duplicados/ignorados)";
                 final LogExtracaoEntity logColetas = new LogExtracaoEntity(
                     "coletas",
                     inicioColetas,
@@ -224,9 +222,9 @@ public final class GraphQLRunner {
                     System.out.println("✓ Salvos: " + registrosSalvos + "/" + fretesDTO.size() + " fretes");
                 }
                 final String status = resultadoFretes.isCompleto() ? "COMPLETO" : "INCOMPLETO";
-                final String mensagem = resultadoFretes.isCompleto() ? 
-                    "Extração completa" : 
-                    "Extração incompleta: " + resultadoFretes.getMotivoInterrupcao();
+                final int totalRecebido = fretesDTO.size();
+                final int deltaIgnorados = Math.max(0, totalRecebido - registrosSalvos);
+                final String mensagem = "API: " + totalRecebido + " recebidos | DB: " + registrosSalvos + " processados | Delta: " + deltaIgnorados + " (duplicados/ignorados)";
                 final LogExtracaoEntity logFretes = new LogExtracaoEntity(
                     "fretes",
                     inicioFretes,

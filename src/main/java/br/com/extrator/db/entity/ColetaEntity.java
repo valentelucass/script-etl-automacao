@@ -29,6 +29,7 @@ public class ColetaEntity {
     private String clienteDoc;
     private String localColeta;
     private String numeroColeta;
+    private String complementoColeta;
     private String cidadeColeta;
     private String bairroColeta;
     private String ufColeta;
@@ -175,6 +176,14 @@ public class ColetaEntity {
 
     public void setNumeroColeta(final String numeroColeta) {
         this.numeroColeta = numeroColeta;
+    }
+
+    public String getComplementoColeta() {
+        return complementoColeta;
+    }
+
+    public void setComplementoColeta(final String complementoColeta) {
+        this.complementoColeta = complementoColeta;
     }
 
     public String getCidadeColeta() {

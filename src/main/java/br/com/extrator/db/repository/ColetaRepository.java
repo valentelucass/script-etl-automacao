@@ -57,6 +57,7 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
                     cliente_doc NVARCHAR(50),
                     local_coleta NVARCHAR(500),
                     numero_coleta NVARCHAR(50),
+                    complemento_coleta NVARCHAR(255),
                     cidade_coleta NVARCHAR(255),
                     bairro_coleta NVARCHAR(255),
                     uf_coleta NVARCHAR(10),
@@ -213,6 +214,7 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
 
             adicionarColunaSeNaoExistir(conexao, "cliente_doc", "NVARCHAR(50)");
             adicionarColunaSeNaoExistir(conexao, "numero_coleta", "NVARCHAR(50)");
+            adicionarColunaSeNaoExistir(conexao, "complemento_coleta", "NVARCHAR(255)");
             adicionarColunaSeNaoExistir(conexao, "bairro_coleta", "NVARCHAR(255)");
             adicionarColunaSeNaoExistir(conexao, "cep_coleta", "NVARCHAR(20)");
             adicionarColunaSeNaoExistir(conexao, "filial_id", "BIGINT");
@@ -249,7 +251,15 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
                 service_start_hour AS [Horario (Inicio)],
                 finish_date AS [Finalizacao],
                 service_end_hour AS [Hora (Fim)],
-                status AS [Status],
+                CASE LOWER(status)
+                    WHEN 'pending' THEN N'pendente'
+                    WHEN 'done' THEN N'concluído'
+                    WHEN 'canceled' THEN N'cancelado'
+                    WHEN 'finished' THEN N'finalizado'
+                    WHEN 'treatment' THEN N'em tratamento'
+                    WHEN 'in_transit' THEN N'em trânsito'
+                    ELSE status
+                END AS [Status],
                 requester AS [Solicitante],
                 total_volumes AS [Volumes],
                 total_weight AS [Peso Real],
@@ -264,6 +274,7 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
                 cliente_doc AS [Cliente Doc],
                 local_coleta AS [Local da Coleta],
                 numero_coleta AS [Numero],
+                complemento_coleta AS [Complemento],
                 cidade_coleta AS [Cidade],
                 bairro_coleta AS [Bairro],
                 uf_coleta AS [UF],
@@ -310,7 +321,7 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
             USING (
                 SELECT
                     ? AS id, ? AS sequence_code, ? AS request_date, ? AS service_date, ? AS status, ? AS total_value, ? AS total_weight, ? AS total_volumes,
-                    ? AS cliente_id, ? AS cliente_nome, ? AS cliente_doc, ? AS local_coleta, ? AS numero_coleta, ? AS cidade_coleta, ? AS bairro_coleta, ? AS uf_coleta, ? AS cep_coleta, ? AS filial_id, ? AS filial_nome, ? AS filial_cnpj, ? AS usuario_id, ? AS usuario_nome,
+                    ? AS cliente_id, ? AS cliente_nome, ? AS cliente_doc, ? AS local_coleta, ? AS numero_coleta, ? AS complemento_coleta, ? AS cidade_coleta, ? AS bairro_coleta, ? AS uf_coleta, ? AS cep_coleta, ? AS filial_id, ? AS filial_nome, ? AS filial_cnpj, ? AS usuario_id, ? AS usuario_nome,
                     ? AS request_hour, ? AS service_start_hour, ? AS finish_date, ? AS service_end_hour, ? AS requester, ? AS taxed_weight,
                     ? AS comments, ? AS agent_id, ? AS manifest_item_pick_id, ? AS vehicle_type_id,
                     ? AS cancellation_reason, ? AS cancellation_user_id, ? AS cargo_classification_id, ? AS cost_center_id,
@@ -333,6 +344,7 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
                     cliente_doc = source.cliente_doc,
                     local_coleta = source.local_coleta,
                     numero_coleta = source.numero_coleta,
+                    complemento_coleta = source.complemento_coleta,
                     cidade_coleta = source.cidade_coleta,
                     bairro_coleta = source.bairro_coleta,
                     uf_coleta = source.uf_coleta,
@@ -371,7 +383,7 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
             WHEN NOT MATCHED THEN
                 INSERT (
                     id, sequence_code, request_date, service_date, status, total_value, total_weight, total_volumes,
-                    cliente_id, cliente_nome, cliente_doc, local_coleta, numero_coleta, cidade_coleta, bairro_coleta, uf_coleta, cep_coleta, filial_id, filial_nome, filial_cnpj, usuario_id, usuario_nome,
+                    cliente_id, cliente_nome, cliente_doc, local_coleta, numero_coleta, complemento_coleta, cidade_coleta, bairro_coleta, uf_coleta, cep_coleta, filial_id, filial_nome, filial_cnpj, usuario_id, usuario_nome,
                     request_hour, service_start_hour, finish_date, service_end_hour, requester, taxed_weight,
                     comments, agent_id, manifest_item_pick_id, vehicle_type_id,
                     cancellation_reason, cancellation_user_id, cargo_classification_id, cost_center_id,
@@ -381,7 +393,7 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
                 )
                 VALUES (
                     source.id, source.sequence_code, source.request_date, source.service_date, source.status, source.total_value, source.total_weight, source.total_volumes,
-                    source.cliente_id, source.cliente_nome, source.cliente_doc, source.local_coleta, source.numero_coleta, source.cidade_coleta, source.bairro_coleta, source.uf_coleta, source.cep_coleta, source.filial_id, source.filial_nome, source.filial_cnpj, source.usuario_id, source.usuario_nome,
+                    source.cliente_id, source.cliente_nome, source.cliente_doc, source.local_coleta, source.numero_coleta, source.complemento_coleta, source.cidade_coleta, source.bairro_coleta, source.uf_coleta, source.cep_coleta, source.filial_id, source.filial_nome, source.filial_cnpj, source.usuario_id, source.usuario_nome,
                     source.request_hour, source.service_start_hour, source.finish_date, source.service_end_hour, source.requester, source.taxed_weight,
                     source.comments, source.agent_id, source.manifest_item_pick_id, source.vehicle_type_id,
                     source.cancellation_reason, source.cancellation_user_id, source.cargo_classification_id, source.cost_center_id,
@@ -403,7 +415,7 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
             int expectedCount;
             try {
                 final int metaCount = statement.getParameterMetaData().getParameterCount();
-                expectedCount = (metaCount > 0 ? metaCount : 48);
+                expectedCount = (metaCount > 0 ? metaCount : 49);
                 logger.debug("MERGE de Coletas preparado: {} parâmetro(s) esperado(s)", expectedCount);
             } catch (final SQLException pmEx) {
                 logger.debug("Não foi possível obter ParameterMetaData: {}", pmEx.getMessage());
@@ -425,6 +437,7 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
             statement.setString(paramIndex++, coleta.getClienteDoc());
             statement.setString(paramIndex++, coleta.getLocalColeta());
             statement.setString(paramIndex++, coleta.getNumeroColeta());
+            statement.setString(paramIndex++, coleta.getComplementoColeta());
             statement.setString(paramIndex++, coleta.getCidadeColeta());
             statement.setString(paramIndex++, coleta.getBairroColeta());
             statement.setString(paramIndex++, coleta.getUfColeta());

@@ -30,6 +30,15 @@ REM Configurar JAVA_HOME automaticamente
 set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-17.0.16.8-hotspot"
 set "PATH=%JAVA_HOME%\bin;%PATH%"
 
+echo Compilando projeto...
+call "%~dp0mvn.bat" -q -DskipTests package
+if errorlevel 1 (
+    echo ERRO: Compilacao falhou
+    echo.
+    pause
+    exit /b 1
+)
+
 if not exist "target\extrator.jar" (
     echo ERRO: Arquivo target\extrator.jar nao encontrado!
     echo.

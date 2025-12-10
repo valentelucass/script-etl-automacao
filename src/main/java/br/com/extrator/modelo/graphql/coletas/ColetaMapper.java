@@ -57,7 +57,8 @@ public class ColetaMapper {
 
         if (dto.getPickAddress() != null) {
             entity.setLocalColeta(dto.getPickAddress().getLine1());
-            entity.setNumeroColeta(dto.getSequenceCode() != null ? String.valueOf(dto.getSequenceCode()) : null);
+            entity.setComplementoColeta(dto.getPickAddress().getLine2());
+            entity.setNumeroColeta(dto.getPickAddress().getNumber());
             entity.setBairroColeta(dto.getPickAddress().getNeighborhood());
             entity.setCepColeta(dto.getPickAddress().getPostalCode());
             if (dto.getPickAddress().getCity() != null) {

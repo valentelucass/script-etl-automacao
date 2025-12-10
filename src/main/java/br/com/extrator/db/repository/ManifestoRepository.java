@@ -273,7 +273,12 @@ public class ManifestoRepository extends AbstractRepository<ManifestoEntity> {
             SELECT
                 sequence_code                                       AS [Número],
                 identificador_unico                                 AS [Identificador Único],
-                status                                              AS [Status],
+                CASE status
+                    WHEN 'closed' THEN 'encerrado'
+                    WHEN 'in_transit' THEN 'em trânsito'
+                    WHEN 'pending' THEN 'pendente'
+                    ELSE status
+                END                                                 AS [Status],
                 classification                                      AS [Classificação],
                 branch_nickname                                     AS [Filial],
                 created_at                                          AS [Data criação],
@@ -282,7 +287,13 @@ public class ManifestoRepository extends AbstractRepository<ManifestoEntity> {
                 finished_at                                         AS [Chegada],
                 mdfe_number                                         AS [MDFe],
                 mdfe_key                                            AS [MDF-es/Chave],
-                mdfe_status                                         AS [MDFe/Status],
+                CASE mdfe_status
+                    WHEN 'pending' THEN 'pendente'
+                    WHEN 'closed' THEN 'encerrado'
+                    WHEN 'issued' THEN 'emitido'
+                    WHEN 'rejected' THEN 'rejeitado'
+                    ELSE mdfe_status
+                END                                                 AS [MDFe/Status],
                 distribution_pole                                   AS [Polo de distribuição],
                 vehicle_plate                                       AS [Veículo/Placa],
                 vehicle_type                                        AS [Tipo Veículo/Nome],
@@ -291,7 +302,10 @@ public class ManifestoRepository extends AbstractRepository<ManifestoEntity> {
                 vehicle_departure_km                                AS [Km saída],
                 closing_km                                          AS [Km chegada],
                 traveled_km                                         AS [KM viagem],
-                manual_km                                           AS [Km manual],
+                CASE WHEN manual_km = 1 THEN 'é manual'
+                     WHEN manual_km = 0 THEN 'não é manual'
+                     ELSE NULL
+                END                                                 AS [Km manual],
                 invoices_count                                      AS [Qtd NF],
                 invoices_volumes                                    AS [Volumes NF],
                 invoices_weight                                     AS [Peso NF],
@@ -299,11 +313,23 @@ public class ManifestoRepository extends AbstractRepository<ManifestoEntity> {
                 total_cubic_volume                                  AS [Total M3],
                 invoices_value                                      AS [Valor NF],
                 manifest_freights_total                             AS [Fretes/Total],
-                pick_sequence_code                                   AS [Coleta/Sequence Code],
-                contract_number                                     AS [Contrato/Número],
-                contract_type                                       AS [Tipo de contrato],
-                calculation_type                                    AS [Tipo de cálculo],
-                cargo_type                                          AS [Tipo de carga],
+                pick_sequence_code                                   AS [Coleta/Número],
+                contract_number                                     AS [CIOT/Número],
+                CASE contract_type
+                    WHEN 'aggregate' THEN 'prestador agregado'
+                    WHEN 'driver' THEN 'motorista autônomo'
+                    ELSE contract_type
+                END                                                 AS [Tipo de contrato],
+                CASE calculation_type
+                    WHEN 'price_table' THEN 'tabela de preço'
+                    WHEN 'agreed' THEN 'acordado'
+                    ELSE calculation_type
+                END                                                 AS [Tipo de cálculo],
+                CASE cargo_type
+                    WHEN 'fractioned' THEN 'carga fracionada'
+                    WHEN 'closed' THEN 'carga fechada'
+                    ELSE cargo_type
+                END                                                 AS [Tipo de carga],
                 daily_subtotal                                      AS [Diária],
                 total_cost                                          AS [Custo total],
                 freight_subtotal                                    AS [Valor frete],
@@ -318,6 +344,11 @@ public class ManifestoRepository extends AbstractRepository<ManifestoEntity> {
                 uniq_destinations_count                             AS [Destinos únicos/Qtd],
                 generate_mdfe                                       AS [Gerar MDF-e],
                 monitoring_request                                  AS [Solicitou Monitoramento],
+                CASE monitoring_request
+                    WHEN 'true' THEN 'sim'
+                    WHEN 'false' THEN 'não'
+                    ELSE monitoring_request
+                END                                                 AS [Solicitação Monitoramento],
                 mobile_read_at                                      AS [Leitura Móvel/Em],
                 km                                                  AS [KM Total],
                 delivery_manifest_items_count                       AS [Itens/Entrega],
@@ -333,8 +364,8 @@ public class ManifestoRepository extends AbstractRepository<ManifestoEntity> {
                 calculated_dispatch_count                           AS [Calculado/Despacho],
                 calculated_consolidation_count                      AS [Calculado/Consolidação],
                 calculated_reverse_pick_count                       AS [Calculado/Coleta Reversa],
-                pick_subtotal                                       AS [Coletas.1],
-                delivery_subtotal                                   AS [Entregas.1],
+                pick_subtotal                                       AS [Valor/Coletas],
+                delivery_subtotal                                   AS [Valor/Entregas],
                 dispatch_subtotal                                   AS [Despachos],
                 consolidation_subtotal                              AS [Consolidações],
                 reverse_pick_subtotal                               AS [Coleta Reversa],
@@ -344,7 +375,7 @@ public class ManifestoRepository extends AbstractRepository<ManifestoEntity> {
                 discounts_subtotal                                  AS [Descontos],
                 discount_value                                      AS [Desconto/Valor],
                 iks_id                                              AS [IKS ID],
-                programacao_sequence_code                           AS [Programação/Sequence Code],
+                programacao_sequence_code                           AS [Programação/Número],
                 programacao_starting_at                             AS [Programação/Início],
                 programacao_ending_at                               AS [Programação/Término],
                 trailer1_license_plate                              AS [Carreta 1/Placa],
@@ -353,8 +384,10 @@ public class ManifestoRepository extends AbstractRepository<ManifestoEntity> {
                 trailer2_weight_capacity                            AS [Carreta 2/Capacidade Peso],
                 vehicle_weight_capacity                             AS [Veículo/Capacidade Peso],
                 vehicle_cubic_weight                                AS [Veículo/Peso Cubado],
-                unloading_recipient_names                           AS [Descarregamento/Destinatários],
-                delivery_region_names                               AS [Entrega/Regiões],
+                REPLACE(REPLACE(unloading_recipient_names, '[', ''), ']', '')
+                                                                  AS [Descarregamento/Destinatários],
+                REPLACE(REPLACE(REPLACE(delivery_region_names, '[', ''), ']', ''), '"', '')
+                                                                  AS [Entrega/Regiões],
                 programacao_cliente                                 AS [Programação/Cliente],
                 programacao_tipo_servico                            AS [Programação/Tipo Serviço],
                 creation_user_name                                  AS [Usuário/Emissor],

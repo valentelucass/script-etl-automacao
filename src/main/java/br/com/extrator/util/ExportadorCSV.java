@@ -26,7 +26,8 @@ public class ExportadorCSV {
         "faturas_por_cliente",
         "fretes",
         "manifestos",
-        "localizacao_cargas"
+        "localizacao_cargas",
+        "page_audit"
     };
     
     private static final String PASTA_DESTINO = "exports";
@@ -38,6 +39,9 @@ public class ExportadorCSV {
         System.out.println("===============================================================");
         System.out.println();
         
+        final String tabelaEspecifica = (args != null && args.length > 0) ? args[0].trim() : null;
+        final boolean somenteUmaTabela = tabelaEspecifica != null && !tabelaEspecifica.isEmpty();
+
         // Criar pasta de destino
         final Path pastaExports = Paths.get(PASTA_DESTINO);
         try {
@@ -66,13 +70,10 @@ public class ExportadorCSV {
         } catch (final Exception e) {
         }
         
-        // Exportar cada entidade
-        for (int i = 0; i < ENTIDADES.length; i++) {
-            final String entidade = ENTIDADES[i];
-            System.out.printf("[%d/%d] 📊 Exportando: %s%n", i + 1, ENTIDADES.length, entidade);
-            
+        if (somenteUmaTabela) {
+            System.out.println("📌 Exportando tabela específica: " + tabelaEspecifica);
             try {
-                final int registros = exportarEntidade(entidade, timestamp);
+                final int registros = exportarEntidade(tabelaEspecifica, timestamp);
                 System.out.println("    ✅ Sucesso: " + registros + " registros");
                 totalRegistros += registros;
                 entidadesExportadas++;
@@ -80,6 +81,20 @@ public class ExportadorCSV {
                 System.err.println("    ❌ Erro: " + e.getMessage());
             }
             System.out.println();
+        } else {
+            for (int i = 0; i < ENTIDADES.length; i++) {
+                final String entidade = ENTIDADES[i];
+                System.out.printf("[%d/%d] 📊 Exportando: %s%n", i + 1, ENTIDADES.length, entidade);
+                try {
+                    final int registros = exportarEntidade(entidade, timestamp);
+                    System.out.println("    ✅ Sucesso: " + registros + " registros");
+                    totalRegistros += registros;
+                    entidadesExportadas++;
+                } catch (final Exception e) {
+                    System.err.println("    ❌ Erro: " + e.getMessage());
+                }
+                System.out.println();
+            }
         }
         
         // Resumo final
@@ -458,7 +473,8 @@ public class ExportadorCSV {
      * Exporta uma entidade para CSV
      */
     private static int exportarEntidade(final String entidade, final String timestamp) throws Exception {
-        final String nomeArquivo = String.format("%s/%s_%s.csv", PASTA_DESTINO, entidade, timestamp);
+        final String entidadeArquivo = entidade.replaceAll("[^A-Za-z0-9_]+", "_");
+        final String nomeArquivo = String.format("%s/%s_%s.csv", PASTA_DESTINO, entidadeArquivo, timestamp);
         
         System.out.println("    🔍 Contando registros no banco...");
         

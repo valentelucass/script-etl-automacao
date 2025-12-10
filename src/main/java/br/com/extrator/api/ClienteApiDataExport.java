@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.UUID;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -34,6 +35,8 @@ import br.com.extrator.modelo.dataexport.contasapagar.ContasAPagarDTO;
 import br.com.extrator.modelo.dataexport.manifestos.ManifestoDTO;
 import br.com.extrator.util.CarregadorConfig;
 import br.com.extrator.util.GerenciadorRequisicaoHttp;
+import br.com.extrator.db.entity.PageAuditEntity;
+import br.com.extrator.db.repository.PageAuditRepository;
 
 /**
  * Cliente para extração de dados da API Data Export do ESL Cloud.
@@ -54,6 +57,8 @@ public class ClienteApiDataExport {
     private final int templateIdCotacoes;
     private final GerenciadorRequisicaoHttp gerenciadorRequisicao;
     private final Duration timeoutRequisicao;
+    private final PageAuditRepository pageAuditRepository;
+    private String executionUuid;
 
     // PROTEÇÕES CONTRA LOOPS INFINITOS - Replicadas do ClienteApiRest
     private static final int MAX_REGISTROS_POR_EXECUCAO = 10000;
@@ -130,9 +135,15 @@ public class ClienteApiDataExport {
 
         // Inicializa o gerenciador de requisições HTTP
         this.gerenciadorRequisicao = new GerenciadorRequisicaoHttp();
+        this.pageAuditRepository = new PageAuditRepository();
+        this.pageAuditRepository.criarTabelaSeNaoExistir();
 
         logger.info("Cliente da API Data Export inicializado com sucesso");
         logger.debug("URL base configurada: {}", urlBase);
+    }
+
+    public void setExecutionUuid(final String uuid) {
+        this.executionUuid = uuid;
     }
 
     /**
@@ -229,6 +240,10 @@ public class ClienteApiDataExport {
         // Determina o nome amigável do tipo de dados baseado na tabela
         final String tipoAmigavel = obterNomeAmigavelTipo(nomeTabela);
         final String chaveTemplate = "Template-" + templateId;
+        if (this.executionUuid == null || this.executionUuid.isEmpty()) {
+            this.executionUuid = UUID.randomUUID().toString();
+        }
+        final String runUuid = UUID.randomUUID().toString();
         
         // CIRCUIT BREAKER - Verificar se o template está com circuit aberto
         if (templatesComCircuitAberto.contains(chaveTemplate)) {
@@ -240,6 +255,14 @@ public class ClienteApiDataExport {
         // Obter valor de 'per' e timeout adequado
         final String valorPer = obterValorPerPorTemplate(templateId);
         final Duration timeout = obterTimeoutPorTemplate(templateId);
+        int perInt;
+        try {
+            perInt = Integer.parseInt(valorPer);
+        } catch (final NumberFormatException e) {
+            perInt = 100;
+        }
+        final LocalDate janelaInicio = dataInicio.atZone(java.time.ZoneOffset.UTC).toLocalDate();
+        final LocalDate janelaFim = dataFim.atZone(java.time.ZoneOffset.UTC).toLocalDate();
         
         logger.info("═══════════════════════════════════════════════════════");
         logger.info("INICIANDO EXTRAÇÃO: Template {} - {}", templateId, tipoAmigavel);
@@ -285,6 +308,15 @@ public class ClienteApiDataExport {
                 final String corpoJson = construirCorpoRequisicao(templateId, nomeTabela, campoData, dataInicio, dataFim, paginaAtual, valorPer);
 
                 logger.debug("URL: {} | Corpo: {}", url, corpoJson);
+                String reqHash;
+                try {
+                    final byte[] d = java.security.MessageDigest.getInstance("SHA-256").digest(corpoJson.getBytes(StandardCharsets.UTF_8));
+                    final StringBuilder sb = new StringBuilder(d.length * 2);
+                    for (final byte b : d) sb.append(String.format("%02x", b));
+                    reqHash = sb.toString();
+                } catch (final java.security.NoSuchAlgorithmException ex) {
+                    reqHash = "";
+                }
 
                 final HttpRequest requisicao = HttpRequest.newBuilder()
                         .uri(URI.create(url))
@@ -308,6 +340,15 @@ public class ClienteApiDataExport {
                 }
 
                 logger.info("← Resposta recebida: Status {}, Tempo: {}ms", resposta.statusCode(), duracaoMs);
+                String respHash;
+                try {
+                    final byte[] d = java.security.MessageDigest.getInstance("SHA-256").digest(resposta.body().getBytes(StandardCharsets.UTF_8));
+                    final StringBuilder sb = new StringBuilder(d.length * 2);
+                    for (final byte b : d) sb.append(String.format("%02x", b));
+                    respHash = sb.toString();
+                } catch (final java.security.NoSuchAlgorithmException ex) {
+                    respHash = "";
+                }
 
                 if (resposta.statusCode() != 200) {
                     logger.error("❌ Erro HTTP {} na página {}: {}", 
@@ -321,17 +362,88 @@ public class ClienteApiDataExport {
                 try {
                     final JsonNode raizJson = objectMapper.readTree(resposta.body());
                     final JsonNode dadosNode = raizJson.has("data") ? raizJson.get("data") : raizJson;
+                    final String idKey = switch (templateId) {
+                        case 6399, 6906, 8636 -> "sequence_code";
+                        case 8656 -> "sequence_number";
+                        case 4924 -> "unique_id";
+                        default -> null;
+                    };
 
                     if (dadosNode != null && dadosNode.isArray()) {
                         if (dadosNode.size() == 0) {
-                            // Array vazio - fim da paginação
+                            final PageAuditEntity audit = new PageAuditEntity();
+                            audit.setExecutionUuid(this.executionUuid);
+                            audit.setRunUuid(runUuid);
+                            audit.setTemplateId(templateId);
+                            audit.setPage(paginaAtual);
+                            audit.setPer(perInt);
+                            audit.setJanelaInicio(janelaInicio);
+                            audit.setJanelaFim(janelaFim);
+                            audit.setReqHash(reqHash);
+                            audit.setRespHash(respHash);
+                            audit.setTotalItens(0);
+                            audit.setIdKey(idKey);
+                            audit.setStatusCode(resposta.statusCode());
+                            audit.setDuracaoMs((int) duracaoMs);
+                            pageAuditRepository.inserir(audit);
                             logger.info("■ Fim da paginação (página vazia)");
                             totalPaginas = paginaAtual - 1;
                             break;
                         }
+                        Long minNum = null;
+                        Long maxNum = null;
+                        String minStr = null;
+                        String maxStr = null;
+                        if (idKey != null) {
+                            for (final JsonNode it : dadosNode) {
+                                if (!it.has(idKey)) continue;
+                                final JsonNode v = it.get(idKey);
+                                if (v.isNumber()) {
+                                    final long val = v.asLong();
+                                    minNum = (minNum == null || val < minNum) ? val : minNum;
+                                    maxNum = (maxNum == null || val > maxNum) ? val : maxNum;
+                                } else {
+                                    final String sv = v.asText();
+                                    minStr = (minStr == null || sv.compareTo(minStr) < 0) ? sv : minStr;
+                                    maxStr = (maxStr == null || sv.compareTo(maxStr) > 0) ? sv : maxStr;
+                                }
+                            }
+                        }
+                        final PageAuditEntity audit = new PageAuditEntity();
+                        audit.setExecutionUuid(this.executionUuid);
+                        audit.setRunUuid(runUuid);
+                        audit.setTemplateId(templateId);
+                        audit.setPage(paginaAtual);
+                        audit.setPer(perInt);
+                        audit.setJanelaInicio(janelaInicio);
+                        audit.setJanelaFim(janelaFim);
+                        audit.setReqHash(reqHash);
+                        audit.setRespHash(respHash);
+                        audit.setTotalItens(dadosNode.size());
+                        audit.setIdKey(idKey);
+                        audit.setIdMinNum(minNum);
+                        audit.setIdMaxNum(maxNum);
+                        audit.setIdMinStr(minStr);
+                        audit.setIdMaxStr(maxStr);
+                        audit.setStatusCode(resposta.statusCode());
+                        audit.setDuracaoMs((int) duracaoMs);
+                        pageAuditRepository.inserir(audit);
                         registrosPagina = objectMapper.convertValue(dadosNode, typeReference);
                     } else {
-                        // Resposta não é um array - tratar como vazio
+                        final PageAuditEntity audit = new PageAuditEntity();
+                        audit.setExecutionUuid(this.executionUuid);
+                        audit.setRunUuid(runUuid);
+                        audit.setTemplateId(templateId);
+                        audit.setPage(paginaAtual);
+                        audit.setPer(perInt);
+                        audit.setJanelaInicio(janelaInicio);
+                        audit.setJanelaFim(janelaFim);
+                        audit.setReqHash(reqHash);
+                        audit.setRespHash(respHash);
+                        audit.setTotalItens(0);
+                        audit.setStatusCode(resposta.statusCode());
+                        audit.setDuracaoMs((int) duracaoMs);
+                        pageAuditRepository.inserir(audit);
                         logger.warn("⚠️ Resposta não é um array válido na página {}. Tratando como vazio.", paginaAtual);
                         totalPaginas = paginaAtual - 1;
                         break;
@@ -499,6 +611,12 @@ public class ClienteApiDataExport {
             corpo.set("search", search);
             corpo.put("page", String.valueOf(pagina));
             corpo.put("per", valorPer);
+            final String orderBy = switch (templateId) {
+                case TEMPLATE_ID_LOCALIZACAO_CARGA -> "sequence_number asc";
+                case TEMPLATE_ID_FATURAS_POR_CLIENTE -> "unique_id asc";
+                default -> "sequence_code asc";
+            };
+            corpo.put("order_by", orderBy);
 
             final String corpoJson = objectMapper.writeValueAsString(corpo);
             logger.debug("Corpo JSON construído: {}", corpoJson);
@@ -753,8 +871,9 @@ public class ClienteApiDataExport {
             search.set(nomeTabela, table);
 
             corpo.set("search", search);
-            corpo.put("page", "1"); // Apenas primeira página para contagem
-            corpo.put("per", "10000"); // Máximo possível para obter todos os registros
+            corpo.put("page", "1");
+            corpo.put("per", "10000");
+            corpo.put("order_by", "sequence_code asc");
 
             final String corpoJson = objectMapper.writeValueAsString(corpo);
             logger.debug("Corpo JSON para contagem CSV construído: {}", corpoJson);

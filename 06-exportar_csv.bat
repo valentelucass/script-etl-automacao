@@ -10,6 +10,15 @@ echo   EXPORTADOR CSV - TODOS OS DADOS
 echo ================================================================
 echo.
 
+echo Compilando projeto...
+call "%~dp0mvn.bat" -q -DskipTests package
+if errorlevel 1 (
+    echo ERRO: Compilacao falhou
+    echo.
+    pause
+    exit /b 1
+)
+
 REM Verificar se o JAR existe
 if not exist "target\extrator.jar" (
     echo ERRO: JAR nao encontrado!
@@ -29,13 +38,39 @@ if not exist "src\main\java\br\com\extrator\util\ExportadorCSV.java" (
 )
 
 echo.
+echo Escolha da tabela (opcional):
+echo   - Deixe vazio para exportar todas
+echo   - Exemplos: fretes, cotacoes, page_audit
+echo.
+setlocal EnableExtensions
+set "TABELA=%~1"
+if not defined TABELA goto ASK_TABLE
+goto RUN
+
+:ASK_TABLE
+set /p TABELA=Informe a tabela desejada ^(vazio = todas^): 
+echo.
+if not defined TABELA goto RUN_ALL
+
+:RUN
 echo Executando exportador...
 echo.
 echo ================================================================
 echo.
+if not defined TABELA goto RUN_ALL
+java -cp "target\extrator.jar" br.com.extrator.util.ExportadorCSV "%TABELA%"
+goto END
 
-REM Executar usando o JAR compilado
+:RUN_ALL
+echo Executando exportador...
+echo.
+echo ================================================================
+echo.
 java -cp "target\extrator.jar" br.com.extrator.util.ExportadorCSV
+goto END
+
+:END
+endlocal
 
 if errorlevel 1 (
     echo.
@@ -87,7 +122,8 @@ echo   - fretes.csv                          (Fretes)
 echo   - coletas.csv                         (Coletas)
 echo   - manifestos.csv                      (Manifestos)
 echo   - cotacoes.csv                        (Cotacoes)
-echo   - localizacao_carga.csv               (Localizacao da Carga)
+echo   - localizacao_cargas.csv              (Localizacao da Carga)
+echo   - page_audit.csv                      (Auditoria de Paginas)
 echo.
 echo Verifique a pasta 'exports' para os arquivos gerados.
 echo.

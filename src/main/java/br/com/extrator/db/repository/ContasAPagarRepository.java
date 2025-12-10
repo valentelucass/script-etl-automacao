@@ -151,7 +151,10 @@ public class ContasAPagarRepository {
                 data_transacao AS [Data transação],
                 nome_usuario AS [Usuário/Nome],
                 status_pagamento AS [Status Pagamento],
-                reconciliado AS [Conciliado],
+                CASE WHEN reconciliado = 1 THEN 'Conciliado'
+                     WHEN reconciliado = 0 THEN 'Não conciliado'
+                     ELSE NULL
+                END AS [Conciliado],
                 metadata AS [Metadata],
                 data_extracao AS [Data de extracao]
             FROM dbo.contas_a_pagar;

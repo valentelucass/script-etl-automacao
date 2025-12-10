@@ -108,10 +108,24 @@ public class ClienteApiGraphQL {
 
                 logger.debug("Executando página {} da query GraphQL para {}", paginaAtual, nomeEntidade);
                 
-                // Adicionar cursor às variáveis se não for a primeira página
                 final Map<String, Object> variaveisComCursor = new java.util.HashMap<>(variaveis);
                 if (cursor != null) {
                     variaveisComCursor.put("after", cursor);
+                }
+                String resumoParams = null;
+                try {
+                    final Object paramsObj = variaveisComCursor.get("params");
+                    if (paramsObj instanceof final java.util.Map<?, ?> m) {
+                        final Object v1 = ((java.util.Map<?, ?>) m).get("serviceAt");
+                        final Object v2 = ((java.util.Map<?, ?>) m).get("requestDate");
+                        final String intervalo = v1 != null ? v1.toString() : (v2 != null ? v2.toString() : "");
+                        final String cursorStr = cursor != null ? cursor : "<inicio>";
+                        resumoParams = "after=" + cursorStr + " | intervalo=" + intervalo;
+                    }
+                } catch (final Exception ignored) {
+                }
+                if (resumoParams != null) {
+                    logger.info("Parâmetros da requisição: {}", resumoParams);
                 }
 
                 // Executar a query para esta página
@@ -212,6 +226,7 @@ public class ClienteApiGraphQL {
                         customer { id name cnpj }
                         pickAddress {
                           line1
+                          line2
                           number
                           neighborhood
                           postalCode

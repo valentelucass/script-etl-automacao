@@ -209,10 +209,21 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                 id_cidade_destino AS [Cidade Destino ID],
                 data_previsao_entrega AS [Previsão de Entrega],
                 modal AS [Modal],
-                status AS [Status],
-                tipo_frete AS [Tipo Frete],
+                CASE status
+                    WHEN 'pending' THEN 'pendente'
+                    WHEN 'finished' THEN 'finalizado'
+                    WHEN 'in_transit' THEN 'em trânsito'
+                    WHEN 'standby' THEN 'aguardando / parado'
+                    WHEN 'manifested' THEN 'manifesto emitido / pré-registro'
+                    WHEN 'occurrence_treatment' THEN 'tratamento de ocorrência'
+                    ELSE status
+                END AS [Status],
+                REPLACE(tipo_frete, 'Freight::', '') AS [Tipo Frete],
                 service_type AS [Service Type],
-                insurance_enabled AS [Seguro Habilitado],
+                CASE WHEN insurance_enabled = 1 THEN 'Com seguro'
+                     WHEN insurance_enabled = 0 THEN 'Sem seguro'
+                     ELSE NULL
+                END AS [Seguro Habilitado],
                 gris_subtotal AS [GRIS],
                 tde_subtotal AS [TDE],
                 freight_weight_subtotal AS [Frete Peso],
@@ -222,8 +233,15 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                 modal_cte AS [Modal CT-e],
                 redispatch_subtotal AS [Redispatch],
                 suframa_subtotal AS [SUFRAMA],
-                payment_type AS [Tipo Pagamento],
-                previous_document_type AS [Doc Anterior],
+                CASE payment_type
+                    WHEN 'bill' THEN 'boleto / fatura / cobrança bancária'
+                    WHEN 'cash' THEN 'dinheiro'
+                    ELSE payment_type
+                END AS [Tipo Pagamento],
+                CASE previous_document_type
+                    WHEN 'electronic' THEN 'eletrônico'
+                    ELSE previous_document_type
+                END AS [Doc Anterior],
                 products_value AS [Valor Produtos],
                 trt_subtotal AS [TRT],
                 fiscal_cst_type AS [ICMS CST],
@@ -235,7 +253,10 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                     fiscal_tax_rate AS [Alíquota ICMS %],
                     fiscal_pis_rate AS [Alíquota PIS %],
                     fiscal_cofins_rate AS [Alíquota COFINS %],
-                    fiscal_has_difal AS [Possui DIFAL],
+                    CASE WHEN fiscal_has_difal = 1 THEN 'possui'
+                         WHEN fiscal_has_difal = 0 THEN 'não possui'
+                         ELSE NULL
+                    END AS [Possui DIFAL],
                     fiscal_difal_origin AS [DIFAL Origem],
                     fiscal_difal_destination AS [DIFAL Destino],
                 nfse_series AS [Série NFS-e],
@@ -245,9 +266,15 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                 km AS [KM],
                 payment_accountable_type AS [Tipo Contábil Pagamento],
                 insured_value AS [Valor Segurado],
-                globalized AS [Globalizado],
+                CASE WHEN globalized = 1 THEN 'verdadeiro'
+                     WHEN globalized = 0 THEN 'falso'
+                     ELSE NULL
+                END AS [Globalizado],
                 sec_cat_subtotal AS [SEC/CAT],
-                globalized_type AS [Tipo Globalizado],
+                CASE globalized_type
+                    WHEN 'none' THEN 'nenhum'
+                    ELSE globalized_type
+                END AS [Tipo Globalizado],
                 price_table_accountable_type AS [Tipo Contábil Tabela],
                 insurance_accountable_type AS [Tipo Contábil Seguro],
                 metadata AS [Metadata],
