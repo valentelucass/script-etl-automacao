@@ -82,6 +82,7 @@ public final class LoopReconciliationService {
         args.add("--extracao-intervalo");
         args.add(data.toString());
         args.add(data.toString());
+        args.add("--modo-loop-daemon");
         if (!incluirFaturasGraphQL) {
             args.add("--sem-faturas-graphql");
         }

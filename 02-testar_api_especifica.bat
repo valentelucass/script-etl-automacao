@@ -2,7 +2,8 @@
 setlocal EnableDelayedExpansion
 
 REM Ajusta code page para evitar erros de parsing com acentos e parenteses
-chcp 1252 >nul
+if /i not "%EXTRATOR_SKIP_CHCP%"=="1" chcp 1252 >nul
+set "FLAG_FATURAS_GRAPHQL="
 
 REM ================================================================
 REM Script: 02-testar_api_especifica.bat
@@ -11,13 +12,14 @@ REM   Executa testes da API especifica informada como parametro ou via menu inte
 REM   Valores aceitos: 'graphql' ou 'dataexport'.
 REM
 REM Uso:
-REM   02-testar_api_especifica.bat [api] [entidade]
+REM   02-testar_api_especifica.bat [api] [entidade] [--sem-faturas-graphql]
 REM
 REM Parametros (opcionais):
 REM   %1  Nome da API a testar: graphql | dataexport
 REM   %2  Entidade (opcional):
 REM       GraphQL -> coletas | fretes | faturas_graphql
 REM       DataExport -> manifestos | cotacoes | localizacao_carga | contas_a_pagar | faturas_por_cliente
+REM   %3  Flag opcional: --sem-faturas-graphql (somente para GraphQL sem entidade especifica)
 REM
 REM Se nenhum parametro for informado, exibe menu interativo.
 REM ================================================================
@@ -26,6 +28,19 @@ REM Se parametros foram fornecidos, usar diretamente
 if not "%~1"=="" (
     set "API=%~1"
     set "ENTIDADE=%~2"
+    set "FLAG_FATURAS_GRAPHQL=%~3"
+    if /i "!ENTIDADE!"=="--sem-faturas-graphql" (
+        set "ENTIDADE="
+        set "FLAG_FATURAS_GRAPHQL=--sem-faturas-graphql"
+    )
+    if not "%~4"=="" (
+        echo ERRO: Parametros em excesso.
+        echo.
+        echo Uso: 02-testar_api_especifica.bat [api] [entidade] [--sem-faturas-graphql]
+        echo.
+        pause
+        exit /b 1
+    )
     goto :VALIDATE_ARGS
 )
 
@@ -55,7 +70,7 @@ if "%OPCAO_API%"=="2" (
 
 echo.
 echo ERRO: Opcao invalida!
-timeout /t 2 >nul
+timeout /t 2 /nobreak >nul 2>&1
 goto :INTERACTIVE_MENU
 
 :CHOOSE_ENTITY
@@ -72,6 +87,7 @@ set /p "OPCAO_ESCOPO=Digite sua opcao (1 ou 2): "
 
 if "%OPCAO_ESCOPO%"=="1" (
     set "ENTIDADE="
+    if /i "%API%"=="graphql" goto :CONFIGURAR_FATURAS_GRAPHQL
     goto :RUN
 )
 if "%OPCAO_ESCOPO%"=="2" (
@@ -80,7 +96,7 @@ if "%OPCAO_ESCOPO%"=="2" (
 
 echo.
 echo ERRO: Opcao invalida!
-timeout /t 2 >nul
+timeout /t 2 /nobreak >nul 2>&1
 goto :CHOOSE_ENTITY
 
 :CHOOSE_SPECIFIC_ENTITY
@@ -107,7 +123,7 @@ if /i "%API%"=="graphql" (
     if "!ENTIDADE!"=="" (
         echo.
         echo ERRO: Opcao invalida!
-        timeout /t 2 >nul
+        timeout /t 2 /nobreak >nul 2>&1
         goto :CHOOSE_SPECIFIC_ENTITY
     )
     goto :RUN
@@ -132,7 +148,7 @@ if /i "%API%"=="dataexport" (
     if "!ENTIDADE!"=="" (
         echo.
         echo ERRO: Opcao invalida!
-        timeout /t 2 >nul
+        timeout /t 2 /nobreak >nul 2>&1
         goto :CHOOSE_SPECIFIC_ENTITY
     )
     goto :RUN
@@ -188,15 +204,15 @@ cls
 echo ================================================================
 echo TESTANDO API: %API%
 if not "%ENTIDADE%"=="" echo ENTIDADE: %ENTIDADE%
+if /i "%API%"=="graphql" if "%ENTIDADE%"=="" (
+    if defined FLAG_FATURAS_GRAPHQL (
+        echo FATURAS GRAPHQL: DESABILITADO
+    ) else (
+        echo FATURAS GRAPHQL: INCLUIDO
+    )
+)
 echo ================================================================
 echo.
-
-if /i "%API%"=="graphql" (
-  if /i "%ENTIDADE%"=="faturas" set "API_GRAPHQL_FATURAS_DIAS_JANELA=1"
-  if /i "%ENTIDADE%"=="faturas" set "API_GRAPHQL_FATURAS_MAX_PAGINAS=20"
-  if /i "%ENTIDADE%"=="faturas_graphql" set "API_GRAPHQL_FATURAS_DIAS_JANELA=1"
-  if /i "%ENTIDADE%"=="faturas_graphql" set "API_GRAPHQL_FATURAS_MAX_PAGINAS=20"
-)
 
 REM Compilar e gerar JAR antes de executar
 if /i "%PROD_MODE%"=="1" (
@@ -223,12 +239,12 @@ if not exist "target\extrator.jar" (
 REM Configurar JAVA_HOME automaticamente (Java 17+)
 if not defined JAVA_HOME (
     REM Tenta encontrar JDK 17+ no Eclipse Adoptium
-    for /f "delims=" %%D in ('dir /b /ad "C:\Program Files\Eclipse Adoptium\jdk-17*" 2^>nul ^| sort /r') do (
+    for /f "delims=" %%D in ('dir /b /ad /o-n "C:\Program Files\Eclipse Adoptium\jdk-17*" 2^>nul') do (
         set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\%%D"
         goto :javahomefound
     )
     REM Se nao encontrar, tenta qualquer JDK 17+ no Adoptium
-    for /f "delims=" %%D in ('dir /b /ad "C:\Program Files\Eclipse Adoptium\jdk-*" 2^>nul ^| sort /r') do (
+    for /f "delims=" %%D in ('dir /b /ad /o-n "C:\Program Files\Eclipse Adoptium\jdk-*" 2^>nul') do (
         set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\%%D"
         goto :javahomefound
     )
@@ -247,6 +263,7 @@ if errorlevel 1 exit /b 1
 
 set "CMD_ARGS=--testar-api %API%"
 if not "%ENTIDADE%"=="" set "CMD_ARGS=%CMD_ARGS% %ENTIDADE%"
+if defined FLAG_FATURAS_GRAPHQL set "CMD_ARGS=%CMD_ARGS% %FLAG_FATURAS_GRAPHQL%"
 echo Executando: java --enable-native-access=ALL-UNNAMED -jar "target\extrator.jar" %CMD_ARGS%
 echo.
 
@@ -279,6 +296,38 @@ echo.
 pause
 exit /b 0
 
+:CONFIGURAR_FATURAS_GRAPHQL
+set "FLAG_FATURAS_GRAPHQL="
+echo.
+echo ================================================================
+echo CONFIGURACAO DE FATURAS GRAPHQL
+echo ================================================================
+echo Esta etapa pode demorar bastante quando incluida.
+echo.
+
+:PERGUNTAR_FATURAS_GRAPHQL
+set /p INCLUIR_FATURAS_GRAPHQL="Incluir Faturas GraphQL neste teste? (1=Sim, 2=Nao, S/N): "
+
+if /i "%INCLUIR_FATURAS_GRAPHQL%"=="S" (
+    set "FLAG_FATURAS_GRAPHQL="
+    goto :RUN
+)
+if "%INCLUIR_FATURAS_GRAPHQL%"=="1" (
+    set "FLAG_FATURAS_GRAPHQL="
+    goto :RUN
+)
+if /i "%INCLUIR_FATURAS_GRAPHQL%"=="N" (
+    set "FLAG_FATURAS_GRAPHQL=--sem-faturas-graphql"
+    goto :RUN
+)
+if "%INCLUIR_FATURAS_GRAPHQL%"=="2" (
+    set "FLAG_FATURAS_GRAPHQL=--sem-faturas-graphql"
+    goto :RUN
+)
+
+echo Opcao invalida. Digite 1, 2, S ou N.
+goto :PERGUNTAR_FATURAS_GRAPHQL
+
 :AUTH_CHECK
 if /i "%EXTRATOR_SKIP_AUTH_CHECK%"=="1" exit /b 0
 echo.
@@ -291,3 +340,5 @@ if errorlevel 1 (
     exit /b 1
 )
 exit /b 0
+
+

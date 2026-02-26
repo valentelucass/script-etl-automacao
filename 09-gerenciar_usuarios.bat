@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-chcp 65001 >nul
+if /i not "%EXTRATOR_SKIP_CHCP%"=="1" chcp 65001 >nul
 
 echo ================================================================
 echo GERENCIAMENTO DE USUARIOS DE ACESSO
@@ -31,11 +31,11 @@ if not exist "%~dp0target\extrator.jar" (
 )
 
 if not defined JAVA_HOME (
-    for /f "delims=" %%D in ('dir /b /ad "C:\Program Files\Eclipse Adoptium\jdk-17*" 2^>nul ^| sort /r') do (
+    for /f "delims=" %%D in ('dir /b /ad /o-n "C:\Program Files\Eclipse Adoptium\jdk-17*" 2^>nul') do (
         set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\%%D"
         goto :javahomefound
     )
-    for /f "delims=" %%D in ('dir /b /ad "C:\Program Files\Eclipse Adoptium\jdk-*" 2^>nul ^| sort /r') do (
+    for /f "delims=" %%D in ('dir /b /ad /o-n "C:\Program Files\Eclipse Adoptium\jdk-*" 2^>nul') do (
         set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\%%D"
         goto :javahomefound
     )
@@ -60,7 +60,10 @@ echo  5. Exibir informacoes do banco de seguranca
 echo  0. Voltar
 echo.
 set "OP="
-set /p "OP=Escolha uma opcao: "
+set /p "OP=Escolha uma opcao: " || (
+    echo Entrada encerrada. Encerrando menu de usuarios.
+    goto :END
+)
 set "OP=%OP: =%"
 echo.
 
@@ -107,9 +110,11 @@ if "%OP%"=="5" (
 )
 
 echo Opcao invalida.
-timeout /t 2 >nul
+timeout /t 2 /nobreak >nul 2>&1
 goto :MENU
 
 :END
 endlocal
 exit /b 0
+
+

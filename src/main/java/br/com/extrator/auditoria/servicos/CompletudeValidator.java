@@ -9,6 +9,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +35,8 @@ import br.com.extrator.util.validacao.ConstantesEntidades;
  */
 public class CompletudeValidator {
     private static final Logger logger = LoggerFactory.getLogger(CompletudeValidator.class);
+    private static final Pattern PADRAO_DB_UPSERTS = Pattern.compile("\\bdb_upserts=(\\d+)\\b");
+    private static final Pattern PADRAO_UNIQUE_COUNT = Pattern.compile("\\bunique_count=(\\d+)\\b");
     
     // Clientes de API para buscar contagens do ESL Cloud
     private final ClienteApiGraphQL clienteApiGraphQL;
@@ -112,23 +117,24 @@ public class CompletudeValidator {
             // === API DataExport - Manifestos, Cotações, Localizações, Contas a Pagar, Faturas/Cliente ===
             logger.info("📊 Buscando contagens via API DataExport (últimas 24h)...");
 
-            final var resManifestos = clienteApiDataExport.buscarManifestos();
+            final LocalDate dataInicioDataExport = dataReferencia.minusDays(1);
+            final var resManifestos = clienteApiDataExport.buscarManifestos(dataInicioDataExport, dataReferencia);
             totaisEslCloud.put(ConstantesEntidades.MANIFESTOS, resManifestos.getRegistrosExtraidos());
             logger.info("✅ Manifestos: {} registros", resManifestos.getRegistrosExtraidos());
 
-            final var resCotacoes = clienteApiDataExport.buscarCotacoes();
+            final var resCotacoes = clienteApiDataExport.buscarCotacoes(dataInicioDataExport, dataReferencia);
             totaisEslCloud.put(ConstantesEntidades.COTACOES, resCotacoes.getRegistrosExtraidos());
             logger.info("✅ Cotações: {} registros", resCotacoes.getRegistrosExtraidos());
 
-            final var resLocalizacoes = clienteApiDataExport.buscarLocalizacaoCarga();
+            final var resLocalizacoes = clienteApiDataExport.buscarLocalizacaoCarga(dataInicioDataExport, dataReferencia);
             totaisEslCloud.put(ConstantesEntidades.LOCALIZACAO_CARGAS, resLocalizacoes.getRegistrosExtraidos());
             logger.info("✅ Localizações de Carga: {} registros", resLocalizacoes.getRegistrosExtraidos());
 
-            final var resContasAPagar = clienteApiDataExport.buscarContasAPagar();
+            final var resContasAPagar = clienteApiDataExport.buscarContasAPagar(dataInicioDataExport, dataReferencia);
             totaisEslCloud.put(ConstantesEntidades.CONTAS_A_PAGAR, resContasAPagar.getRegistrosExtraidos());
             logger.info("✅ Contas a Pagar: {} registros", resContasAPagar.getRegistrosExtraidos());
 
-            final var resFaturasPorCliente = clienteApiDataExport.buscarFaturasPorCliente();
+            final var resFaturasPorCliente = clienteApiDataExport.buscarFaturasPorCliente(dataInicioDataExport, dataReferencia);
             totaisEslCloud.put(ConstantesEntidades.FATURAS_POR_CLIENTE, resFaturasPorCliente.getRegistrosExtraidos());
             logger.info("✅ Faturas por Cliente: {} registros", resFaturasPorCliente.getRegistrosExtraidos());
             
@@ -196,13 +202,14 @@ public class CompletudeValidator {
                 }
                 try {
                     final String sqlLog = """
-                        SELECT TOP 1 timestamp_inicio, timestamp_fim, registros_extraidos
+                        SELECT TOP 1 timestamp_inicio, timestamp_fim, registros_extraidos, mensagem
                         FROM dbo.log_extracoes
                         WHERE entidade = ? AND CAST(timestamp_inicio AS DATE) = ? AND status_final = 'COMPLETO'
                         ORDER BY timestamp_fim DESC
                     """;
                     java.sql.Timestamp tsInicio = null;
                     java.sql.Timestamp tsFim = null;
+                    String mensagemLog = null;
                     int contagemEslCloud = -1;
                     try (PreparedStatement stmtLog = conexao.prepareStatement(sqlLog)) {
                         stmtLog.setString(1, nomeEntidade);
@@ -212,12 +219,20 @@ public class CompletudeValidator {
                                 tsInicio = rsLog.getTimestamp("timestamp_inicio");
                                 tsFim = rsLog.getTimestamp("timestamp_fim");
                                 contagemEslCloud = rsLog.getInt("registros_extraidos");
+                                mensagemLog = rsLog.getString("mensagem");
+                                final OptionalInt uniqueCount = extrairMetricaInteira(mensagemLog, PADRAO_UNIQUE_COUNT);
+                                if (uniqueCount.isPresent()) {
+                                    contagemEslCloud = uniqueCount.getAsInt();
+                                }
                             }
                         }
                     }
 
                     int contagemBanco;
-                    if (tsInicio != null && tsFim != null) {
+                    final OptionalInt dbUpserts = extrairMetricaInteira(mensagemLog, PADRAO_DB_UPSERTS);
+                    if (dbUpserts.isPresent()) {
+                        contagemBanco = dbUpserts.getAsInt();
+                    } else if (tsInicio != null && tsFim != null) {
                         final String colunaTemporal = ConstantesEntidades.USUARIOS_SISTEMA.equals(nomeEntidade)
                             ? "data_atualizacao"
                             : "data_extracao";
@@ -288,6 +303,22 @@ public class CompletudeValidator {
         }
         
         return resultadosValidacao;
+    }
+
+    private OptionalInt extrairMetricaInteira(final String mensagem, final Pattern padrao) {
+        if (mensagem == null || mensagem.isBlank()) {
+            return OptionalInt.empty();
+        }
+        final Matcher matcher = padrao.matcher(mensagem);
+        if (!matcher.find()) {
+            return OptionalInt.empty();
+        }
+        try {
+            return OptionalInt.of(Integer.parseInt(matcher.group(1)));
+        } catch (final NumberFormatException e) {
+            logger.debug("Nao foi possivel converter metrica numérica de '{}': {}", mensagem, e.getMessage());
+            return OptionalInt.empty();
+        }
     }
     
     /**

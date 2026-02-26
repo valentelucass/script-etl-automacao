@@ -30,6 +30,19 @@ public interface EntityExtractor<T> {
      * @throws java.sql.SQLException Se houver erro ao salvar
      */
     int save(List<T> dtos) throws java.sql.SQLException;
+
+    /**
+     * Salva entidades e retorna métricas de persistência.
+     *
+     * Implementação padrão:
+     * - totalUnicos = tamanho da lista recebida
+     * - registrosInvalidos = 0
+     */
+    default SaveMetrics saveWithMetrics(final List<T> dtos) throws java.sql.SQLException {
+        final int totalUnicos = dtos != null ? dtos.size() : 0;
+        final int registrosSalvos = save(dtos);
+        return new SaveMetrics(registrosSalvos, totalUnicos, 0);
+    }
     
     /**
      * Retorna o nome da entidade (usado para logs e identificação).
@@ -45,5 +58,32 @@ public interface EntityExtractor<T> {
      */
     default String getEmoji() {
         return "📦";
+    }
+
+    /**
+     * Métricas de salvamento de uma entidade.
+     */
+    final class SaveMetrics {
+        private final int registrosSalvos;
+        private final int totalUnicos;
+        private final int registrosInvalidos;
+
+        public SaveMetrics(final int registrosSalvos, final int totalUnicos, final int registrosInvalidos) {
+            this.registrosSalvos = registrosSalvos;
+            this.totalUnicos = totalUnicos;
+            this.registrosInvalidos = registrosInvalidos;
+        }
+
+        public int getRegistrosSalvos() {
+            return registrosSalvos;
+        }
+
+        public int getTotalUnicos() {
+            return totalUnicos;
+        }
+
+        public int getRegistrosInvalidos() {
+            return registrosInvalidos;
+        }
     }
 }

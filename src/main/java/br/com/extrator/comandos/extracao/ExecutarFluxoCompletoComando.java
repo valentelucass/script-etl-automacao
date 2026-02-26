@@ -24,6 +24,7 @@ import br.com.extrator.util.console.LoggerConsole;
 import br.com.extrator.runners.dataexport.DataExportRunner;
 import br.com.extrator.runners.graphql.GraphQLRunner;
 import br.com.extrator.util.console.BannerUtil;
+import br.com.extrator.util.configuracao.CarregadorConfig;
 import br.com.extrator.util.formatacao.FormatadorData;
 import br.com.extrator.util.validacao.ConstantesEntidades;
 
@@ -52,23 +53,29 @@ public class ExecutarFluxoCompletoComando implements Comando {
         // Exibe banner inicial de extraÃ§Ã£o completa
         BannerUtil.exibirBannerExtracaoCompleta();
         
-        // Define data de hoje para buscar dados do dia atual
-        final LocalDate dataHoje = LocalDate.now();
+        // Janela padrão da extração completa: últimas 24h (ontem -> hoje)
+        final LocalDate dataFim = LocalDate.now();
+        final LocalDate dataInicio = dataFim.minusDays(1);
         
         // PROBLEMA #9 CORRIGIDO: Usar LoggerConsole para log duplo
         log.info("Iniciando processo de extraÃ§Ã£o de dados das 2 APIs do ESL Cloud");
         log.console("\n" + "=".repeat(60));
         log.console("INICIANDO PROCESSO DE EXTRAÃ‡ÃƒO DE DADOS");
         log.console("=".repeat(60));
-        log.console("Modo: DADOS DE HOJE");
+        log.console("Modo: ULTIMAS 24H");
         if (modoLoopDaemon) {
             log.console("Contexto: LOOP DAEMON (integridade final nao bloqueante)");
         }
         log.console("Faturas GraphQL: {}", incluirFaturasGraphQL ? "INCLUIDO" : "DESABILITADO (flag --sem-faturas-graphql)");
         // PROBLEMA 13 CORRIGIDO: Usar FormatadorData em vez de criar formatters inline
-        log.console("Data de extraÃ§Ã£o: {} (dados de hoje)", FormatadorData.formatBR(dataHoje));
+        log.console("Periodo de extraÃ§Ã£o: {} a {}", FormatadorData.formatBR(dataInicio), FormatadorData.formatBR(dataFim));
         log.console("InÃ­cio: {}", FormatadorData.formatBR(LocalDateTime.now()));
         log.console("=".repeat(60) + "\n");
+        
+        // Mitigacao referencial: preenche coletas de dias retroativos para reduzir
+        // manifestos orfaos em base recem-limpa. Essa etapa ocorre ANTES da
+        // janela oficial de validacao desta execucao.
+        executarPreBackfillReferencialColetas(dataInicio, modoLoopDaemon);
         
         final LocalDateTime inicioExecucao = LocalDateTime.now();
         boolean validacaoFinalCompleta = true;
@@ -91,10 +98,10 @@ public class ExecutarFluxoCompletoComando implements Comando {
         try {
             // Submeter todas as tarefas para execuÃ§Ã£o paralela
             log.info("ðŸ”„ [1/2] Submetendo API GraphQL para execuÃ§Ã£o...");
-            runnersFuturos.put("GraphQL", executor.submit(criarCallableRunner(() -> GraphQLRunner.executar(dataHoje))));
+            runnersFuturos.put("GraphQL", executor.submit(criarCallableRunner(() -> GraphQLRunner.executarPorIntervalo(dataInicio, dataFim))));
             
             log.info("ðŸ”„ [2/2] Submetendo API Data Export para execuÃ§Ã£o...");
-            runnersFuturos.put("DataExport", executor.submit(criarCallableRunner(() -> DataExportRunner.executar(dataHoje))));
+            runnersFuturos.put("DataExport", executor.submit(criarCallableRunner(() -> DataExportRunner.executarPorIntervalo(dataInicio, dataFim))));
             
             log.info("â³ Aguardando conclusÃ£o de todos os runners...");
             
@@ -152,7 +159,7 @@ public class ExecutarFluxoCompletoComando implements Comando {
             log.info("â„¹ï¸ Faturas GraphQL Ã© executado por Ãºltimo devido ao processo de enriquecimento demorado.");
             
             try {
-                GraphQLRunner.executarFaturasGraphQLPorIntervalo(dataHoje, dataHoje);
+                GraphQLRunner.executarFaturasGraphQLPorIntervalo(dataInicio, dataFim);
                 log.info("âœ… Faturas GraphQL concluÃ­das com sucesso!");
                 totalSucessos++;
             } catch (final Exception e) {
@@ -181,7 +188,9 @@ public class ExecutarFluxoCompletoComando implements Comando {
         try {
             final CompletudeValidator validator = new CompletudeValidator();
             
-            final LocalDate dataReferencia = LocalDate.now();
+            // Usa a data de referência congelada no início da execução para evitar
+            // falso ERRO quando o fluxo atravessa meia-noite.
+            final LocalDate dataReferencia = dataFim;
             log.info("ðŸ”„ [1/2] Validando completude (contagem origem x destino) com base nos logs da execuÃ§Ã£o...");
             final Map<String, CompletudeValidator.StatusValidacao> resultadosValidacao =
                 validator.validarCompletudePorLogs(dataReferencia);
@@ -405,6 +414,44 @@ public class ExecutarFluxoCompletoComando implements Comando {
             return "PARTIAL";
         }
         return "ERROR";
+    }
+
+    private void executarPreBackfillReferencialColetas(final LocalDate dataInicio, final boolean modoLoopDaemon) {
+        if (modoLoopDaemon) {
+            return;
+        }
+
+        final int diasRetroativos = CarregadorConfig.obterEtlReferencialColetasBackfillDias();
+        if (diasRetroativos <= 0) {
+            log.info("Pre-backfill referencial de coletas desabilitado (etl.referencial.coletas.backfill.dias=0).");
+            return;
+        }
+
+        final LocalDate backfillInicio = dataInicio.minusDays(diasRetroativos);
+        final LocalDate backfillFim = dataInicio.minusDays(1);
+        if (backfillInicio.isAfter(backfillFim)) {
+            return;
+        }
+
+        log.console("\n" + "=".repeat(60));
+        log.info(
+            "PRE-BACKFILL REFERENCIAL DE COLETAS | periodo={} a {} | dias_retroativos={}",
+            FormatadorData.formatBR(backfillInicio),
+            FormatadorData.formatBR(backfillFim),
+            diasRetroativos
+        );
+        log.console("=".repeat(60));
+
+        try {
+            GraphQLRunner.executarPorIntervalo(backfillInicio, backfillFim, ConstantesEntidades.COLETAS);
+            log.info("Pre-backfill referencial de coletas concluido.");
+        } catch (final Exception e) {
+            log.warn(
+                "Pre-backfill referencial de coletas falhou: {}. Fluxo principal seguira normalmente.",
+                e.getMessage()
+            );
+            log.debug("Detalhes da falha no pre-backfill referencial de coletas:", e);
+        }
     }
 }
 

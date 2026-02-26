@@ -103,7 +103,7 @@ public final class ConstantesApiDataExport {
             "accounting_debits",            // tabelaApi
             "100",                          // valorPer
             Duration.ofSeconds(60),         // timeout
-            "sequence_code asc",            // orderBy
+            "issue_date desc",              // orderBy (alinhado ao template oficial)
             true                            // usaSearchNested (estrutura diferente!)
         ),
 
@@ -233,4 +233,3 @@ public final class ConstantesApiDataExport {
         return obterCampoIdPrimario(obterConfiguracao(entidade));
     }
 }
-

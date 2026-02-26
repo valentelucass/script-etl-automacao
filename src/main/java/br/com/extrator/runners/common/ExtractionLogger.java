@@ -1,4 +1,4 @@
-package br.com.extrator.runners.common;
+﻿package br.com.extrator.runners.common;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -7,22 +7,22 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import br.com.extrator.api.ResultadoExtracao;
-// DataExportEntityExtractor Ã© usado em instanceof e cast (linhas 54, 56, 79) - falso positivo do linter
+// DataExportEntityExtractor ÃƒÂ© usado em instanceof e cast (linhas 54, 56, 79) - falso positivo do linter
 import br.com.extrator.runners.common.DataExportEntityExtractor;
 import br.com.extrator.util.configuracao.CarregadorConfig;
 import br.com.extrator.util.console.LoggerConsole;
 import br.com.extrator.util.validacao.ConstantesEntidades;
 
 /**
- * Classe utilitÃ¡ria para logging padronizado e detalhado de extraÃ§Ãµes.
- * Fornece logs ricos com mÃ©tricas, estatÃ­sticas e informaÃ§Ãµes de performance.
+ * Classe utilitÃƒÂ¡ria para logging padronizado e detalhado de extraÃƒÂ§ÃƒÂµes.
+ * Fornece logs ricos com mÃƒÂ©tricas, estatÃƒÂ­sticas e informaÃƒÂ§ÃƒÂµes de performance.
  */
-@SuppressWarnings("unused") // DataExportEntityExtractor Ã© usado em instanceof e cast (linhas 59, 60, 61, 85)
+@SuppressWarnings("unused") // DataExportEntityExtractor ÃƒÂ© usado em instanceof e cast (linhas 59, 60, 61, 85)
 public class ExtractionLogger {
     private final LoggerConsole log;
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
     
-    // ReferÃªncia estÃ¡tica ao tipo para forÃ§ar o linter a reconhecer o import
+    // ReferÃƒÂªncia estÃƒÂ¡tica ao tipo para forÃƒÂ§ar o linter a reconhecer o import
     private static final Class<?> DATA_EXPORT_EXTRACTOR_TYPE = DataExportEntityExtractor.class;
     
     public ExtractionLogger(final Class<?> clazz) {
@@ -30,13 +30,13 @@ public class ExtractionLogger {
     }
     
     /**
-     * Executa uma extraÃ§Ã£o com logging padronizado e detalhado.
+     * Executa uma extraÃƒÂ§ÃƒÂ£o com logging padronizado e detalhado.
      * 
      * @param extractor Extractor a ser executado
-     * @param dataInicio Data de inÃ­cio
+     * @param dataInicio Data de inÃƒÂ­cio
      * @param dataFim Data de fim
-     * @param emoji Emoji para identificaÃ§Ã£o visual
-     * @return Resultado da extraÃ§Ã£o
+     * @param emoji Emoji para identificaÃƒÂ§ÃƒÂ£o visual
+     * @return Resultado da extraÃƒÂ§ÃƒÂ£o
      */
     public <T> ExtractionResult executeWithLogging(
             final EntityExtractor<T> extractor,
@@ -50,12 +50,12 @@ public class ExtractionLogger {
         
         // Log inicial detalhado
         log.info("{}", "=".repeat(80));
-        log.info("{} {} INICIANDO EXTRAÃ‡ÃƒO: {}", displayEmoji, displayEmoji, entityName.toUpperCase());
+        log.info("{} {} INICIANDO EXTRAÃƒâ€¡ÃƒÆ’O: {}", displayEmoji, displayEmoji, entityName.toUpperCase());
         log.info("{}", "=".repeat(80));
-        log.info("ðŸ“… PerÃ­odo: {} a {}", 
+        log.info("Ã°Å¸â€œâ€¦ PerÃƒÂ­odo: {} a {}", 
             formatarPeriodo(dataInicio, dataFim), 
             dataFim != null && !dataInicio.equals(dataFim) ? dataFim : dataInicio);
-        log.info("â° InÃ­cio: {}", inicio.format(TIME_FORMATTER));
+        log.info("Ã¢ÂÂ° InÃƒÂ­cio: {}", inicio.format(TIME_FORMATTER));
         log.info("{}", "-".repeat(80));
 
         int registrosExtraidosAteFalha = 0;
@@ -70,97 +70,79 @@ public class ExtractionLogger {
             final List<T> dtos = resultado.getDados();
             final int totalPaginas = resultado.getPaginasProcessadas();
             final boolean completo = resultado.isCompleto();
-            final String statusMsg = completo ? "âœ… COMPLETO" : "âš ï¸ INCOMPLETO (" + resultado.getMotivoInterrupcao() + ")";
+            final String statusMsg = completo ? "Ã¢Å“â€¦ COMPLETO" : "Ã¢Å¡Â Ã¯Â¸Â INCOMPLETO (" + resultado.getMotivoInterrupcao() + ")";
             registrosExtraidosAteFalha = resultado.getRegistrosExtraidos();
             paginasProcessadasAteFalha = totalPaginas;
             
-            // Log de extraÃ§Ã£o detalhado
+            // Log de extraÃƒÂ§ÃƒÂ£o detalhado
             log.info("{}", "-".repeat(80));
-            log.info("ðŸ“Š RESULTADO DA EXTRAÃ‡ÃƒO:");
-            log.info("   â€¢ Total extraÃ­do da API: {} registros", formatarNumero(dtos.size()));
-            log.info("   â€¢ PÃ¡ginas processadas: {}", totalPaginas);
-            log.info("   â€¢ Status: {}", statusMsg);
+            log.info("Ã°Å¸â€œÅ  RESULTADO DA EXTRAÃƒâ€¡ÃƒÆ’O:");
+            log.info("   Ã¢â‚¬Â¢ Total extraÃƒÂ­do da API: {} registros", formatarNumero(dtos.size()));
+            log.info("   Ã¢â‚¬Â¢ PÃƒÂ¡ginas processadas: {}", totalPaginas);
+            log.info("   Ã¢â‚¬Â¢ Status: {}", statusMsg);
             final double segundosExtracao = duracaoExtracao.toMillis() / 1000.0;
-            log.info("   â€¢ Tempo de extraÃ§Ã£o (apenas busca na API): {} ms ({} s)",
+            log.info("   Ã¢â‚¬Â¢ Tempo de extraÃƒÂ§ÃƒÂ£o (apenas busca na API): {} ms ({} s)",
                 duracaoExtracao.toMillis(),
                 String.format("%.2f", segundosExtracao));
-            log.info("      â†³ enriquecimento e gravaÃ§Ã£o entram no Tempo de salvamento abaixo");
+            log.info("      Ã¢â€ Â³ enriquecimento e gravaÃƒÂ§ÃƒÂ£o entram no Tempo de salvamento abaixo");
             if (dtos.size() > 0 && duracaoExtracao.toMillis() > 0) {
                 final double registrosPorSegundo = (dtos.size() * 1000.0) / duracaoExtracao.toMillis();
-                log.info("   â€¢ Taxa de extraÃ§Ã£o: {} registros/segundo", String.format("%.2f", registrosPorSegundo));
+                log.info("   Ã¢â‚¬Â¢ Taxa de extraÃƒÂ§ÃƒÂ£o: {} registros/segundo", String.format("%.2f", registrosPorSegundo));
             }
             
             int registrosSalvos = 0;
-            int totalUnicos = dtos.size(); // PadrÃ£o para GraphQL
+            int totalUnicos = dtos.size(); // PadrÃƒÂ£o para GraphQL
             int registrosInvalidos = 0;
             final LocalDateTime inicioSalvamento = LocalDateTime.now();
             
             if (!dtos.isEmpty()) {
                 try {
-                    // Se for DataExportEntityExtractor, usar saveWithDeduplication para obter totalUnicos
-                    if (extractor instanceof DataExportEntityExtractor) {
-                        final DataExportEntityExtractor<T> dataExportExtractor = (DataExportEntityExtractor<T>) extractor;
-                        final DataExportEntityExtractor.SaveResult saveResult = 
-                            dataExportExtractor.saveWithDeduplication(dtos);
-                        registrosSalvos = saveResult.getRegistrosSalvos();
-                        totalUnicos = saveResult.getTotalUnicos();
-                        registrosInvalidos = saveResult.getRegistrosInvalidos();
-                        
-                        final LocalDateTime fimSalvamento = LocalDateTime.now();
-                        final Duration duracaoSalvamento = Duration.between(inicioSalvamento, fimSalvamento);
-                        
-                        if (dtos.size() != totalUnicos) {
-                            final int duplicadosRemovidos = dtos.size() - totalUnicos;
-                            final double percentualDuplicados = (duplicadosRemovidos * 100.0) / dtos.size();
-                            log.warn("   âš ï¸ Duplicados removidos: {} ({}% do total)", 
-                                formatarNumero(duplicadosRemovidos), String.format("%.2f", percentualDuplicados));
-                        }
-                        
-                        log.info("{}", "-".repeat(80));
-                        log.info("ðŸ’¾ RESULTADO DO SALVAMENTO (DataExport):");
-                        log.info("   â€¢ Registros Ãºnicos apÃ³s deduplicaÃ§Ã£o: {}", formatarNumero(totalUnicos));
-                        log.info("   â€¢ OperaÃ§Ãµes no banco (INSERTs + UPDATEs): {}", formatarNumero(registrosSalvos));
-                        final double segundosSalvamento = duracaoSalvamento.toMillis() / 1000.0;
-                        log.info("   â€¢ Tempo de salvamento: {} ms ({} s)", 
-                            duracaoSalvamento.toMillis(), 
-                            String.format("%.2f", segundosSalvamento));
-                        if (totalUnicos > 0 && duracaoSalvamento.toMillis() > 0) {
-                            final double registrosPorSegundo = (totalUnicos * 1000.0) / duracaoSalvamento.toMillis();
-                            log.info("   â€¢ Taxa de salvamento: {} registros/segundo", String.format("%.2f", registrosPorSegundo));
-                        }
-                        if (registrosInvalidos > 0) {
-                            log.warn("   âš ï¸ Registros invÃ¡lidos descartados: {}", formatarNumero(registrosInvalidos));
-                        }
+                    final EntityExtractor.SaveMetrics saveMetrics = extractor.saveWithMetrics(dtos);
+                    registrosSalvos = saveMetrics.getRegistrosSalvos();
+                    totalUnicos = saveMetrics.getTotalUnicos();
+                    registrosInvalidos = saveMetrics.getRegistrosInvalidos();
+
+                    final LocalDateTime fimSalvamento = LocalDateTime.now();
+                    final Duration duracaoSalvamento = Duration.between(inicioSalvamento, fimSalvamento);
+                    final boolean isDataExportExtractor = extractor instanceof DataExportEntityExtractor;
+
+                    if (dtos.size() != totalUnicos) {
+                        final int duplicadosRemovidos = dtos.size() - totalUnicos;
+                        final double percentualDuplicados = (duplicadosRemovidos * 100.0) / dtos.size();
+                        log.warn("   Duplicados removidos: {} ({}% do total)",
+                            formatarNumero(duplicadosRemovidos), String.format("%.2f", percentualDuplicados));
+                    }
+
+                    log.info("{}", "-".repeat(80));
+                    if (isDataExportExtractor) {
+                        log.info("RESULTADO DO SALVAMENTO (DataExport):");
+                        log.info("   Registros unicos apos deduplicacao: {}", formatarNumero(totalUnicos));
+                        log.info("   Operacoes no banco (INSERTs + UPDATEs): {}", formatarNumero(registrosSalvos));
                     } else {
-                        registrosSalvos = extractor.save(dtos);
-                        if (ConstantesEntidades.USUARIOS_SISTEMA.equals(entityName)) {
-                            // usuarios_sistema deduplica por user_id dentro do extractor antes do MERGE.
-                            // Para consistÃªncia de status/log, "totalUnicos" deve refletir a cardinalidade deduplicada.
-                            totalUnicos = registrosSalvos;
-                        }
-                        final LocalDateTime fimSalvamento = LocalDateTime.now();
-                        final Duration duracaoSalvamento = Duration.between(inicioSalvamento, fimSalvamento);
-                        
-                        log.info("{}", "-".repeat(80));
-                        log.info("ðŸ’¾ RESULTADO DO SALVAMENTO (GraphQL):");
-                        log.info("   â€¢ Registros salvos: {}", formatarNumero(registrosSalvos));
-                        final double segundosSalvamento = duracaoSalvamento.toMillis() / 1000.0;
-                        log.info("   â€¢ Tempo de salvamento: {} ms ({} s)", 
-                            duracaoSalvamento.toMillis(), 
-                            String.format("%.2f", segundosSalvamento));
-                        if (registrosSalvos > 0 && duracaoSalvamento.toMillis() > 0) {
-                            final double registrosPorSegundo = (registrosSalvos * 1000.0) / duracaoSalvamento.toMillis();
-                            log.info("   â€¢ Taxa de salvamento: {} registros/segundo", String.format("%.2f", registrosPorSegundo));
-                        }
+                        log.info("RESULTADO DO SALVAMENTO (GraphQL):");
+                        log.info("   Registros salvos: {}", formatarNumero(registrosSalvos));
+                    }
+                    final double segundosSalvamento = duracaoSalvamento.toMillis() / 1000.0;
+                    log.info("   Tempo de salvamento: {} ms ({} s)",
+                        duracaoSalvamento.toMillis(),
+                        String.format("%.2f", segundosSalvamento));
+                    if (registrosSalvos > 0 && duracaoSalvamento.toMillis() > 0) {
+                        final double registrosPorSegundo = (registrosSalvos * 1000.0) / duracaoSalvamento.toMillis();
+                        log.info("   Taxa de salvamento: {} registros/segundo", String.format("%.2f", registrosPorSegundo));
+                    }
+                    if (registrosInvalidos > 0) {
+                        log.warn("   Registros invalidos descartados: {}", formatarNumero(registrosInvalidos));
                     }
                 } catch (final java.sql.SQLException e) {
-                    log.error("âŒ ERRO CRÃTICO ao salvar {}: {}", entityName, e.getMessage());
+                    log.error("ERRO CRITICO ao salvar {}: {}", entityName, e.getMessage());
                     throw new RuntimeException("Erro ao salvar " + entityName, e);
                 }
             } else {
-                log.info("   â„¹ï¸ Nenhum registro para salvar (lista vazia)");
+                log.info("Nenhum registro para salvar (lista vazia)");
             }
             
+            totalUnicos = ajustarTotalUnicosAposSalvamento(entityName, totalUnicos, registrosSalvos);
+
             final LocalDateTime fim = LocalDateTime.now();
             final Duration duracaoTotal = Duration.between(inicio, fim);
             final int totalRecebido = dtos.size();
@@ -188,14 +170,14 @@ public class ExtractionLogger {
             );
 
             if (!salvamentoConsistente) {
-                log.error("âŒ DivergÃªncia de carga detectada em {}: Ãºnicos={} | salvos={}",
+                log.error("Ã¢ÂÅ’ DivergÃƒÂªncia de carga detectada em {}: ÃƒÂºnicos={} | salvos={}",
                     entityName, formatarNumero(totalUnicos), formatarNumero(registrosSalvos));
             }
             if (registrosInvalidos > 0 && !invalidosDentroTolerancia) {
-                log.error("❌ Registros inválidos descartados em {}: {}", entityName, formatarNumero(registrosInvalidos));
+                log.error("âŒ Registros invÃ¡lidos descartados em {}: {}", entityName, formatarNumero(registrosInvalidos));
             } else if (registrosInvalidos > 0) {
                 final double percentualInvalidos = (registrosInvalidos * 100.0) / Math.max(1, totalRecebido);
-                log.warn("⚠️ Registros inválidos descartados em {} dentro da tolerância operacional: {} ({}%)",
+                log.warn("âš ï¸ Registros invÃ¡lidos descartados em {} dentro da tolerÃ¢ncia operacional: {} ({}%)",
                     entityName,
                     formatarNumero(registrosInvalidos),
                     String.format("%.2f", percentualInvalidos));
@@ -213,29 +195,30 @@ public class ExtractionLogger {
             log.info("{}", "=".repeat(80));
             log.info("{} {} RESUMO FINAL: {}", displayEmoji, displayEmoji, entityName.toUpperCase());
             log.info("{}", "=".repeat(80));
-            log.info("ðŸ“ˆ EstatÃ­sticas:");
-            log.info("   â€¢ API â†’ DB: {} â†’ {} registros", formatarNumero(totalRecebido), formatarNumero(registrosSalvos));
+            log.info("Ã°Å¸â€œË† EstatÃƒÂ­sticas:");
+            log.info("   Ã¢â‚¬Â¢ API Ã¢â€ â€™ DB: {} Ã¢â€ â€™ {} registros", formatarNumero(totalRecebido), formatarNumero(registrosSalvos));
             if (totalRecebido != totalUnicos) {
-                log.info("   â€¢ Ãšnicos apÃ³s deduplicaÃ§Ã£o: {}", formatarNumero(totalUnicos));
+                log.info("   Ã¢â‚¬Â¢ ÃƒÅ¡nicos apÃƒÂ³s deduplicaÃƒÂ§ÃƒÂ£o: {}", formatarNumero(totalUnicos));
             }
             if (deltaIgnorados > 0) {
-                log.info("   â€¢ Ignorados/duplicados: {}", formatarNumero(deltaIgnorados));
+                log.info("   Ã¢â‚¬Â¢ Ignorados/duplicados: {}", formatarNumero(deltaIgnorados));
             }
-            log.info("   â€¢ PÃ¡ginas: {}", totalPaginas);
-            log.info("   â€¢ Tempo total: {} ms ({} s)", 
+            log.info("   Ã¢â‚¬Â¢ PÃƒÂ¡ginas: {}", totalPaginas);
+            log.info("   Ã¢â‚¬Â¢ Tempo total: {} ms ({} s)", 
                 duracaoTotal.toMillis(), 
                 String.format("%.2f", duracaoTotal.toMillis() / 1000.0));
             if (registrosInvalidos > 0) {
-                log.info("   â€¢ Registros invÃ¡lidos descartados: {}", formatarNumero(registrosInvalidos));
+                log.info("   Ã¢â‚¬Â¢ Registros invÃƒÂ¡lidos descartados: {}", formatarNumero(registrosInvalidos));
             }
-            log.info("   â€¢ Status: {}", formatarStatusHumano(statusFinal));
-            log.info("â° Fim: {}", fim.format(TIME_FORMATTER));
+            log.info("   Ã¢â‚¬Â¢ Status: {}", formatarStatusHumano(statusFinal));
+            log.info("Ã¢ÂÂ° Fim: {}", fim.format(TIME_FORMATTER));
             log.info("{}", "=".repeat(80));
-            log.info(""); // Linha em branco para separaÃ§Ã£o visual
+            log.info(""); // Linha em branco para separaÃƒÂ§ÃƒÂ£o visual
             
-            // Usar sucessoComUnicos se for DataExport (tem deduplicaÃ§Ã£o)
-            final boolean isDataExport = extractor instanceof DataExportEntityExtractor;
-            if (isDataExport) {
+            // Usar sucessoComUnicos se for DataExport (tem deduplicaÃƒÂ§ÃƒÂ£o)
+            final boolean usarUnicos = (extractor instanceof DataExportEntityExtractor)
+                || totalUnicos != resultado.getDados().size();
+            if (usarUnicos) {
                 return ExtractionResult.sucessoComUnicos(entityName, inicio, resultado, registrosSalvos, totalUnicos, mensagem)
                     .status(statusFinal)
                     .build();
@@ -249,20 +232,20 @@ public class ExtractionLogger {
             final LocalDateTime fim = LocalDateTime.now();
             final Duration duracaoTotal = Duration.between(inicio, fim);
             log.error("{}", "=".repeat(80));
-            log.error("âŒ ERRO NA EXTRAÃ‡ÃƒO: {}", entityName.toUpperCase());
+            log.error("Ã¢ÂÅ’ ERRO NA EXTRAÃƒâ€¡ÃƒÆ’O: {}", entityName.toUpperCase());
             log.error("{}", "=".repeat(80));
-            log.error("   â€¢ Erro: {}", e.getMessage());
-            log.error("   â€¢ Tipo: {}", e.getClass().getSimpleName());
-            log.error("   â€¢ Tempo atÃ© erro: {} ms ({} s)", 
+            log.error("   Ã¢â‚¬Â¢ Erro: {}", e.getMessage());
+            log.error("   Ã¢â‚¬Â¢ Tipo: {}", e.getClass().getSimpleName());
+            log.error("   Ã¢â‚¬Â¢ Tempo atÃƒÂ© erro: {} ms ({} s)", 
                 duracaoTotal.toMillis(), 
                 String.format("%.2f", duracaoTotal.toMillis() / 1000.0));
             if (registrosExtraidosAteFalha > 0 || paginasProcessadasAteFalha > 0) {
-                log.error("   â€¢ Progresso antes da falha: {} registros da API, {} pÃ¡ginas",
+                log.error("   Ã¢â‚¬Â¢ Progresso antes da falha: {} registros da API, {} pÃƒÂ¡ginas",
                     formatarNumero(registrosExtraidosAteFalha),
                     formatarNumero(paginasProcessadasAteFalha));
             }
             log.error("{}", "=".repeat(80));
-            log.error(""); // Linha em branco para separaÃ§Ã£o visual
+            log.error(""); // Linha em branco para separaÃƒÂ§ÃƒÂ£o visual
             return ExtractionResult.erroComParcial(
                 entityName,
                 inicio,
@@ -297,19 +280,19 @@ public class ExtractionLogger {
         final StringBuilder sb = new StringBuilder();
         sb.append("API: ").append(formatarNumero(totalRecebido)).append(" recebidos");
         if (totalRecebido != totalUnicos) {
-            sb.append(" (Ãºnicos: ").append(formatarNumero(totalUnicos)).append(")");
+            sb.append(" (ÃƒÂºnicos: ").append(formatarNumero(totalUnicos)).append(")");
         }
         sb.append(" | DB: ").append(formatarNumero(registrosSalvos)).append(" processados");
         if (deltaIgnorados > 0) {
             sb.append(" | Delta: ").append(formatarNumero(deltaIgnorados)).append(" (duplicados/ignorados)");
         }
         if (registrosInvalidos > 0) {
-            sb.append(" | InvÃ¡lidos descartados: ").append(formatarNumero(registrosInvalidos));
+            sb.append(" | InvÃƒÂ¡lidos descartados: ").append(formatarNumero(registrosInvalidos));
         }
         sb.append(" | Tempo: ").append(duracaoTotal.toMillis()).append("ms");
         
         if (dataFim != null && !dataInicio.equals(dataFim)) {
-            sb.append(" | PerÃ­odo: ").append(dataInicio).append(" a ").append(dataFim);
+            sb.append(" | PerÃƒÂ­odo: ").append(dataInicio).append(" a ").append(dataFim);
         } else {
             sb.append(" | Data: ").append(dataInicio);
         }
@@ -377,11 +360,24 @@ public class ExtractionLogger {
         return registrosInvalidos <= limiteAbsoluto && percentualInvalidos <= limitePercentual;
     }
 
+    private int ajustarTotalUnicosAposSalvamento(final String entityName,
+                                                  final int totalUnicosAtual,
+                                                  final int registrosSalvos) {
+        if (ConstantesEntidades.FATURAS_GRAPHQL.equals(entityName) && registrosSalvos > totalUnicosAtual) {
+            log.info("   - {}: ajuste de total_unicos apos backfill referencial (api_unicos={} | total_processado={})",
+                entityName,
+                formatarNumero(totalUnicosAtual),
+                formatarNumero(registrosSalvos));
+            return registrosSalvos;
+        }
+        return totalUnicosAtual;
+    }
+
     private String formatarStatusHumano(final String statusCode) {
         if (ConstantesEntidades.STATUS_COMPLETO.equals(statusCode)) {
-            return "âœ… COMPLETO";
+            return "Ã¢Å“â€¦ COMPLETO";
         }
-        return "âš ï¸ " + statusCode;
+        return "Ã¢Å¡Â Ã¯Â¸Â " + statusCode;
     }
 }
 

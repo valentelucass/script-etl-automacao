@@ -48,12 +48,12 @@ if not exist "target\extrator.jar" (
 REM Configurar JAVA_HOME automaticamente (Java 17+)
 if not defined JAVA_HOME (
     REM Tenta encontrar JDK 17+ no Eclipse Adoptium
-    for /f "delims=" %%D in ('dir /b /ad "C:\Program Files\Eclipse Adoptium\jdk-17*" 2^>nul ^| sort /r') do (
+    for /f "delims=" %%D in ('dir /b /ad /o-n "C:\Program Files\Eclipse Adoptium\jdk-17*" 2^>nul') do (
         set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\%%D"
         goto :javahomefound
     )
     REM Se nao encontrar, tenta qualquer JDK 17+ no Adoptium
-    for /f "delims=" %%D in ('dir /b /ad "C:\Program Files\Eclipse Adoptium\jdk-*" 2^>nul ^| sort /r') do (
+    for /f "delims=" %%D in ('dir /b /ad /o-n "C:\Program Files\Eclipse Adoptium\jdk-*" 2^>nul') do (
         set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\%%D"
         goto :javahomefound
     )
@@ -167,11 +167,19 @@ exit /b 0
 
 :CONFIGURAR_FATURAS_GRAPHQL
 set "FLAG_FATURAS_GRAPHQL="
+set /a FATURAS_TENTATIVAS=0
 
 if /i "%~1"=="--sem-faturas-graphql" (
     echo.
     echo Faturas GraphQL: DESABILITADO por parametro informado.
     set "FLAG_FATURAS_GRAPHQL=--sem-faturas-graphql"
+    exit /b 0
+)
+
+if /i "%~1"=="--com-faturas-graphql" (
+    echo.
+    echo Faturas GraphQL: INCLUIDO por parametro informado.
+    set "FLAG_FATURAS_GRAPHQL="
     exit /b 0
 )
 
@@ -183,9 +191,15 @@ echo Esta entidade passa por enriquecimento e pode demorar bastante.
 echo.
 
 :PERGUNTAR_FATURAS
-set /p INCLUIR_FATURAS="Incluir Faturas GraphQL nesta execucao? (S/N): "
+set /a FATURAS_TENTATIVAS+=1
+set /p INCLUIR_FATURAS="Incluir Faturas GraphQL nesta execucao? (1=Sim, 2=Nao, S/N): "
 
 if /i "%INCLUIR_FATURAS%"=="S" (
+    echo Faturas GraphQL: INCLUIDO.
+    exit /b 0
+)
+
+if "%INCLUIR_FATURAS%"=="1" (
     echo Faturas GraphQL: INCLUIDO.
     exit /b 0
 )
@@ -196,5 +210,16 @@ if /i "%INCLUIR_FATURAS%"=="N" (
     exit /b 0
 )
 
-echo Opcao invalida. Digite S ou N.
+if "%INCLUIR_FATURAS%"=="2" (
+    echo Faturas GraphQL: DESABILITADO.
+    set "FLAG_FATURAS_GRAPHQL=--sem-faturas-graphql"
+    exit /b 0
+)
+
+echo Opcao invalida. Digite 1, 2, S ou N.
+if %FATURAS_TENTATIVAS% GEQ 10 (
+    echo ERRO: Numero maximo de tentativas atingido ao configurar Faturas GraphQL.
+    exit /b 1
+)
 goto :PERGUNTAR_FATURAS
+

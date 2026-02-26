@@ -17,6 +17,8 @@ public class PaginatedGraphQLResponse<T> {
     private final String reqHash;
     private final String respHash;
     private final int totalItens;
+    private final boolean erroApi;
+    private final String erroDetalhe;
     
     /**
      * Construtor da resposta paginada
@@ -26,6 +28,19 @@ public class PaginatedGraphQLResponse<T> {
      * @param endCursor Cursor para buscar a próxima página
      */
     public PaginatedGraphQLResponse(List<T> entidades, boolean hasNextPage, String endCursor, int statusCode, int duracaoMs, String reqHash, String respHash, int totalItens) {
+        this(entidades, hasNextPage, endCursor, statusCode, duracaoMs, reqHash, respHash, totalItens, false, null);
+    }
+
+    public PaginatedGraphQLResponse(List<T> entidades,
+                                    boolean hasNextPage,
+                                    String endCursor,
+                                    int statusCode,
+                                    int duracaoMs,
+                                    String reqHash,
+                                    String respHash,
+                                    int totalItens,
+                                    boolean erroApi,
+                                    String erroDetalhe) {
         this.entidades = entidades;
         this.hasNextPage = hasNextPage;
         this.endCursor = endCursor;
@@ -34,6 +49,8 @@ public class PaginatedGraphQLResponse<T> {
         this.reqHash = reqHash;
         this.respHash = respHash;
         this.totalItens = totalItens;
+        this.erroApi = erroApi;
+        this.erroDetalhe = erroDetalhe;
     }
     
     /**
@@ -75,5 +92,13 @@ public class PaginatedGraphQLResponse<T> {
     
     public int getTotalItens() {
         return totalItens;
+    }
+
+    public boolean isErroApi() {
+        return erroApi;
+    }
+
+    public String getErroDetalhe() {
+        return erroDetalhe;
     }
 }

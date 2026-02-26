@@ -25,7 +25,12 @@ public class ExibirAjudaComando implements Comando {
         System.out.println("  --auditoria --periodo YYYY-MM-DD YYYY-MM-DD");
         System.out.println("                        Executa auditoria para periodo especifico");
         System.out.println("  --auditar-api         Audita estrutura das APIs e gera CSV");
-        System.out.println("  --testar-api [tipo]   Testa API especifica (rest|graphql|dataexport)");
+        System.out.println("  --testar-api [tipo]   Testa API especifica (graphql|dataexport)");
+        System.out.println("                        Uso: --testar-api [tipo] [entidade] [--sem-faturas-graphql]");
+        System.out.println("  --validar-api-banco-24h");
+        System.out.println("                        Compara API ao vivo x banco (janela da ultima extracao COMPLETA)");
+        System.out.println("  --validar-api-banco-24h-detalhado");
+        System.out.println("                        Compara chave a chave por entidade (API x banco na janela da ultima extracao)");
         System.out.println("  --loop                Console interativo de loop");
         System.out.println("                        Opcional: --sem-faturas-graphql");
         System.out.println("  --loop-daemon-start   Inicia loop em segundo plano");

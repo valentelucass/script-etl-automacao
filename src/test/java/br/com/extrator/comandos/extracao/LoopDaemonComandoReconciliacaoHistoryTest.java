@@ -20,6 +20,8 @@ import br.com.extrator.comandos.extracao.reconciliacao.LoopReconciliationService
 
 class LoopDaemonComandoReconciliacaoHistoryTest {
 
+    private static final String HISTORY_OVERRIDE_KEY = "extrator.loop.reconciliacao.history.dir";
+
     @TempDir
     Path tempDir;
 
@@ -28,48 +30,57 @@ class LoopDaemonComandoReconciliacaoHistoryTest {
         final LocalDateTime inicio = LocalDateTime.of(2026, 2, 20, 11, 0);
         final LocalDateTime fimExtracao = LocalDateTime.of(2026, 2, 20, 11, 30);
 
-        final Path pastaReconciliacao = Path.of("logs", "daemon", "reconciliacao");
+        final Path pastaReconciliacao = tempDir.resolve("reconciliacao-history");
         Files.createDirectories(pastaReconciliacao);
         final Path csvEsperado = pastaReconciliacao.resolve("reconciliacao_daemon_2026_02.csv");
-        Files.deleteIfExists(csvEsperado);
+        final String overrideAnterior = System.getProperty(HISTORY_OVERRIDE_KEY);
+        System.setProperty(HISTORY_OVERRIDE_KEY, pastaReconciliacao.toString());
 
         final Path cicloLog = tempDir.resolve("ciclo.log");
         Files.writeString(cicloLog, "log-ciclo-teste", StandardCharsets.UTF_8);
 
-        final LoopReconciliationService service = new LoopReconciliationService(
-            tempDir.resolve("state.properties"),
-            Clock.fixed(inicio.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault()),
-            true,
-            2,
-            0,
-            (data, incluirFaturasGraphQL) -> {
-                // no-op
+        try {
+            final LoopReconciliationService service = new LoopReconciliationService(
+                tempDir.resolve("state.properties"),
+                Clock.fixed(inicio.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault()),
+                true,
+                2,
+                0,
+                (data, incluirFaturasGraphQL) -> {
+                    // no-op
+                }
+            );
+            final ReconciliationSummary resumo = service.processarPosCiclo(inicio, fimExtracao, true, true);
+
+            final LoopDaemonComando comando = new LoopDaemonComando(LoopDaemonComando.Modo.STATUS);
+            final Method registrar = LoopDaemonComando.class.getDeclaredMethod(
+                "registrarHistoricoReconciliacao",
+                LocalDateTime.class,
+                LocalDateTime.class,
+                boolean.class,
+                ReconciliationSummary.class,
+                Path.class
+            );
+            registrar.setAccessible(true);
+            registrar.invoke(comando, inicio, fimExtracao, true, resumo, cicloLog);
+
+            assertTrue(Files.exists(csvEsperado), "CSV de reconciliacao deve ser criado");
+            final List<String> linhas = Files.readAllLines(csvEsperado, StandardCharsets.UTF_8);
+            assertFalse(linhas.isEmpty(), "CSV deve conter pelo menos cabecalho");
+            assertTrue(
+                linhas.stream().anyMatch(l -> l.contains("STATUS_RECONCILIACAO") && l.contains("EXECUTADAS")),
+                "CSV deve conter cabecalho de reconciliacao"
+            );
+            assertTrue(
+                linhas.stream().anyMatch(l -> l.contains(";EXECUTADA;") && l.contains(";true;")),
+                "CSV deve conter registro com status da reconciliacao executada"
+            );
+        } finally {
+            if (overrideAnterior == null) {
+                System.clearProperty(HISTORY_OVERRIDE_KEY);
+            } else {
+                System.setProperty(HISTORY_OVERRIDE_KEY, overrideAnterior);
             }
-        );
-        final ReconciliationSummary resumo = service.processarPosCiclo(inicio, fimExtracao, true, true);
-
-        final LoopDaemonComando comando = new LoopDaemonComando(LoopDaemonComando.Modo.STATUS);
-        final Method registrar = LoopDaemonComando.class.getDeclaredMethod(
-            "registrarHistoricoReconciliacao",
-            LocalDateTime.class,
-            LocalDateTime.class,
-            boolean.class,
-            ReconciliationSummary.class,
-            Path.class
-        );
-        registrar.setAccessible(true);
-        registrar.invoke(comando, inicio, fimExtracao, true, resumo, cicloLog);
-
-        assertTrue(Files.exists(csvEsperado), "CSV de reconciliacao deve ser criado");
-        final List<String> linhas = Files.readAllLines(csvEsperado, StandardCharsets.UTF_8);
-        assertFalse(linhas.isEmpty(), "CSV deve conter pelo menos cabecalho");
-        assertTrue(
-            linhas.stream().anyMatch(l -> l.contains("STATUS_RECONCILIACAO") && l.contains("EXECUTADAS")),
-            "CSV deve conter cabecalho de reconciliacao"
-        );
-        assertTrue(
-            linhas.stream().anyMatch(l -> l.contains(";EXECUTADA;") && l.contains(";true;")),
-            "CSV deve conter registro com status da reconciliacao executada"
-        );
+        }
     }
 }

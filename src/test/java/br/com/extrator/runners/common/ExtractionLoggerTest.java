@@ -40,6 +40,15 @@ class ExtractionLoggerTest {
     }
 
     @Test
+    void deveConsiderarCompletoFaturasGraphqlQuandoBackfillAumentaVolumeSalvo() {
+        final ResultadoExtracao<String> resultadoExtracao = ResultadoExtracao.completo(List.of("a", "b"), 1, 2);
+        final ExtractionResult result = executarGraphqlFaturas(resultadoExtracao, 5);
+
+        assertEquals(ConstantesEntidades.STATUS_COMPLETO, result.getStatus());
+        assertEquals(5, result.getTotalUnicos());
+    }
+
+    @Test
     void deveClassificarComoErroApiQuandoMotivoForErroApi() {
         final ResultadoExtracao<String> resultadoExtracao = ResultadoExtracao.incompleto(
             List.of("a"),
@@ -74,6 +83,13 @@ class ExtractionLoggerTest {
         return logger.executeWithLogging(extractor, LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 1), "");
     }
 
+    private ExtractionResult executarGraphqlFaturas(final ResultadoExtracao<String> resultadoExtracao,
+                                                    final int salvos) {
+        final ExtractionLogger logger = new ExtractionLogger(ExtractionLoggerTest.class);
+        final DummyGraphqlFaturasExtractor extractor = new DummyGraphqlFaturasExtractor(resultadoExtracao, salvos);
+        return logger.executeWithLogging(extractor, LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 1), "");
+    }
+
     private static final class DummyDataExportExtractor implements DataExportEntityExtractor<String> {
         private final ResultadoExtracao<String> resultadoExtracao;
         private final SaveResult saveResult;
@@ -104,5 +120,35 @@ class ExtractionLoggerTest {
             return "";
         }
     }
-}
 
+    private static final class DummyGraphqlFaturasExtractor implements EntityExtractor<String> {
+        private final ResultadoExtracao<String> resultadoExtracao;
+        private final int salvos;
+
+        private DummyGraphqlFaturasExtractor(final ResultadoExtracao<String> resultadoExtracao,
+                                             final int salvos) {
+            this.resultadoExtracao = resultadoExtracao;
+            this.salvos = salvos;
+        }
+
+        @Override
+        public ResultadoExtracao<String> extract(final LocalDate dataInicio, final LocalDate dataFim) {
+            return resultadoExtracao;
+        }
+
+        @Override
+        public int save(final List<String> dtos) {
+            return salvos;
+        }
+
+        @Override
+        public String getEntityName() {
+            return ConstantesEntidades.FATURAS_GRAPHQL;
+        }
+
+        @Override
+        public String getEmoji() {
+            return "";
+        }
+    }
+}

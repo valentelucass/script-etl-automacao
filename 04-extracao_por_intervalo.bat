@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableDelayedExpansion
-chcp 65001 >nul
+if /i not "%EXTRATOR_SKIP_CHCP%"=="1" chcp 65001 >nul
 set "FINAL_EXIT_CODE=0"
 set "FLAG_FATURAS_GRAPHQL="
 set "PARAM_FLAG_FATURAS="
@@ -20,12 +20,14 @@ REM   04-extracao_por_intervalo.bat YYYY-MM-DD YYYY-MM-DD
 REM   04-extracao_por_intervalo.bat YYYY-MM-DD YYYY-MM-DD api
 REM   04-extracao_por_intervalo.bat YYYY-MM-DD YYYY-MM-DD api entidade
 REM   04-extracao_por_intervalo.bat YYYY-MM-DD YYYY-MM-DD [api] [entidade] --sem-faturas-graphql
+REM   04-extracao_por_intervalo.bat YYYY-MM-DD YYYY-MM-DD [api] [entidade] --com-faturas-graphql
 REM
 REM Exemplos:
 REM   04-extracao_por_intervalo.bat 2024-10-26 2024-12-26
 REM   04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 dataexport
 REM   04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 dataexport localizacao_cargas
 REM   04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 --sem-faturas-graphql
+REM   04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 --com-faturas-graphql
 REM
 REM Funcionalidades:
 REM   - Aceita parametros na linha de comando OU menu interativo
@@ -72,16 +74,24 @@ if /i "%API_ESCOLHIDA%"=="--sem-faturas-graphql" (
     set "API_ESCOLHIDA="
     set "PARAM_FLAG_FATURAS=--sem-faturas-graphql"
 )
+if /i "%API_ESCOLHIDA%"=="--com-faturas-graphql" (
+    set "API_ESCOLHIDA="
+    set "PARAM_FLAG_FATURAS=--com-faturas-graphql"
+)
 if /i "%ENTIDADE_ESCOLHIDA%"=="--sem-faturas-graphql" (
     set "ENTIDADE_ESCOLHIDA="
     set "PARAM_FLAG_FATURAS=--sem-faturas-graphql"
+)
+if /i "%ENTIDADE_ESCOLHIDA%"=="--com-faturas-graphql" (
+    set "ENTIDADE_ESCOLHIDA="
+    set "PARAM_FLAG_FATURAS=--com-faturas-graphql"
 )
 
 REM Validar que pelo menos as datas foram fornecidas
 if "%DATA_INICIO%"=="" (
     echo ERRO: Data de inicio nao informada!
     echo.
-    echo Uso: 04-extracao_por_intervalo.bat [DATA_INICIO] [DATA_FIM] [API] [ENTIDADE] [--sem-faturas-graphql]
+    echo Uso: 04-extracao_por_intervalo.bat [DATA_INICIO] [DATA_FIM] [API] [ENTIDADE] [--sem-faturas-graphql^|--com-faturas-graphql]
     echo Exemplo: 04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 dataexport localizacao_cargas
     pause
     exit /b 1
@@ -90,7 +100,7 @@ if "%DATA_INICIO%"=="" (
 if "%DATA_FIM%"=="" (
     echo ERRO: Data de fim nao informada!
     echo.
-    echo Uso: 04-extracao_por_intervalo.bat [DATA_INICIO] [DATA_FIM] [API] [ENTIDADE] [--sem-faturas-graphql]
+    echo Uso: 04-extracao_por_intervalo.bat [DATA_INICIO] [DATA_FIM] [API] [ENTIDADE] [--sem-faturas-graphql^|--com-faturas-graphql]
     echo Exemplo: 04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 dataexport localizacao_cargas
     pause
     exit /b 1
@@ -313,12 +323,22 @@ if not "%~1"=="" (
     goto :COMPILAR
 )
 
-set /p CONFIRMA="Confirma a extracao para este periodo? (S/N): "
-if /i not "%CONFIRMA%"=="S" (
+:PERGUNTAR_CONFIRMACAO
+set /p CONFIRMA="Confirma a extracao para este periodo? (1=Sim, 2=Nao, S/N): "
+if /i "%CONFIRMA%"=="S" goto :COMPILAR
+if "%CONFIRMA%"=="1" goto :COMPILAR
+if /i "%CONFIRMA%"=="N" (
     echo Operacao cancelada pelo usuario.
     pause
     exit /b 0
 )
+if "%CONFIRMA%"=="2" (
+    echo Operacao cancelada pelo usuario.
+    pause
+    exit /b 0
+)
+echo Opcao invalida. Digite 1, 2, S ou N.
+goto :PERGUNTAR_CONFIRMACAO
 
 :COMPILAR
 echo.
@@ -421,6 +441,7 @@ endlocal & exit /b %RET_CODE%
 
 :CONFIGURAR_FATURAS_GRAPHQL
 set "FLAG_FATURAS_GRAPHQL="
+set /a FATURAS_TENTATIVAS=0
 
 if /i "%ENTIDADE_ESCOLHIDA%"=="faturas_graphql" (
     echo.
@@ -450,6 +471,12 @@ if /i "%PARAM_FLAG_FATURAS%"=="--sem-faturas-graphql" (
     set "FLAG_FATURAS_GRAPHQL=--sem-faturas-graphql"
     exit /b 0
 )
+if /i "%PARAM_FLAG_FATURAS%"=="--com-faturas-graphql" (
+    echo.
+    echo Faturas GraphQL: INCLUIDO por parametro informado.
+    set "FLAG_FATURAS_GRAPHQL="
+    exit /b 0
+)
 
 echo.
 echo ================================================================
@@ -459,8 +486,14 @@ echo Esta entidade usa enriquecimento e pode aumentar bastante o tempo.
 echo.
 
 :PERGUNTAR_FATURAS_GRAPHQL
-set /p INCLUIR_FATURAS_GRAPHQL="Incluir Faturas GraphQL nesta extracao? (S/N): "
+set /a FATURAS_TENTATIVAS+=1
+set /p INCLUIR_FATURAS_GRAPHQL="Incluir Faturas GraphQL nesta extracao? (1=Sim, 2=Nao, S/N): "
 if /i "!INCLUIR_FATURAS_GRAPHQL!"=="S" (
+    set "FLAG_FATURAS_GRAPHQL="
+    echo Faturas GraphQL: INCLUIDO.
+    exit /b 0
+)
+if "!INCLUIR_FATURAS_GRAPHQL!"=="1" (
     set "FLAG_FATURAS_GRAPHQL="
     echo Faturas GraphQL: INCLUIDO.
     exit /b 0
@@ -470,7 +503,16 @@ if /i "!INCLUIR_FATURAS_GRAPHQL!"=="N" (
     echo Faturas GraphQL: DESABILITADO.
     exit /b 0
 )
-echo Opcao invalida. Digite S ou N.
+if "!INCLUIR_FATURAS_GRAPHQL!"=="2" (
+    set "FLAG_FATURAS_GRAPHQL=--sem-faturas-graphql"
+    echo Faturas GraphQL: DESABILITADO.
+    exit /b 0
+)
+echo Opcao invalida. Digite 1, 2, S ou N.
+if !FATURAS_TENTATIVAS! GEQ 10 (
+    echo ERRO: Numero maximo de tentativas atingido ao configurar Faturas GraphQL.
+    exit /b 1
+)
 goto :PERGUNTAR_FATURAS_GRAPHQL
 
 :VALIDAR_DATA
@@ -484,3 +526,4 @@ set "DATA_NUMERICA=%DATA_TESTE:-=%"
 if not "%DATA_NUMERICA:~8,1%"=="" exit /b 1
 for /f "delims=0123456789" %%A in ("%DATA_NUMERICA%") do exit /b 1
 exit /b 0
+

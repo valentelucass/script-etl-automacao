@@ -79,6 +79,9 @@ public final class GerenciadorConexao {
         config.setIdleTimeout(obterConfigLong("DB_POOL_IDLE_TIMEOUT", "db.pool.idle_timeout_ms", POOL_IDLE_TIMEOUT_DEFAULT));
         config.setConnectionTimeout(obterConfigLong("DB_POOL_CONN_TIMEOUT", "db.pool.connection_timeout_ms", POOL_CONNECTION_TIMEOUT_DEFAULT));
         config.setMaxLifetime(obterConfigLong("DB_POOL_MAX_LIFETIME", "db.pool.max_lifetime_ms", POOL_MAX_LIFETIME_DEFAULT));
+        // Permite inicializacao do pool mesmo com banco temporariamente indisponivel.
+        // Evita erro definitivo de classe quando ha oscilacao de conectividade.
+        config.setInitializationFailTimeout(-1L);
 
         // Configurações de performance para SQL Server
         config.addDataSourceProperty("cachePrepStmts", "true");
@@ -93,13 +96,19 @@ public final class GerenciadorConexao {
         logger.info("✅ Pool HikariCP inicializado: maxSize={}, minIdle={}", 
             config.getMaximumPoolSize(), config.getMinimumIdle());
         
-        // Hook para fechar o pool no shutdown da JVM
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            if (!ds.isClosed()) {
-                logger.info("🔌 Fechando pool de conexões...");
-                ds.close();
-            }
-        }));
+        // Hook para fechar o pool no shutdown da JVM.
+        // Em casos onde o pool é inicializado dentro de um shutdown hook, a JVM já está
+        // encerrando e não permite registrar novos hooks.
+        try {
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                if (!ds.isClosed()) {
+                    logger.info("🔌 Fechando pool de conexões...");
+                    ds.close();
+                }
+            }));
+        } catch (final IllegalStateException e) {
+            logger.warn("JVM em desligamento: hook de fechamento do pool não registrado.");
+        }
 
         return ds;
     }
@@ -111,7 +120,14 @@ public final class GerenciadorConexao {
      * @throws SQLException Se não for possível obter uma conexão.
      */
     public static Connection obterConexao() throws SQLException {
-        return DataSourceHolder.INSTANCE.getConnection();
+        try {
+            return DataSourceHolder.INSTANCE.getConnection();
+        } catch (final ExceptionInInitializerError | NoClassDefFoundError e) {
+            final String msg =
+                "Falha ao inicializar pool de conexoes. Verifique DB_URL/DB_USER/DB_PASSWORD e conectividade com o SQL Server.";
+            logger.error(msg, e);
+            throw new SQLException(msg + " Detalhe: " + extrairMensagemMaisInterna(e), e);
+        }
     }
 
     /**
@@ -219,5 +235,14 @@ public final class GerenciadorConexao {
         }
         
         return defaultValue;
+    }
+
+    private static String extrairMensagemMaisInterna(final Throwable throwable) {
+        Throwable atual = throwable;
+        while (atual.getCause() != null && atual.getCause() != atual) {
+            atual = atual.getCause();
+        }
+        final String mensagem = atual.getMessage();
+        return (mensagem == null || mensagem.isBlank()) ? atual.getClass().getSimpleName() : mensagem;
     }
 }

@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableDelayedExpansion
-chcp 65001 >nul
+if /i not "%EXTRATOR_SKIP_CHCP%"=="1" chcp 65001 >nul
 
 REM ================================================================
 REM Script: 07-exportar_csv.bat
@@ -41,12 +41,12 @@ if not exist "target\extrator.jar" (
 REM Configurar JAVA_HOME automaticamente (Java 17+)
 if not defined JAVA_HOME (
     REM Tenta encontrar JDK 17+ no Eclipse Adoptium
-    for /f "delims=" %%D in ('dir /b /ad "C:\Program Files\Eclipse Adoptium\jdk-17*" 2^>nul ^| sort /r') do (
+    for /f "delims=" %%D in ('dir /b /ad /o-n "C:\Program Files\Eclipse Adoptium\jdk-17*" 2^>nul') do (
         set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\%%D"
         goto :javahomefound
     )
     REM Se nao encontrar, tenta qualquer JDK 17+ no Adoptium
-    for /f "delims=" %%D in ('dir /b /ad "C:\Program Files\Eclipse Adoptium\jdk-*" 2^>nul ^| sort /r') do (
+    for /f "delims=" %%D in ('dir /b /ad /o-n "C:\Program Files\Eclipse Adoptium\jdk-*" 2^>nul') do (
         set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\%%D"
         goto :javahomefound
     )
@@ -219,3 +219,5 @@ if errorlevel 1 (
     exit /b 1
 )
 exit /b 0
+
+

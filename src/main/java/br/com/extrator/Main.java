@@ -31,6 +31,8 @@ import br.com.extrator.comandos.utilitarios.LimparTabelasComando;
 import br.com.extrator.comandos.utilitarios.RealizarIntrospeccaoGraphQLComando;
 import br.com.extrator.comandos.utilitarios.TestarApiComando;
 import br.com.extrator.comandos.validacao.ValidarAcessoComando;
+import br.com.extrator.comandos.validacao.ValidarApiVsBanco24hComando;
+import br.com.extrator.comandos.validacao.ValidarApiVsBanco24hDetalhadoComando;
 import br.com.extrator.comandos.validacao.ValidarDadosCompletoComando;
 import br.com.extrator.comandos.validacao.ValidarManifestosComando;
 import br.com.extrator.comandos.validacao.VerificarTimestampsComando;
@@ -63,6 +65,8 @@ public class Main {
         comandos.put("--verificar-timezone", new VerificarTimezoneComando());
         comandos.put("--validar-manifestos", new ValidarManifestosComando());
         comandos.put("--validar-dados", new ValidarDadosCompletoComando());
+        comandos.put("--validar-api-banco-24h", new ValidarApiVsBanco24hComando());
+        comandos.put("--validar-api-banco-24h-detalhado", new ValidarApiVsBanco24hDetalhadoComando());
         comandos.put("--exportar-csv", new ExportarCsvComando());
 
         comandos.put("--auth-check", new AuthCheckComando());
@@ -171,24 +175,25 @@ public class Main {
                 System.err.println("Use --ajuda para ver os comandos disponiveis.");
             }
             comando.executar(args);
-        } catch (final Exception e) {
-            if (e instanceof PartialExecutionException) {
-                statusRef.set("PARTIAL");
-                errorMessageRef.set(e.getMessage());
-                errorCategoryRef.set(e.getClass().getSimpleName());
-                exitCode = 2;
-                logger.warn("Execucao concluida com falhas parciais: {}", e.getMessage());
-                System.err.println("Execucao parcial: " + e.getMessage());
-            } else {
-                statusRef.set("ERROR");
-                errorMessageRef.set(e.getMessage());
-                errorCategoryRef.set(e.getClass().getSimpleName());
-                exitCode = 1;
-                if (!(comandoSilencioso && isErroEsperado(e))) {
-                    logger.error("Erro durante execucao: {}", e.getMessage(), e);
-                }
-                System.err.println("Erro durante execucao: " + e.getMessage());
+        } catch (final PartialExecutionException e) {
+            statusRef.set("PARTIAL");
+            errorMessageRef.set(e.getMessage());
+            errorCategoryRef.set(e.getClass().getSimpleName());
+            exitCode = 2;
+            logger.warn("Execucao concluida com falhas parciais: {}", e.getMessage());
+            System.err.println("Execucao parcial: " + e.getMessage());
+        } catch (final Throwable e) {
+            final String mensagem = (e.getMessage() == null || e.getMessage().isBlank())
+                ? e.getClass().getSimpleName()
+                : e.getMessage();
+            statusRef.set("ERROR");
+            errorMessageRef.set(mensagem);
+            errorCategoryRef.set(e.getClass().getSimpleName());
+            exitCode = 1;
+            if (!(comandoSilencioso && isErroEsperado(e))) {
+                logger.error("Erro durante execucao: {}", mensagem, e);
             }
+            System.err.println("Erro durante execucao: " + mensagem);
         } finally {
             persistirHistoricoExecucao.run();
             finalizadoNormalmente.set(true);
@@ -221,7 +226,7 @@ public class Main {
             || "--loop-daemon-status".equals(nomeComando);
     }
 
-    private static boolean isErroEsperado(final Exception e) {
+    private static boolean isErroEsperado(final Throwable e) {
         return e instanceof IllegalArgumentException || e instanceof IllegalStateException;
     }
 }

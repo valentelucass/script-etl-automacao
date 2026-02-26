@@ -25,6 +25,7 @@ import br.com.extrator.api.ResultadoExtracao;
 import br.com.extrator.db.entity.FaturaGraphQLEntity;
 import br.com.extrator.db.repository.FaturaGraphQLRepository;
 import br.com.extrator.db.repository.FaturaPorClienteRepository;
+import br.com.extrator.db.repository.FreteRepository;
 import br.com.extrator.modelo.graphql.faturas.CreditCustomerBillingNodeDTO;
 import br.com.extrator.modelo.graphql.bancos.BankAccountNodeDTO;
 import br.com.extrator.runners.common.ConstantesExtracao;
@@ -36,20 +37,26 @@ import br.com.extrator.util.validacao.ConstantesEntidades;
 
 /**
  * Extractor para entidade Faturas GraphQL.
- * Possui lógica especial de mapeamento e enriquecimento.
+ * Possui lÃ³gica especial de mapeamento e enriquecimento.
  * 
- * FASE 4: Implementa padrão Producer-Consumer para otimização:
- * - Thread Produtora: Faz requisições HTTP sequenciais (respeitando throttling global de 2s)
+ * FASE 4: Implementa padrÃ£o Producer-Consumer para otimizaÃ§Ã£o:
+ * - Thread Produtora: Faz requisiÃ§Ãµes HTTP sequenciais (respeitando throttling global de 2s)
  * - Threads Consumidoras: Processam resultados em paralelo (parsing, mapeamento)
  * - Logs de progresso detalhados a cada N registros
- * - Heartbeat para indicar que o processo está vivo
+ * - Heartbeat para indicar que o processo estÃ¡ vivo
  */
 public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBillingNodeDTO> {
     
     private final ClienteApiGraphQL apiClient;
     private final FaturaGraphQLRepository repository;
     private final FaturaPorClienteRepository faturasPorClienteRepository;
+    private final FreteRepository freteRepository;
     private final LoggerConsole log;
+    private static final int LIMITE_BACKFILL_FATURAS_ORFAAS = 2000;
+    private static final int MAX_TENTATIVAS_BACKFILL_POR_ID = 3;
+    private static final long BACKFILL_RETRY_BASE_MS = 1500L;
+    private LocalDate dataInicioExtracao;
+    private LocalDate dataFimExtracao;
     
     // FASE 4: Contadores para logs de progresso
     private final AtomicInteger totalProcessadas = new AtomicInteger(0);
@@ -63,7 +70,7 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
     
     /**
      * FASE 4: Task para a fila de enriquecimento.
-     * Contém o ID da fatura e o resultado da requisição HTTP.
+     * ContÃ©m o ID da fatura e o resultado da requisiÃ§Ã£o HTTP.
      */
     private record EnriquecimentoTask(
         Long faturaId,
@@ -73,15 +80,19 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
     public FaturaGraphQLExtractor(final ClienteApiGraphQL apiClient,
                                  final FaturaGraphQLRepository repository,
                                  final FaturaPorClienteRepository faturasPorClienteRepository,
+                                 final FreteRepository freteRepository,
                                  final LoggerConsole log) {
         this.apiClient = apiClient;
         this.repository = repository;
         this.faturasPorClienteRepository = faturasPorClienteRepository;
+        this.freteRepository = freteRepository;
         this.log = log;
     }
     
     @Override
     public ResultadoExtracao<CreditCustomerBillingNodeDTO> extract(final LocalDate dataInicio, final LocalDate dataFim) {
+        this.dataInicioExtracao = dataInicio;
+        this.dataFimExtracao = dataFim;
         return apiClient.buscarCapaFaturas(dataInicio, dataFim);
     }
     
@@ -91,13 +102,13 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
             return 0;
         }
         
-        log.info("🔄 Iniciando processamento de {} faturas GraphQL com lógica híbrida", dtos.size());
+        log.info("ðŸ”„ Iniciando processamento de {} faturas GraphQL com lÃ³gica hÃ­brida", dtos.size());
         
-        // PASSO 1: DEDUPLICAÇÃO (Resolve o problema das linhas repetidas)
+        // PASSO 1: DEDUPLICAÃ‡ÃƒO (Resolve o problema das linhas repetidas)
         final Map<Long, FaturaGraphQLEntity> faturasUnicas = new HashMap<>();
         for (final CreditCustomerBillingNodeDTO dto : dtos) {
             if (dto.getId() == null) {
-                log.warn("⚠️ Fatura GraphQL com ID nulo ignorada: {}", dto.getDocument());
+                log.warn("âš ï¸ Fatura GraphQL com ID nulo ignorada: {}", dto.getDocument());
                 continue;
             }
             
@@ -108,14 +119,19 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
             }
         }
         
-        log.info("✓ Deduplicação concluída: {} faturas únicas de {} totais", faturasUnicas.size(), dtos.size());
+        log.info("âœ“ DeduplicaÃ§Ã£o concluÃ­da: {} faturas Ãºnicas de {} totais", faturasUnicas.size(), dtos.size());
+        final int adicionadasPorBackfill = executarBackfillFaturasOrfasPorId(faturasUnicas);
+        if (adicionadasPorBackfill > 0) {
+            log.info("Backfill por accounting_credit_id adicionou {} faturas antes do enriquecimento", adicionadasPorBackfill);
+        }
         
-        // PASSO 2: PREPARAÇÃO DO CACHE BANCÁRIO (Side-Loading)
+        
+        // PASSO 2: PREPARAÃ‡ÃƒO DO CACHE BANCÃRIO (Side-Loading)
         final Set<Integer> idsBancos = new HashSet<>();
         final Map<Long, Integer> faturaIdParaBancoId = new HashMap<>();
         
         // PASSO 3: LOOP DE ENRIQUECIMENTO (GraphQL)
-        // Primeiro, tenta usar dados já disponíveis na query principal
+        // Primeiro, tenta usar dados jÃ¡ disponÃ­veis na query principal
         for (final CreditCustomerBillingNodeDTO dto : dtos) {
             if (dto.getId() == null) {
                 continue;
@@ -126,13 +142,13 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
                 continue;
             }
             
-            // Coleta ticketAccountId se já estiver disponível na query principal
+            // Coleta ticketAccountId se jÃ¡ estiver disponÃ­vel na query principal
             if (dto.getTicketAccountId() != null) {
                 idsBancos.add(dto.getTicketAccountId());
                 faturaIdParaBancoId.put(dto.getId(), dto.getTicketAccountId());
             }
             
-            // Método de pagamento já pode estar na primeira parcela
+            // MÃ©todo de pagamento jÃ¡ pode estar na primeira parcela
             if (dto.getInstallments() != null && !dto.getInstallments().isEmpty()) {
                 final var parcela = dto.getInstallments().get(0);
                 if (parcela.getPaymentMethod() != null && !parcela.getPaymentMethod().trim().isEmpty() 
@@ -143,7 +159,7 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
         }
         
         // Agora enriquece apenas as faturas que precisam (falta NFS-e ou ticketAccountId)
-        // FASE 4: Removidas variáveis locais - usar AtomicInteger da classe
+        // FASE 4: Removidas variÃ¡veis locais - usar AtomicInteger da classe
         final Set<Long> faturasParaEnriquecer = new HashSet<>();
         
         for (final Map.Entry<Long, FaturaGraphQLEntity> entry : faturasUnicas.entrySet()) {
@@ -159,7 +175,7 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
             }
         }
         
-        log.info("🔍 {} faturas precisam de enriquecimento adicional (falta NFS-e ou ticketAccountId)", faturasParaEnriquecer.size());
+        log.info("ðŸ” {} faturas precisam de enriquecimento adicional (falta NFS-e ou ticketAccountId)", faturasParaEnriquecer.size());
 
         // FASE 4: Reset dos contadores
         totalProcessadas.set(0);
@@ -183,10 +199,10 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
             );
         }
 
-        log.info("✓ Enriquecimento concluído: {} faturas enriquecidas, {} erros, {} IDs de bancos únicos coletados",
+        log.info("âœ“ Enriquecimento concluÃ­do: {} faturas enriquecidas, {} erros, {} IDs de bancos Ãºnicos coletados",
                 totalEnriquecidas.get(), totalComErro.get(), idsBancos.size());
 
-        // PASSO 4: CACHE BANCÁRIO (Busca detalhes apenas uma vez por Banco)
+        // PASSO 4: CACHE BANCÃRIO (Busca detalhes apenas uma vez por Banco)
         final Map<Integer, BankAccountNodeDTO> cacheBanco = new HashMap<>();
         int totalBancosBuscados = 0;
 
@@ -200,11 +216,11 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
                     totalBancosBuscados++;
                 }
             } catch (final Exception e) {
-                log.warn("⚠️ Erro ao buscar detalhes do banco ID {}: {}", idBanco, e.getMessage());
+                log.warn("âš ï¸ Erro ao buscar detalhes do banco ID {}: {}", idBanco, e.getMessage());
             }
         }
 
-        log.info("✓ Cache bancário preenchido: {} bancos buscados com sucesso", totalBancosBuscados);
+        log.info("âœ“ Cache bancÃ¡rio preenchido: {} bancos buscados com sucesso", totalBancosBuscados);
         
         // PASSO 5: MERGE FINAL
         for (final Map.Entry<Long, FaturaGraphQLEntity> entry : faturasUnicas.entrySet()) {
@@ -220,12 +236,12 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
                         entity.setBancoNome(infoBanco.getBankName().trim());
                     }
                     
-                    // Carteira (pode vir vazio se não cadastrado)
+                    // Carteira (pode vir vazio se nÃ£o cadastrado)
                     if (infoBanco.getPortfolioVariation() != null && !infoBanco.getPortfolioVariation().trim().isEmpty()) {
                         entity.setCarteiraBanco(infoBanco.getPortfolioVariation().trim());
                     }
                     
-                    // Instrução Customizada (pode vir vazio se não cadastrado)
+                    // InstruÃ§Ã£o Customizada (pode vir vazio se nÃ£o cadastrado)
                     if (infoBanco.getCustomInstruction() != null && !infoBanco.getCustomInstruction().trim().isEmpty()) {
                         entity.setInstrucaoBoleto(infoBanco.getCustomInstruction().trim());
                     }
@@ -236,16 +252,16 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
         // PASSO 6: SALVAR NO SQL (Upsert)
         final List<FaturaGraphQLEntity> entitiesParaSalvar = new ArrayList<>(faturasUnicas.values());
         final int salvos = repository.salvar(entitiesParaSalvar);
-        log.info("✓ Capa Faturas GraphQL salvos: {}/{}", salvos, entitiesParaSalvar.size());
+        log.info("âœ“ Capa Faturas GraphQL salvos: {}/{}", salvos, entitiesParaSalvar.size());
         
         // Enriquecimento via tabela ponte
         try {
             final int nfseAtualizadas = faturasPorClienteRepository.enriquecerNumeroNfseViaTabelaPonte();
-            log.info("✓ Relatório Faturas enriquecido com NFS-e: {} linhas atualizadas", nfseAtualizadas);
+            log.info("âœ“ RelatÃ³rio Faturas enriquecido com NFS-e: {} linhas atualizadas", nfseAtualizadas);
             final int pagadorAtualizadas = faturasPorClienteRepository.enriquecerPagadorViaTabelaPonte();
-            log.info("✓ Relatório Faturas enriquecido com Pagador: {} linhas atualizadas", pagadorAtualizadas);
+            log.info("âœ“ RelatÃ³rio Faturas enriquecido com Pagador: {} linhas atualizadas", pagadorAtualizadas);
         } catch (final java.sql.SQLException e) {
-            log.warn("⚠️ Enriquecimento via tabela ponte ignorado: {}", e.getMessage());
+            log.warn("âš ï¸ Enriquecimento via tabela ponte ignorado: {}", e.getMessage());
             ExtractionHelper.appendAvisoSeguranca("Faturas GraphQL: enriquecimento via tabela ponte (NFS-e/Pagador) ignorado. Erro: " + e.getMessage());
         }
         
@@ -254,7 +270,7 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
     
     /**
      * Mapeia um DTO de fatura GraphQL para uma Entity.
-     * Extrai todos os campos básicos (sem enriquecimento via queries adicionais).
+     * Extrai todos os campos bÃ¡sicos (sem enriquecimento via queries adicionais).
      */
     private FaturaGraphQLEntity mapearDtoParaEntity(final CreditCustomerBillingNodeDTO dto) {
         final FaturaGraphQLEntity entity = new FaturaGraphQLEntity();
@@ -294,7 +310,7 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
             entity.setStatus(dto.getInstallments().get(0).getStatus());
         }
         
-        // Tipo e comentários
+        // Tipo e comentÃ¡rios
         entity.setType(dto.getType());
         entity.setComments(dto.getComments());
         entity.setSequenceCode(dto.getSequenceCode());
@@ -321,11 +337,11 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
             }
         }
         
-        // Campos básicos da primeira parcela (podem ser sobrescritos no enriquecimento)
+        // Campos bÃ¡sicos da primeira parcela (podem ser sobrescritos no enriquecimento)
         if (dto.getInstallments() != null && !dto.getInstallments().isEmpty()) {
             final CreditCustomerBillingNodeDTO.InstallmentDTO primeiraParcela = dto.getInstallments().get(0);
             
-            // N° NFS-e (pode ser sobrescrito no enriquecimento)
+            // NÂ° NFS-e (pode ser sobrescrito no enriquecimento)
             if (primeiraParcela.getAccountingCredit() != null) {
                 final String nfseNumero = primeiraParcela.getAccountingCredit().getDocument();
                 if (nfseNumero != null && !nfseNumero.trim().isEmpty()) {
@@ -333,7 +349,7 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
                 }
             }
             
-            // Carteira e Instrução (podem ser sobrescritos no enriquecimento)
+            // Carteira e InstruÃ§Ã£o (podem ser sobrescritos no enriquecimento)
             if (primeiraParcela.getAccountingBankAccount() != null) {
                 final CreditCustomerBillingNodeDTO.AccountingBankAccountDTO contaBancaria = 
                     primeiraParcela.getAccountingBankAccount();
@@ -348,14 +364,14 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
                     entity.setInstrucaoBoleto(instrucao.trim());
                 }
                 
-                // Nome do banco (pode vir da parcela, mas será sobrescrito se houver enriquecimento)
+                // Nome do banco (pode vir da parcela, mas serÃ¡ sobrescrito se houver enriquecimento)
                 final String bancoNome = contaBancaria.getBankName();
                 if (bancoNome != null && !bancoNome.trim().isEmpty()) {
                     entity.setBancoNome(bancoNome.trim());
                 }
             }
             
-            // Método de Pagamento (pode ser sobrescrito no enriquecimento)
+            // MÃ©todo de Pagamento (pode ser sobrescrito no enriquecimento)
             if (primeiraParcela.getPaymentMethod() != null && !primeiraParcela.getPaymentMethod().trim().isEmpty()) {
                 entity.setMetodoPagamento(primeiraParcela.getPaymentMethod().trim());
             }
@@ -368,9 +384,9 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
     }
     
     /**
-     * FASE 4: Executa o enriquecimento usando padrão Producer-Consumer.
+     * FASE 4: Executa o enriquecimento usando padrÃ£o Producer-Consumer.
      * 
-     * Thread Produtora: Faz requisições HTTP sequenciais (respeitando throttling global de 2s)
+     * Thread Produtora: Faz requisiÃ§Ãµes HTTP sequenciais (respeitando throttling global de 2s)
      * Threads Consumidoras: Processam resultados em paralelo
      */
     private void executarEnriquecimentoProducerConsumer(
@@ -386,21 +402,21 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
         final int limiteErrosConsecutivos = CarregadorConfig.obterLimiteErrosConsecutivos();
         final int heartbeatSegundos = CarregadorConfig.obterHeartbeatSegundos();
         
-        log.info("🚀 [FASE 4] Iniciando enriquecimento com padrão Producer-Consumer");
-        log.info("   • Thread Produtora: 1 (requisições HTTP sequenciais com throttling 2s)");
-        log.info("   • Threads Consumidoras: {} (processamento paralelo)", numThreadsConsumidoras);
-        log.info("   • Log de progresso: a cada {} faturas", intervaloLogProgresso);
-        log.info("   • Heartbeat: a cada {}s", heartbeatSegundos);
+        log.info("ðŸš€ [FASE 4] Iniciando enriquecimento com padrÃ£o Producer-Consumer");
+        log.info("   â€¢ Thread Produtora: 1 (requisiÃ§Ãµes HTTP sequenciais com throttling 2s)");
+        log.info("   â€¢ Threads Consumidoras: {} (processamento paralelo)", numThreadsConsumidoras);
+        log.info("   â€¢ Log de progresso: a cada {} faturas", intervaloLogProgresso);
+        log.info("   â€¢ Heartbeat: a cada {}s", heartbeatSegundos);
         
-        // Fila de comunicação entre Producer e Consumers
+        // Fila de comunicaÃ§Ã£o entre Producer e Consumers
         final BlockingQueue<EnriquecimentoTask> fila = new LinkedBlockingQueue<>(100);
         
-        // Thread Produtora: Faz requisições HTTP sequenciais
+        // Thread Produtora: Faz requisiÃ§Ãµes HTTP sequenciais
         final Thread threadProdutora = new Thread(() -> {
             try {
                 for (final Long faturaId : faturasParaEnriquecer) {
                     try {
-                        // Requisição HTTP (sequencial, respeitando throttling global via Singleton)
+                        // RequisiÃ§Ã£o HTTP (sequencial, respeitando throttling global via Singleton)
                         final var dadosCobrancaOpt = apiClient.buscarDadosCobranca(faturaId);
                         fila.put(new EnriquecimentoTask(faturaId, dadosCobrancaOpt));
                         
@@ -408,17 +424,17 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
                         errosConsecutivos.set(0);
                         
                     } catch (final Exception e) {
-                        log.warn("⚠️ Erro HTTP ao buscar dados de cobrança para fatura {}: {}", faturaId, e.getMessage());
+                        log.warn("âš ï¸ Erro HTTP ao buscar dados de cobranÃ§a para fatura {}: {}", faturaId, e.getMessage());
                         
                         // Incrementa contador de erros consecutivos
                         final int erros = errosConsecutivos.incrementAndGet();
                         totalComErro.incrementAndGet();
                         
-                        // Se muitos erros consecutivos, aguarda mais (resiliência)
+                        // Se muitos erros consecutivos, aguarda mais (resiliÃªncia)
                         if (erros >= limiteErrosConsecutivos) {
                             final double multiplicador = CarregadorConfig.obterMultiplicadorDelayErros();
                             final long delayAdicional = (long) (2000 * multiplicador);
-                            log.warn("⚠️ {} erros consecutivos detectados. Aguardando {}ms adicional...", erros, delayAdicional);
+                            log.warn("âš ï¸ {} erros consecutivos detectados. Aguardando {}ms adicional...", erros, delayAdicional);
                             try {
                                 ThreadUtil.aguardar(delayAdicional);
                             } catch (InterruptedException ie) {
@@ -498,7 +514,7 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
         executorConsumidores.shutdown();
         try {
             if (!executorConsumidores.awaitTermination(5, TimeUnit.MINUTES)) {
-                log.warn("Timeout aguardando threads consumidoras. Forçando shutdown...");
+                log.warn("Timeout aguardando threads consumidoras. ForÃ§ando shutdown...");
                 executorConsumidores.shutdownNow();
             }
         } catch (InterruptedException e) {
@@ -512,12 +528,12 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
             ? (double) totalParaEnriquecer / duracao.getSeconds() 
             : 0;
         
-        log.info("📊 [FASE 4] Enriquecimento Producer-Consumer concluído:");
-        log.info("   • Total processadas: {}/{}", totalProcessadas.get(), totalParaEnriquecer);
-        log.info("   • Enriquecidas com sucesso: {}", totalEnriquecidas.get());
-        log.info("   • Erros HTTP: {}", totalComErro.get());
-        log.info("   • Duração: {} segundos", duracao.getSeconds());
-        log.info("   • Taxa: {} faturas/segundo", String.format("%.2f", taxaSegundo));
+        log.info("ðŸ“Š [FASE 4] Enriquecimento Producer-Consumer concluÃ­do:");
+        log.info("   â€¢ Total processadas: {}/{}", totalProcessadas.get(), totalParaEnriquecer);
+        log.info("   â€¢ Enriquecidas com sucesso: {}", totalEnriquecidas.get());
+        log.info("   â€¢ Erros HTTP: {}", totalComErro.get());
+        log.info("   â€¢ DuraÃ§Ã£o: {} segundos", duracao.getSeconds());
+        log.info("   â€¢ Taxa: {} faturas/segundo", String.format("%.2f", taxaSegundo));
     }
     
     /**
@@ -556,18 +572,18 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
                 }
             }
             
-            // 2. Entra na Parcela para pegar NFS-e e Método Pagamento
+            // 2. Entra na Parcela para pegar NFS-e e MÃ©todo Pagamento
             if (dadosCobranca.getInstallments() != null && !dadosCobranca.getInstallments().isEmpty()) {
                 final var parcela = dadosCobranca.getInstallments().get(0);
                 
-                // Método de Pagamento (synchronized para entity)
+                // MÃ©todo de Pagamento (synchronized para entity)
                 synchronized (entity) {
                     if (parcela.getPaymentMethod() != null && !parcela.getPaymentMethod().trim().isEmpty()
                             && (entity.getMetodoPagamento() == null || entity.getMetodoPagamento().trim().isEmpty())) {
                         entity.setMetodoPagamento(parcela.getPaymentMethod().trim());
                     }
                     
-                    // N° NFS-e
+                    // NÂ° NFS-e
                     if (parcela.getAccountingCredit() != null) {
                         final String nfseNumero = parcela.getAccountingCredit().getDocument();
                         if (nfseNumero != null && !nfseNumero.trim().isEmpty()
@@ -596,13 +612,109 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
                 final double percentualHeartbeat = totalParaEnriquecer > 0
                     ? (100.0 * processadas / totalParaEnriquecer)
                     : 0.0;
-                log.info("💓 [Heartbeat] Enriquecimento em andamento: {}/{} ({}%)",
+                log.info("ðŸ’“ [Heartbeat] Enriquecimento em andamento: {}/{} ({}%)",
                         processadas, totalParaEnriquecer,
                         String.format("%.1f", percentualHeartbeat));
             }
         }
     }
     
+    /**
+     * Backfill referencial para reconciliacao:
+     * busca IDs orfaos em fretes.accounting_credit_id e tenta materializar
+     * as faturas faltantes por consulta direta de ID na GraphQL.
+     */
+    private int executarBackfillFaturasOrfasPorId(final Map<Long, FaturaGraphQLEntity> faturasUnicas) {
+        if (dataInicioExtracao == null || dataFimExtracao == null) {
+            return 0;
+        }
+
+        try {
+            final List<Long> idsOrfaos = freteRepository.listarAccountingCreditIdsOrfaos(
+                dataInicioExtracao,
+                dataFimExtracao,
+                LIMITE_BACKFILL_FATURAS_ORFAAS
+            );
+
+            if (idsOrfaos.isEmpty()) {
+                return 0;
+            }
+
+            int adicionadas = 0;
+            int jaPresentes = 0;
+            int naoEncontradas = 0;
+            int erros = 0;
+
+            log.info("Backfill referencial: {} accounting_credit_id orfao(s) identificado(s) para {} a {}",
+                idsOrfaos.size(), dataInicioExtracao, dataFimExtracao);
+
+            for (final Long billingId : idsOrfaos) {
+                if (billingId == null) {
+                    continue;
+                }
+                if (faturasUnicas.containsKey(billingId)) {
+                    jaPresentes++;
+                    continue;
+                }
+
+                try {
+                    final Optional<CreditCustomerBillingNodeDTO> faturaOpt = buscarFaturaPorIdComRetentativa(billingId);
+                    if (faturaOpt.isPresent()) {
+                        faturasUnicas.put(billingId, mapearDtoParaEntity(faturaOpt.get()));
+                        adicionadas++;
+                    } else {
+                        naoEncontradas++;
+                    }
+                } catch (final RuntimeException e) {
+                    erros++;
+                    log.warn("Falha ao buscar fatura por ID {} durante backfill: {}", billingId, e.getMessage());
+                }
+            }
+
+            log.info("Backfill referencial concluido: adicionadas={} | ja_presentes={} | nao_encontradas={} | erros={}",
+                adicionadas, jaPresentes, naoEncontradas, erros);
+            return adicionadas;
+
+        } catch (final java.sql.SQLException e) {
+            log.warn("Backfill referencial por accounting_credit_id falhou: {}", e.getMessage());
+            ExtractionHelper.appendAvisoSeguranca(
+                "Faturas GraphQL: backfill por accounting_credit_id falhou. Erro: " + e.getMessage()
+            );
+            return 0;
+        }
+    }
+
+    private Optional<CreditCustomerBillingNodeDTO> buscarFaturaPorIdComRetentativa(final Long billingId) {
+        final int limiteTentativas = Math.max(1, MAX_TENTATIVAS_BACKFILL_POR_ID);
+        for (int tentativa = 1; tentativa <= limiteTentativas; tentativa++) {
+            final Optional<CreditCustomerBillingNodeDTO> faturaOpt = apiClient.buscarCapaFaturaPorId(billingId);
+            if (faturaOpt.isPresent()) {
+                if (tentativa > 1) {
+                    log.info("Backfill referencial: ID {} recuperado na tentativa {}", billingId, tentativa);
+                }
+                return faturaOpt;
+            }
+
+            if (tentativa < limiteTentativas) {
+                final long esperaMs = BACKFILL_RETRY_BASE_MS * tentativa;
+                log.warn("Backfill referencial: ID {} nao retornou dados na tentativa {}/{}. Nova tentativa em {} ms",
+                    billingId,
+                    tentativa,
+                    limiteTentativas,
+                    esperaMs);
+                try {
+                    ThreadUtil.aguardar(esperaMs);
+                } catch (final InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    log.warn("Backfill referencial interrompido durante retentativa do ID {}", billingId);
+                    break;
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+
     /**
      * FASE 4: Log de progresso detalhado.
      */
@@ -616,7 +728,7 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
         final long segundosRestantes = taxaSegundo > 0 ? (long) (restantes / taxaSegundo) : 0;
         final long minutosRestantes = segundosRestantes / 60;
         
-        log.info("📊 Progresso Enriquecimento: {}/{} ({}%) | Enriquecidas: {} | Erros: {} | Taxa: {} faturas/s | Tempo restante: ~{} min",
+        log.info("ðŸ“Š Progresso Enriquecimento: {}/{} ({}%) | Enriquecidas: {} | Erros: {} | Taxa: {} faturas/s | Tempo restante: ~{} min",
                 processadas, total, String.format("%.1f", percentual),
                 totalEnriquecidas.get(), totalComErro.get(),
                 String.format("%.2f", taxaSegundo), minutosRestantes);

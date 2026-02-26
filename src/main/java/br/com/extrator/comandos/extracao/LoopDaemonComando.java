@@ -19,8 +19,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.OptionalLong;
 import java.util.Properties;
 import java.util.regex.Matcher;
@@ -43,7 +45,8 @@ public class LoopDaemonComando implements Comando {
     private static final Path DAEMON_DIR = Paths.get("logs", "daemon");
     private static final Path CYCLES_DIR = DAEMON_DIR.resolve("ciclos");
     private static final Path DAEMON_HISTORY_DIR = DAEMON_DIR.resolve("history");
-    private static final Path RECONCILIACAO_HISTORY_DIR = DAEMON_DIR.resolve("reconciliacao");
+    private static final Path RECONCILIACAO_HISTORY_DIR_DEFAULT = DAEMON_DIR.resolve("reconciliacao");
+    private static final String RECONCILIACAO_HISTORY_DIR_OVERRIDE_KEY = "extrator.loop.reconciliacao.history.dir";
     private static final Path RUNTIME_DIR = DAEMON_DIR.resolve("runtime");
     private static final Path RUNTIME_JAR = RUNTIME_DIR.resolve("extrator-daemon-runtime.jar");
     private static final Path PID_FILE = DAEMON_DIR.resolve("loop_daemon.pid");
@@ -91,9 +94,10 @@ public class LoopDaemonComando implements Comando {
 
     private void iniciarDaemon(final boolean incluirFaturasGraphQL) throws Exception {
         garantirDiretorioLogs();
-        final OptionalLong pidExistente = lerPidArquivo();
+        final OptionalLong pidExistente = localizarPidDaemonAtivo();
         final String modoFaturas = descreverModoFaturas(incluirFaturasGraphQL);
-        if (pidExistente.isPresent() && processoEstaVivo(pidExistente.getAsLong())) {
+        if (pidExistente.isPresent() && processoEhLoopDaemonAtivo(pidExistente.getAsLong())) {
+            sincronizarPidArquivo(pidExistente.getAsLong());
             solicitarCicloImediato();
             final Properties estadoAtual = carregarEstado();
             final String statusAtual = estadoAtual.getProperty("status", "RUNNING");
@@ -140,32 +144,53 @@ public class LoopDaemonComando implements Comando {
 
     private void pararDaemon() throws Exception {
         garantirDiretorioLogs();
-        final OptionalLong pidOpt = lerPidArquivo();
-        if (pidOpt.isEmpty()) {
+        final List<ProcessHandle> processosAtivos = localizarProcessosAlvoParada();
+        if (processosAtivos.isEmpty()) {
+            limparArquivoSeExistir(PID_FILE);
             limparArquivoSeExistir(STOP_FILE);
+            limparArquivoSeExistir(FORCE_RUN_FILE);
             salvarEstado("STOPPED", -1L, "Loop daemon ja estava parado.", null, null);
             System.out.println("Loop daemon nao estava em execucao.");
             return;
         }
 
-        final long pid = pidOpt.getAsLong();
+        final long pid = processosAtivos.get(0).pid();
+        sincronizarPidArquivo(pid);
         Files.writeString(STOP_FILE, "stop@" + LocalDateTime.now(), StandardCharsets.UTF_8);
-        salvarEstado("STOPPING", pid, "Solicitado encerramento do loop daemon.", null, null);
+        salvarEstado("STOPPING", pid, "Solicitado encerramento do loop daemon. processos_detectados=" + processosAtivos.size(), null, null);
 
-        final ProcessHandle processHandle = ProcessHandle.of(pid).orElse(null);
-        if (processHandle != null && processHandle.isAlive()) {
-            final long limiteMillis = System.currentTimeMillis() + 20_000L;
-            while (processHandle.isAlive() && System.currentTimeMillis() < limiteMillis) {
-                Thread.sleep(500L);
+        aguardarEncerramentoProcessos(processosAtivos, 20_000L);
+
+        for (final ProcessHandle processo : processosAtivos) {
+            if (processo.isAlive()) {
+                processo.destroy();
             }
-            if (processHandle.isAlive()) {
-                processHandle.destroy();
-                Thread.sleep(2000L);
+        }
+
+        aguardarEncerramentoProcessos(processosAtivos, 2_000L);
+
+        for (final ProcessHandle processo : processosAtivos) {
+            if (processo.isAlive()) {
+                processo.destroyForcibly();
             }
-            if (processHandle.isAlive()) {
-                processHandle.destroyForcibly();
-                Thread.sleep(1000L);
-            }
+        }
+
+        aguardarEncerramentoProcessos(processosAtivos, 1_000L);
+
+        final List<Long> pidsAindaAtivos = processosAtivos.stream()
+            .filter(ProcessHandle::isAlive)
+            .map(ProcessHandle::pid)
+            .toList();
+        if (!pidsAindaAtivos.isEmpty()) {
+            sincronizarPidArquivo(pidsAindaAtivos.get(0));
+            salvarEstado(
+                "STOPPING",
+                pidsAindaAtivos.get(0),
+                "Encerramento solicitado, mas processos ainda ativos: " + pidsAindaAtivos,
+                null,
+                null
+            );
+            throw new IllegalStateException("Nao foi possivel parar completamente o loop daemon. PID(s) ativos: " + pidsAindaAtivos);
         }
 
         limparArquivoSeExistir(PID_FILE);
@@ -177,11 +202,15 @@ public class LoopDaemonComando implements Comando {
 
     private void exibirStatus() throws Exception {
         garantirDiretorioLogs();
-        final OptionalLong pidOpt = lerPidArquivo();
+        final OptionalLong pidArquivo = lerPidArquivo();
+        final OptionalLong pidOpt = localizarPidDaemonAtivo();
+        if (pidOpt.isPresent()) {
+            sincronizarPidArquivo(pidOpt.getAsLong());
+        }
         final Properties state = carregarEstado();
 
         final long pid = pidOpt.orElse(-1L);
-        final boolean vivo = pid > 0 && processoEstaVivo(pid);
+        final boolean vivo = pid > 0;
         final String statusEstado = state.getProperty("status", vivo ? "RUNNING" : "STOPPED");
         final String atualizadoEm = state.getProperty("updated_at", "N/A");
         final String detalhe = state.getProperty("detail", "N/A");
@@ -198,8 +227,8 @@ public class LoopDaemonComando implements Comando {
         System.out.println("  Detalhe: " + detalhe);
         System.out.println("  Log: " + DAEMON_STDOUT_FILE.toAbsolutePath());
 
-        if (pid > 0 && !vivo) {
-            salvarEstado("STOPPED", pid, "PID registrado nao esta mais ativo.", ultimoCiclo, proximoCiclo);
+        if (!vivo && pidArquivo.isPresent()) {
+            salvarEstado("STOPPED", pidArquivo.getAsLong(), "PID registrado nao esta mais ativo.", ultimoCiclo, proximoCiclo);
             limparArquivoSeExistir(PID_FILE);
         }
     }
@@ -245,7 +274,10 @@ public class LoopDaemonComando implements Comando {
                         new ExecutarFluxoCompletoComando().executar(new String[] {"--fluxo-completo", FLAG_SEM_FATURAS_GRAPHQL, FLAG_MODO_LOOP_DAEMON});
                     }
                 }
-            } catch (final Exception e) {
+            } catch (final Throwable e) {
+                if (ehErroIrrecuperavel(e)) {
+                    throw e;
+                }
                 if (ehFalhaIntegridadeOperacional(e)) {
                     sucesso = true;
                     detalhe = "Ciclo concluido com alerta de integridade: " + resumirMensagem(e.getMessage());
@@ -499,6 +531,19 @@ public class LoopDaemonComando implements Comando {
         }
     }
 
+    private OptionalLong lerPidEstado() {
+        final Properties estado = carregarEstado();
+        final String pidTexto = estado.getProperty("pid", "").trim();
+        if (pidTexto.isEmpty()) {
+            return OptionalLong.empty();
+        }
+        try {
+            return OptionalLong.of(Long.parseLong(pidTexto));
+        } catch (final NumberFormatException e) {
+            return OptionalLong.empty();
+        }
+    }
+
     private Properties carregarEstado() {
         final Properties p = new Properties();
         if (!Files.exists(STATE_FILE)) {
@@ -534,8 +579,105 @@ public class LoopDaemonComando implements Comando {
         }
     }
 
-    private boolean processoEstaVivo(final long pid) {
-        return ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false);
+    private OptionalLong localizarPidDaemonAtivo() {
+        final OptionalLong pidArquivo = lerPidArquivo();
+        if (pidArquivo.isPresent() && processoEhLoopDaemonAtivo(pidArquivo.getAsLong())) {
+            return pidArquivo;
+        }
+
+        final OptionalLong pidEstado = lerPidEstado();
+        if (pidEstado.isPresent() && processoEhLoopDaemonAtivo(pidEstado.getAsLong())) {
+            return pidEstado;
+        }
+
+        return localizarProcessosDaemonAtivos().stream()
+            .mapToLong(ProcessHandle::pid)
+            .findFirst();
+    }
+
+    private List<ProcessHandle> localizarProcessosAlvoParada() {
+        final Map<Long, ProcessHandle> processos = new LinkedHashMap<>();
+        adicionarProcessoSeAtivo(processos, lerPidArquivo());
+        adicionarProcessoSeAtivo(processos, lerPidEstado());
+        for (final ProcessHandle processo : localizarProcessosDaemonAtivos()) {
+            processos.putIfAbsent(processo.pid(), processo);
+        }
+        return new ArrayList<>(processos.values());
+    }
+
+    private void adicionarProcessoSeAtivo(final Map<Long, ProcessHandle> processos, final OptionalLong pidOpt) {
+        if (pidOpt.isEmpty()) {
+            return;
+        }
+        ProcessHandle.of(pidOpt.getAsLong())
+            .filter(ProcessHandle::isAlive)
+            .filter(this::ehProcessoLoopDaemon)
+            .ifPresent(processo -> processos.putIfAbsent(processo.pid(), processo));
+    }
+
+    private List<ProcessHandle> localizarProcessosDaemonAtivos() {
+        return ProcessHandle.allProcesses()
+            .filter(ProcessHandle::isAlive)
+            .filter(this::ehProcessoLoopDaemon)
+            .toList();
+    }
+
+    private boolean ehProcessoLoopDaemon(final ProcessHandle processo) {
+        final ProcessHandle.Info info = processo.info();
+        final StringBuilder comando = new StringBuilder();
+        info.commandLine().ifPresent(comando::append);
+        if (comando.length() == 0) {
+            info.command().ifPresent(comando::append);
+            info.arguments().ifPresent(args -> {
+                for (final String arg : args) {
+                    comando.append(' ').append(arg);
+                }
+            });
+        }
+        if (comando.length() == 0) {
+            return false;
+        }
+        return ehComandoLoopDaemon(comando.toString());
+    }
+
+    private boolean processoEhLoopDaemonAtivo(final long pid) {
+        return ProcessHandle.of(pid)
+            .filter(ProcessHandle::isAlive)
+            .filter(this::ehProcessoLoopDaemon)
+            .isPresent();
+    }
+
+    private boolean ehComandoLoopDaemon(final String comandoCompleto) {
+        final String normalizado = comandoCompleto.toLowerCase(Locale.ROOT).replace('\\', '/');
+        if (!normalizado.contains("--loop-daemon-run")) {
+            return false;
+        }
+        return normalizado.contains("extrator-daemon-runtime.jar")
+            || normalizado.contains("/target/extrator.jar")
+            || normalizado.contains(" br.com.extrator.main ");
+    }
+
+    private void aguardarEncerramentoProcessos(final List<ProcessHandle> processos, final long timeoutMillis)
+        throws InterruptedException {
+        final long limiteMillis = System.currentTimeMillis() + Math.max(0L, timeoutMillis);
+        while (System.currentTimeMillis() < limiteMillis) {
+            final boolean algumVivo = processos.stream().anyMatch(ProcessHandle::isAlive);
+            if (!algumVivo) {
+                return;
+            }
+            Thread.sleep(300L);
+        }
+    }
+
+    private void sincronizarPidArquivo(final long pid) {
+        if (pid <= 0) {
+            return;
+        }
+        try {
+            Files.writeString(PID_FILE, String.valueOf(pid), StandardCharsets.UTF_8);
+        } catch (final IOException ignored) {
+            // Falha ao sincronizar PID nao deve interromper fluxo principal.
+        }
     }
 
     private void garantirDiretorioLogs() throws IOException {
@@ -548,8 +690,9 @@ public class LoopDaemonComando implements Comando {
         if (!Files.exists(DAEMON_HISTORY_DIR)) {
             Files.createDirectories(DAEMON_HISTORY_DIR);
         }
-        if (!Files.exists(RECONCILIACAO_HISTORY_DIR)) {
-            Files.createDirectories(RECONCILIACAO_HISTORY_DIR);
+        final Path reconciliacaoHistoryDir = obterDiretorioHistoricoReconciliacao();
+        if (!Files.exists(reconciliacaoHistoryDir)) {
+            Files.createDirectories(reconciliacaoHistoryDir);
         }
         if (!Files.exists(RUNTIME_DIR)) {
             Files.createDirectories(RUNTIME_DIR);
@@ -563,12 +706,24 @@ public class LoopDaemonComando implements Comando {
         }
     }
 
+    private Path obterDiretorioHistoricoReconciliacao() {
+        final String override = System.getProperty(RECONCILIACAO_HISTORY_DIR_OVERRIDE_KEY);
+        if (override != null && !override.isBlank()) {
+            return Paths.get(override.trim());
+        }
+        return RECONCILIACAO_HISTORY_DIR_DEFAULT;
+    }
+
     private String resumirMensagem(final String msg) {
         if (msg == null || msg.isBlank()) {
             return "Sem detalhes.";
         }
         final String limpa = msg.replace('\n', ' ').replace('\r', ' ').trim();
         return limpa.length() > 240 ? limpa.substring(0, 240) + "..." : limpa;
+    }
+
+    private boolean ehErroIrrecuperavel(final Throwable throwable) {
+        return throwable instanceof VirtualMachineError || throwable instanceof ThreadDeath;
     }
 
     private Path criarArquivoLogCiclo(final LocalDateTime inicio) throws IOException {
@@ -796,7 +951,7 @@ public class LoopDaemonComando implements Comando {
         final Path cicloLog
     ) {
         final String nomeArquivo = "reconciliacao_daemon_" + fimExtracao.format(HISTORY_MONTH_FORMAT) + ".csv";
-        final Path arquivoCsv = RECONCILIACAO_HISTORY_DIR.resolve(nomeArquivo);
+        final Path arquivoCsv = obterDiretorioHistoricoReconciliacao().resolve(nomeArquivo);
         final boolean escreverHeader;
         try {
             escreverHeader = !Files.exists(arquivoCsv) || Files.size(arquivoCsv) == 0L;
@@ -930,7 +1085,7 @@ public class LoopDaemonComando implements Comando {
         return false;
     }
 
-    private boolean ehFalhaIntegridadeOperacional(final Exception e) {
+    private boolean ehFalhaIntegridadeOperacional(final Throwable e) {
         Throwable atual = e;
         while (atual != null) {
             final String mensagem = atual.getMessage();

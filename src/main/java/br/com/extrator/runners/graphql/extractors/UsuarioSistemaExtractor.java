@@ -46,8 +46,13 @@ public class UsuarioSistemaExtractor implements EntityExtractor<IndividualNodeDT
 
     @Override
     public int save(final List<IndividualNodeDTO> dtos) throws java.sql.SQLException {
+        return saveWithMetrics(dtos).getRegistrosSalvos();
+    }
+
+    @Override
+    public EntityExtractor.SaveMetrics saveWithMetrics(final List<IndividualNodeDTO> dtos) throws java.sql.SQLException {
         if (dtos == null || dtos.isEmpty()) {
-            return 0;
+            return new EntityExtractor.SaveMetrics(0, 0, 0);
         }
 
         final List<UsuarioSistemaEntity> entities = dtos.stream()
@@ -59,7 +64,8 @@ public class UsuarioSistemaExtractor implements EntityExtractor<IndividualNodeDT
             logger.warn("⚠️ usuarios_sistema: {} nós da API, {} user_id únicos (duplicados removidos).",
                 entities.size(), unicos.size());
         }
-        return repository.salvar(unicos);
+        final int registrosSalvos = repository.salvar(unicos);
+        return new EntityExtractor.SaveMetrics(registrosSalvos, unicos.size(), 0);
     }
 
     /**

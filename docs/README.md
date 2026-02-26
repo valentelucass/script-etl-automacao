@@ -41,6 +41,9 @@
 ### 🔍 Descobertas
 - [**Descobertas**](descobertas/) - Problemas e descobertas do sistema
 
+### 🧭 Direcionamento
+- [**Direcionamento**](direcionamento/) - Verdades comprovadas, plano de ação e to-do operacional
+
 ---
 
 ## 📁 Estrutura da Documentação
@@ -90,6 +93,12 @@ docs/
 │   ├── problema-esl.md
 │   ├── query.md
 │   └── README.md
+│
+├── 🧭 direcionamento/                   # Direção técnica viva
+│   ├── README.md
+│   ├── TODO-EXECUCAO-DAEMON.md
+│   ├── planos/
+│   └── verdades/
 │
 ├── 📊 relatorios-diarios/               # Relatórios diários (não mexer)
 │   └── [26 arquivos de relatórios]
@@ -225,6 +234,12 @@ Configuração do sistema e solução de problemas.
 ### 🔍 Descobertas
 - [**problema-esl.md**](descobertas/problema-esl.md) - Problemas encontrados no ESL
 - [**query.md**](descobertas/query.md) - Queries úteis
+
+### 🧭 Direcionamento
+- [**README.md**](direcionamento/README.md) - Regras de manutenção do direcionamento
+- [**PLANO-ACAO-DAEMON-RECONCILIACAO-2026-02.md**](direcionamento/planos/PLANO-ACAO-DAEMON-RECONCILIACAO-2026-02.md) - Plano priorizado P0/P1/P2
+- [**TODO-EXECUCAO-DAEMON.md**](direcionamento/TODO-EXECUCAO-DAEMON.md) - Checklist de execução com testes pesados
+- [**VERDADES-OPERACIONAIS.md**](direcionamento/verdades/VERDADES-OPERACIONAIS.md) - Registro vivo de fatos comprovados
 
 ### 📊 Relatórios Diários
 📊 **Relatórios diários de execução (mantido como está - não mexer)**

@@ -44,8 +44,13 @@ public class FreteExtractor implements EntityExtractor<FreteNodeDTO> {
     
     @Override
     public int save(final List<FreteNodeDTO> dtos) throws java.sql.SQLException {
+        return saveWithMetrics(dtos).getRegistrosSalvos();
+    }
+
+    @Override
+    public EntityExtractor.SaveMetrics saveWithMetrics(final List<FreteNodeDTO> dtos) throws java.sql.SQLException {
         if (dtos == null || dtos.isEmpty()) {
-            return 0;
+            return new EntityExtractor.SaveMetrics(0, 0, 0);
         }
         
         final List<FreteEntity> entities = dtos.stream()
@@ -60,7 +65,8 @@ public class FreteExtractor implements EntityExtractor<FreteNodeDTO> {
                 entities.size() - entitiesUnicos.size());
         }
         
-        return repository.salvar(entitiesUnicos);
+        final int registrosSalvos = repository.salvar(entitiesUnicos);
+        return new EntityExtractor.SaveMetrics(registrosSalvos, entitiesUnicos.size(), 0);
     }
     
     /**

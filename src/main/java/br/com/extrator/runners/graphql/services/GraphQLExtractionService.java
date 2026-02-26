@@ -250,6 +250,7 @@ public class GraphQLExtractionService {
             apiClient,
             new FaturaGraphQLRepository(),
             new FaturaPorClienteRepository(),
+            new FreteRepository(),
             log
         );
         

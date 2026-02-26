@@ -59,4 +59,14 @@ public interface DataExportEntityExtractor<T> extends EntityExtractor<T> {
         final SaveResult result = saveWithDeduplication(dtos);
         return result.getRegistrosSalvos();
     }
+
+    @Override
+    default SaveMetrics saveWithMetrics(final List<T> dtos) throws java.sql.SQLException {
+        final SaveResult result = saveWithDeduplication(dtos);
+        return new SaveMetrics(
+            result.getRegistrosSalvos(),
+            result.getTotalUnicos(),
+            result.getRegistrosInvalidos()
+        );
+    }
 }

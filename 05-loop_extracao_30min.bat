@@ -1,6 +1,8 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-chcp 65001 >nul
+REM Em cmd.exe, set /p com entrada redirecionada falha com CP 65001.
+REM CP 1252 preserva compatibilidade em execucao interativa e automatizada.
+if /i not "%EXTRATOR_SKIP_CHCP%"=="1" chcp 1252 >nul
 
 echo ================================================================
 echo GERENCIAR LOOP DE EXTRACAO ^(30 minutos^)
@@ -30,11 +32,11 @@ if not exist "%~dp0target\extrator.jar" (
 )
 
 if not defined JAVA_HOME (
-  for /f "delims=" %%D in ('dir /b /ad "C:\Program Files\Eclipse Adoptium\jdk-17*" 2^>nul ^| sort /r') do (
+  for /f "delims=" %%D in ('dir /b /ad /o-n "C:\Program Files\Eclipse Adoptium\jdk-17*" 2^>nul') do (
     set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\%%D"
     goto :javahomefound
   )
-  for /f "delims=" %%D in ('dir /b /ad "C:\Program Files\Eclipse Adoptium\jdk-*" 2^>nul ^| sort /r') do (
+  for /f "delims=" %%D in ('dir /b /ad /o-n "C:\Program Files\Eclipse Adoptium\jdk-*" 2^>nul') do (
     set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\%%D"
     goto :javahomefound
   )
@@ -59,17 +61,23 @@ echo  4. Reconfigurar Faturas GraphQL do loop ^(reinicia loop^)
 echo  5. Acompanhar logs da extracao ^(tempo real^)
 echo  0. Voltar
 echo.
-set /p OP="Escolha uma opcao: "
+set "OP="
+set /p OP="Escolha uma opcao: " || (
+  echo.
+  echo Entrada encerrada. Encerrando menu do loop.
+  goto :END
+)
+set "OP=%OP: =%"
 
 if "%OP%"=="1" goto :START
 if "%OP%"=="2" goto :STATUS
 if "%OP%"=="3" goto :STOP
 if "%OP%"=="4" goto :RECONFIG_DAEMON
 if "%OP%"=="5" goto :TAIL_LOGS
-if "%OP%"=="0" goto :EXIT_LOOP_MENU
+if "%OP%"=="0" goto :EXIT_LOOP
 
 echo Opcao invalida.
-timeout /t 2 >nul
+timeout /t 2 /nobreak >nul 2>&1
 goto :MENU
 
 :START
@@ -98,8 +106,17 @@ pause
 goto :MENU
 
 :STOP
-call :AUTH_CHECK LOOP_STOP "Parar loop daemon"
-if errorlevel 1 goto :MENU
+if /i "%EXTRATOR_SKIP_AUTH_CHECK%"=="1" goto :DO_STOP
+echo.
+echo Autenticacao obrigatoria para executar esta acao.
+java --enable-native-access=ALL-UNNAMED -jar "%~dp0target\extrator.jar" --auth-check LOOP_STOP "Parar loop daemon"
+if errorlevel 1 (
+  echo Acesso negado.
+  echo.
+  pause
+  goto :MENU
+)
+:DO_STOP
 java --enable-native-access=ALL-UNNAMED -jar "%~dp0target\extrator.jar" --loop-daemon-stop
 echo.
 pause
@@ -144,7 +161,7 @@ echo.
 pause
 goto :MENU
 
-:EXIT_LOOP_MENU
+:EXIT_LOOP
 call :AUTH_CHECK LOOP_EXIT_MENU "Sair do menu de loop"
 if errorlevel 1 goto :MENU
 goto :END
@@ -181,7 +198,12 @@ echo  1. Incluir Faturas GraphQL
 echo  2. Desabilitar Faturas GraphQL ^(--sem-faturas-graphql^)
 echo  0. Cancelar inicio do loop
 echo.
-set /p OP_FATURAS="Escolha uma opcao: "
+set "OP_FATURAS="
+set /p OP_FATURAS="Escolha uma opcao: " || (
+  echo Entrada encerrada. Cancelando configuracao de Faturas GraphQL.
+  exit /b 1
+)
+set "OP_FATURAS=%OP_FATURAS: =%"
 
 if "%OP_FATURAS%"=="1" (
   set "FLAG_FATURAS_GRAPHQL="
@@ -197,10 +219,12 @@ if "%OP_FATURAS%"=="0" (
 )
 
 echo Opcao invalida.
-timeout /t 2 >nul
+timeout /t 2 /nobreak >nul 2>&1
 goto :ASK_FATURAS_GRAPHQL_LOOP
 
 :END
 popd
 endlocal
 exit /b 0
+
+
