@@ -1,3 +1,41 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/runners/dataexport/extractors/FaturaPorClienteExtractor.java
+Classe  : FaturaPorClienteExtractor (class)
+Pacote  : br.com.extrator.runners.dataexport.extractors
+Modulo  : Extractor DataExport
+Papel   : Implementa responsabilidade de fatura por cliente extractor.
+
+Conecta com:
+- ClienteApiDataExport (api)
+- ResultadoExtracao (api)
+- FaturaPorClienteEntity (db.entity)
+- FaturaPorClienteRepository (db.repository)
+- InvalidRecordAuditRepository (db.repository)
+- FaturaPorClienteDTO (modelo.dataexport.faturaporcliente)
+- FaturaPorClienteMapper (modelo.dataexport.faturaporcliente)
+- ConstantesExtracao (runners.common)
+
+Fluxo geral:
+1) Configura requisicao da API DataExport.
+2) Converte resposta em DTO/entidade de dominio.
+3) Persiste lote no repositorio correspondente.
+
+Estrutura interna:
+Metodos principais:
+- FaturaPorClienteExtractor(...4 args): realiza operacao relacionada a "fatura por cliente extractor".
+- extract(...2 args): realiza operacao relacionada a "extract".
+- calcularUniqueIdTemporario(...1 args): realiza operacao relacionada a "calcular unique id temporario".
+- getEntityName(): expone valor atual do estado interno.
+- getEmoji(): expone valor atual do estado interno.
+- auditarRegistroInvalido(...3 args): realiza operacao relacionada a "auditar registro invalido".
+Atributos-chave:
+- apiClient: cliente de integracao externa.
+- repository: dependencia de acesso a banco.
+- mapper: apoio de mapeamento de dados.
+- log: campo de estado para "log".
+- invalidRecordAuditRepository: dependencia de acesso a banco.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.runners.dataexport.extractors;
 
 import java.time.LocalDate;

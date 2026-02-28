@@ -1,3 +1,29 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/util/mapeamento/NumeroUtil.java
+Classe  : NumeroUtil (class)
+Pacote  : br.com.extrator.util.mapeamento
+Modulo  : Utilitario compartilhado
+Papel   : Implementa responsabilidade de numero util.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Centraliza funcoes auxiliares reutilizaveis.
+2) Evita repeticao de logica transversal.
+3) Apoia configuracao, formatacao e infraestrutura.
+
+Estrutura interna:
+Metodos principais:
+- NumeroUtil(): realiza operacao relacionada a "numero util".
+- createDecimalFormatUS(): realiza operacao relacionada a "create decimal format us".
+- parseBigDecimalUS(...1 args): realiza operacao relacionada a "parse big decimal us".
+- parseIntegerOrNull(...1 args): realiza operacao relacionada a "parse integer or null".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- DECIMAL_FORMAT_US: campo de estado para "decimal format us".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.util.mapeamento;
 
 import java.math.BigDecimal;

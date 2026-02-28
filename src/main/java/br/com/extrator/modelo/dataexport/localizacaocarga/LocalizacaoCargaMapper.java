@@ -1,3 +1,30 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/modelo/dataexport/localizacaocarga/LocalizacaoCargaMapper.java
+Classe  : LocalizacaoCargaMapper (class)
+Pacote  : br.com.extrator.modelo.dataexport.localizacaocarga
+Modulo  : DTO/Mapper DataExport
+Papel   : Implementa responsabilidade de localizacao carga mapper.
+
+Conecta com:
+- LocalizacaoCargaEntity (db.entity)
+- ValidadorDTO (util.validacao)
+- ResultadoValidacao (util.validacao.ValidadorDTO)
+- FormatadorData (util.formatacao)
+- MapperUtil (util.mapeamento)
+
+Fluxo geral:
+1) Modela payloads da API DataExport.
+2) Mapeia resposta para entidades internas.
+3) Apoia carga e deduplicacao no destino.
+
+Estrutura interna:
+Metodos principais:
+- LocalizacaoCargaMapper(): realiza operacao relacionada a "localizacao carga mapper".
+- toEntity(...1 args): realiza operacao relacionada a "to entity".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.modelo.dataexport.localizacaocarga;
 
 import br.com.extrator.db.entity.LocalizacaoCargaEntity;

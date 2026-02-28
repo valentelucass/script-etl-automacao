@@ -1,19 +1,50 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/api/graphql/GraphQLQueries.java
+Classe  : GraphQLQueries (class)
+Pacote  : br.com.extrator.api.graphql
+Modulo  : Cliente de integracao API
+Papel   : Implementa responsabilidade de graph qlqueries.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Monta requisicoes para endpoints externos.
+2) Trata autenticacao, timeout e parse de resposta.
+3) Entrega dados normalizados para os extractors.
+
+Estrutura interna:
+Metodos principais:
+- GraphQLQueries(): realiza operacao relacionada a "graph qlqueries".
+- BuscarColetasExpandidaV2(...2 args): consulta e retorna dados conforme criterio.
+- BuscarFretes_Master_V8(...2 args): consulta e retorna dados conforme criterio.
+- ExtrairFaturas_Billing_Final(...2 args): realiza operacao relacionada a "extrair faturas billing final".
+- ExtracaoNfseDireta(...2 args): realiza operacao relacionada a "extracao nfse direta".
+- ExtrairUsuariosSistema(...2 args): realiza operacao relacionada a "extrair usuarios sistema".
+- EnriquecerFaturas(...1 args): realiza operacao relacionada a "enriquecer faturas".
+- EnriquecerFaturasPorDocumento(...1 args): realiza operacao relacionada a "enriquecer faturas por documento".
+- EnriquecerCobranca_Nfse(...1 args): realiza operacao relacionada a "enriquecer cobranca nfse".
+- ResolverContaBancaria(...1 args): realiza operacao relacionada a "resolver conta bancaria".
+Atributos-chave:
+- QUERY_TESTE: campo de estado para "query teste".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.api.graphql;
 
 /**
  * Classe que centraliza todas as queries GraphQL utilizadas no sistema.
- * Isso evita duplicaÃ§Ã£o e facilita manutenÃ§Ã£o.
+ * Isso evita duplicação e facilita manutenção.
  */
 public final class GraphQLQueries {
     
     private GraphQLQueries() {
-        // Construtor privado para classe utilitÃ¡ria
+        // Construtor privado para classe utilitária
     }
     
     /**
      * Query para buscar Coletas (Pick)
      * Tipo GraphQL: Pick
-     * Campo de filtro: requestDate (aceita apenas uma data especÃ­fica)
+     * Campo de filtro: requestDate (aceita apenas uma data específica)
      */
     public static final String QUERY_COLETAS = """
             query BuscarColetasExpandidaV2($params: PickInput!, $after: String) {
@@ -153,7 +184,7 @@ public final class GraphQLQueries {
     /**
      * Query para buscar Capa de Faturas (CreditCustomerBilling)
      * Tipo GraphQL: CreditCustomerBilling
-     * Campo de filtro: dueDate, issueDate ou originalDueDate (aceita apenas uma data especÃ­fica)
+     * Campo de filtro: dueDate, issueDate ou originalDueDate (aceita apenas uma data específica)
      */
     public static final String QUERY_FATURAS = """
             query ExtrairFaturas_Billing_Final($params: CreditCustomerBillingInput!, $after: String) {
@@ -255,7 +286,7 @@ public final class GraphQLQueries {
 
     /**
      * Query de introspection para descobrir campos de PickInput.
-     * Usada para decidir dinamicamente filtros vÃ¡lidos (requestDate/serviceDate).
+     * Usada para decidir dinamicamente filtros válidos (requestDate/serviceDate).
      */
     public static final String INTROSPECTION_PICK_INPUT = """
             query CamposPickInput {
@@ -266,7 +297,7 @@ public final class GraphQLQueries {
     
     /**
      * Query de introspection para descobrir o tipo de destroyUserId e cancellationUserId em Pick
-     * IMPORTANTE: Usar para validar se sÃ£o do tipo Individual antes de fazer JOIN
+     * IMPORTANTE: Usar para validar se são do tipo Individual antes de fazer JOIN
      */
     public static final String INTROSPECTION_PICK_FIELDS = """
             query IntrospectPickFields {
@@ -286,15 +317,15 @@ public final class GraphQLQueries {
             }""";
     
     /**
-     * Query para buscar UsuÃ¡rios do Sistema (Individual)
+     * Query para buscar Usuários do Sistema (Individual)
      * Tipo GraphQL: Individual
-     * Filtro: enabled: true (obrigatÃ³rio)
-     * PaginaÃ§Ã£o: cursor-based (first: 100, after: $cursor)
+     * Filtro: enabled: true (obrigatório)
+     * Paginação: cursor-based (first: 100, after: $cursor)
      * 
-     * âš ï¸ ATENÃ‡ÃƒO: Esta query busca todos os usuÃ¡rios do tipo Individual.
-     * Validar se destroyUserId e cancellationUserId em Pick sÃ£o do mesmo tipo Individual
+     * ?? ATENÇÃO: Esta query busca todos os usuários do tipo Individual.
+     * Validar se destroyUserId e cancellationUserId em Pick são do mesmo tipo Individual
      * antes de fazer JOIN na view de coletas. Se forem de outro tipo (ex: User, Driver),
-     * o cruzamento retornarÃ¡ dados incorretos.
+     * o cruzamento retornará dados incorretos.
      */
     public static final String QUERY_USUARIOS_SISTEMA = """
             query ExtrairUsuariosSistema($params: IndividualInput!, $cursor: String) {
@@ -314,12 +345,12 @@ public final class GraphQLQueries {
     
     /**
      * Query para enriquecer Faturas por Cliente com dados financeiros.
-     * Busca NÂ° NFS-e, Carteira e InstruÃ§Ã£o Customizada via creditCustomerBilling.
+     * Busca Nº NFS-e, Carteira e Instrução Customizada via creditCustomerBilling.
      * 
      * Tipo GraphQL: CreditCustomerBilling
-     * ParÃ¢metro: id (ID da cobranÃ§a)
+     * Parâmetro: id (ID da cobrança)
      * 
-     * Campos extraÃ­dos:
+     * Campos extraídos:
      * - nfse_numero: accountingCredit.document (da primeira parcela)
      * - carteira_banco: accountingBankAccount.portfolioVariation (da primeira parcela)
      * - instrucao_boleto: accountingBankAccount.customInstruction (da primeira parcela)
@@ -346,10 +377,10 @@ public final class GraphQLQueries {
             }""";
     
     /**
-     * Query para enriquecer faturas por nÃºmero do documento (fallback quando billingId nÃ£o estÃ¡ disponÃ­vel).
-     * ParÃ¢metro: document (nÃºmero do documento da fatura, ex: "112025/1-3")
+     * Query para enriquecer faturas por número do documento (fallback quando billingId não está disponível).
+     * Parâmetro: document (número do documento da fatura, ex: "112025/1-3")
      * 
-     * Campos extraÃ­dos:
+     * Campos extraídos:
      * - nfse_numero: accountingCredit.document (da primeira parcela)
      * - carteira_banco: accountingBankAccount.portfolioVariation (da primeira parcela)
      * - instrucao_boleto: accountingBankAccount.customInstruction (da primeira parcela)
@@ -376,12 +407,12 @@ public final class GraphQLQueries {
             }""";
     
     /**
-     * Query para enriquecer cobranÃ§a individual com NFS-e e ID do banco.
+     * Query para enriquecer cobrança individual com NFS-e e ID do banco.
      * Usada dentro do loop de enriquecimento para cada fatura.
      * 
-     * ParÃ¢metro: id (ID da cobranÃ§a - creditCustomerBilling)
+     * Parâmetro: id (ID da cobrança - creditCustomerBilling)
      * 
-     * Campos extraÃ­dos:
+     * Campos extraídos:
      * - ticketAccountId: ID para buscar detalhes do banco depois
      * - nfse_numero: accountingCredit.document (da primeira parcela)
      * - metodo_pagamento: installments[0].paymentMethod
@@ -406,15 +437,15 @@ public final class GraphQLQueries {
             }""";
     
     /**
-     * Query para resolver detalhes de conta bancÃ¡ria via ID.
+     * Query para resolver detalhes de conta bancária via ID.
      * Usada para buscar dados do banco de forma otimizada (cache).
      * 
-     * ParÃ¢metro: id (ID da conta bancÃ¡ria - ticketAccountId)
+     * Parâmetro: id (ID da conta bancária - ticketAccountId)
      * 
-     * Campos extraÃ­dos:
+     * Campos extraídos:
      * - bankName: Nome do banco
-     * - portfolioVariation: Carteira/DescriÃ§Ã£o (pode vir vazio se nÃ£o cadastrado)
-     * - customInstruction: InstruÃ§Ã£o customizada (pode vir vazio se nÃ£o cadastrado)
+     * - portfolioVariation: Carteira/Descrição (pode vir vazio se não cadastrado)
+     * - customInstruction: Instrução customizada (pode vir vazio se não cadastrado)
      */
     public static final String QUERY_RESOLVER_CONTA_BANCARIA = """
             query ResolverContaBancaria($id: Int!) {

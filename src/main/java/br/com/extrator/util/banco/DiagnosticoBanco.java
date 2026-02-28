@@ -1,3 +1,27 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/util/banco/DiagnosticoBanco.java
+Classe  : DiagnosticoBanco (class)
+Pacote  : br.com.extrator.util.banco
+Modulo  : Utilitario compartilhado
+Papel   : Implementa responsabilidade de diagnostico banco.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Centraliza funcoes auxiliares reutilizaveis.
+2) Evita repeticao de logica transversal.
+3) Apoia configuracao, formatacao e infraestrutura.
+
+Estrutura interna:
+Metodos principais:
+- main(...1 args): ponto de entrada da execucao.
+- verificarTabelasCriticas(...1 args): realiza operacao relacionada a "verificar tabelas criticas".
+- verificarViewsPowerBI(...1 args): realiza operacao relacionada a "verificar views power bi".
+Atributos-chave:
+- Atributos nao mapeados automaticamente; consulte a implementacao abaixo.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.util.banco;
 
 import java.sql.Connection;

@@ -1,3 +1,29 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/db/repository/ExecutionHistoryRepository.java
+Classe  : ExecutionHistoryRepository (class)
+Pacote  : br.com.extrator.db.repository
+Modulo  : Repositorio de dados
+Papel   : Implementa responsabilidade de execution history repository.
+
+Conecta com:
+- GerenciadorConexao (util.banco)
+
+Fluxo geral:
+1) Monta comandos SQL e parametros.
+2) Executa operacoes de persistencia/consulta no banco.
+3) Converte resultado para entidades de dominio.
+
+Estrutura interna:
+Metodos principais:
+- inserirHistorico(...7 args): inclui registros no destino configurado.
+- calcularTotalRegistros(...2 args): realiza operacao relacionada a "calcular total registros".
+- existeTabelaLogExtracoes(...1 args): realiza operacao relacionada a "existe tabela log extracoes".
+- limitar(...2 args): realiza operacao relacionada a "limitar".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- estruturaGarantida: campo de estado para "estrutura garantida".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.db.repository;
 
 import java.sql.Connection;

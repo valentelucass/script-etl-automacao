@@ -1,3 +1,36 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/modelo/dataexport/contasapagar/ContasAPagarMapper.java
+Classe  : ContasAPagarMapper (class)
+Pacote  : br.com.extrator.modelo.dataexport.contasapagar
+Modulo  : DTO/Mapper DataExport
+Papel   : Implementa responsabilidade de contas apagar mapper.
+
+Conecta com:
+- ContasAPagarDataExportEntity (db.entity)
+- FormatadorData (util.formatacao)
+- ValidadorDTO (util.validacao)
+- ResultadoValidacao (util.validacao.ValidadorDTO)
+- MapperUtil (util.mapeamento)
+
+Fluxo geral:
+1) Modela payloads da API DataExport.
+2) Mapeia resposta para entidades internas.
+3) Apoia carga e deduplicacao no destino.
+
+Estrutura interna:
+Metodos principais:
+- toEntity(...1 args): realiza operacao relacionada a "to entity".
+- parseLong(...1 args): realiza operacao relacionada a "parse long".
+- parseInteger(...1 args): realiza operacao relacionada a "parse integer".
+- parseBigDecimal(...1 args): realiza operacao relacionada a "parse big decimal".
+- parseLocalDate(...1 args): realiza operacao relacionada a "parse local date".
+- parseOffsetDateTime(...1 args): realiza operacao relacionada a "parse offset date time".
+- limparETraduzirTipoLancamento(...1 args): realiza operacao relacionada a "limpar etraduzir tipo lancamento".
+- traduzirClassificacaoContabil(...1 args): realiza operacao relacionada a "traduzir classificacao contabil".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.modelo.dataexport.contasapagar;
 
 import java.math.BigDecimal;

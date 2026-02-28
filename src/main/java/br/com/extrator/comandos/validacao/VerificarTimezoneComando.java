@@ -1,3 +1,26 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/comandos/validacao/VerificarTimezoneComando.java
+Classe  : VerificarTimezoneComando (class)
+Pacote  : br.com.extrator.comandos.validacao
+Modulo  : Comando CLI (validacao)
+Papel   : Implementa responsabilidade de verificar timezone comando.
+
+Conecta com:
+- Comando (comandos.base)
+- GerenciadorConexao (util.banco)
+
+Fluxo geral:
+1) Executa validacoes de acesso, timestamps e consistencia.
+2) Compara API versus banco quando aplicavel.
+3) Emite resultado de qualidade para operacao.
+
+Estrutura interna:
+Metodos principais:
+- executar(...1 args): executa o fluxo principal desta responsabilidade.
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.comandos.validacao;
 
 import java.sql.Connection;

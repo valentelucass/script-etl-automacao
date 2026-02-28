@@ -1,3 +1,33 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/db/repository/AbstractRepository.java
+Classe  : AbstractRepository (class)
+Pacote  : br.com.extrator.db.repository
+Modulo  : Repositorio de dados
+Papel   : Implementa responsabilidade de abstract repository.
+
+Conecta com:
+- CarregadorConfig (util.configuracao)
+- GerenciadorConexao (util.banco)
+
+Fluxo geral:
+1) Monta comandos SQL e parametros.
+2) Executa operacoes de persistencia/consulta no banco.
+3) Converte resultado para entidades de dominio.
+
+Estrutura interna:
+Metodos principais:
+- getBatchSize(): expone valor atual do estado interno.
+- isContinuarAposErro(): retorna estado booleano de controle.
+- AbstractRepository(): realiza operacao relacionada a "abstract repository".
+- obterIdentificadorEntidade(...1 args): recupera dados configurados ou calculados.
+- encontrarGetter(...2 args): realiza operacao relacionada a "encontrar getter".
+- converterSnakeToCamel(...1 args): transforma dados entre formatos/modelos.
+- normalizarNomeCampo(...1 args): realiza operacao relacionada a "normalizar nome campo".
+- truncate(...2 args): realiza operacao relacionada a "truncate".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.db.repository;
 
 import java.sql.Connection;

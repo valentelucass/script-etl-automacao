@@ -1,3 +1,45 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/runners/graphql/services/GraphQLExtractionService.java
+Classe  : GraphQLExtractionService (class)
+Pacote  : br.com.extrator.runners.graphql.services
+Modulo  : Servico de execucao GraphQL
+Papel   : Implementa responsabilidade de graph qlextraction service.
+
+Conecta com:
+- ClienteApiGraphQL (api)
+- ColetaRepository (db.repository)
+- FreteRepository (db.repository)
+- FaturaGraphQLRepository (db.repository)
+- FaturaPorClienteRepository (db.repository)
+- LogExtracaoRepository (db.repository)
+- UsuarioSistemaRepository (db.repository)
+- ColetaMapper (modelo.graphql.coletas)
+
+Fluxo geral:
+1) Coordena extractors da API GraphQL.
+2) Controla ordem, limites e logging do processamento.
+3) Propaga resultado consolidado para o runner.
+
+Estrutura interna:
+Metodos principais:
+- GraphQLExtractionService(): realiza operacao relacionada a "graph qlextraction service".
+- execute(...3 args): realiza operacao relacionada a "execute".
+- shouldExecute(...2 args): realiza operacao relacionada a "should execute".
+- shouldExecute(...3 args): realiza operacao relacionada a "should execute".
+- extractUsuarios(...3 args): realiza operacao relacionada a "extract usuarios".
+- extractColetas(...2 args): realiza operacao relacionada a "extract coletas".
+- extractFretes(...2 args): realiza operacao relacionada a "extract fretes".
+- extractFaturasGraphQL(...2 args): realiza operacao relacionada a "extract faturas graph ql".
+- exibirResumoConsolidado(...2 args): realiza operacao relacionada a "exibir resumo consolidado".
+- formatarNumero(...1 args): realiza operacao relacionada a "formatar numero".
+Atributos-chave:
+- apiClient: cliente de integracao externa.
+- logRepository: dependencia de acesso a banco.
+- logger: logger da classe para diagnostico.
+- log: campo de estado para "log".
+- entidadeEspecifica: campo de estado para "entidade especifica".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.runners.graphql.services;
 
 import java.time.Duration;

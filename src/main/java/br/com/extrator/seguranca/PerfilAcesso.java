@@ -1,3 +1,25 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/seguranca/PerfilAcesso.java
+Classe  : PerfilAcesso (enum)
+Pacote  : br.com.extrator.seguranca
+Modulo  : Modulo de seguranca
+Papel   : Implementa responsabilidade de perfil acesso.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Modela usuarios, perfis e acoes autorizadas.
+2) Implementa regras de autenticacao e senha.
+3) Gerencia repositorio de seguranca local.
+
+Estrutura interna:
+Metodos principais:
+- fromString(...1 args): realiza operacao relacionada a "from string".
+Atributos-chave:
+- Atributos nao mapeados automaticamente; consulte a implementacao abaixo.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.seguranca;
 
 import java.util.Locale;

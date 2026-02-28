@@ -1,5 +1,25 @@
 @echo off
 setlocal EnableDelayedExpansion
+REM ==[DOC-FILE]===============================================================
+REM Arquivo : 07-exportar_csv.bat
+REM Tipo    : Script operacional Windows (.bat)
+REM Papel   : Automatiza a rotina "07-exportar csv" para uso operacional.
+REM
+REM Conecta com:
+REM - call: %~dp0mvn.bat
+REM - call: :AUTH_CHECK
+REM - java -jar: target\extrator.jar
+REM
+REM Fluxo geral:
+REM 1) Inicializa variaveis de controle do script.
+REM 2) Executa rotina principal com validacoes basicas.
+REM 3) Finaliza com codigo de retorno apropriado.
+REM
+REM Variaveis-chave:
+REM - JAVA_HOME: controle de estado do script.
+REM - TABELA: controle de estado do script.
+REM [DOC-FILE-END]===========================================================
+
 if /i not "%EXTRATOR_SKIP_CHCP%"=="1" chcp 65001 >nul
 
 REM ================================================================
@@ -219,5 +239,3 @@ if errorlevel 1 (
     exit /b 1
 )
 exit /b 0
-
-

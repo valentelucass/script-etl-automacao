@@ -1,4 +1,39 @@
-﻿package br.com.extrator.comandos.utilitarios;
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/comandos/utilitarios/TestarApiComando.java
+Classe  : TestarApiComando (class)
+Pacote  : br.com.extrator.comandos.utilitarios
+Modulo  : Componente Java
+Papel   : Implementa comportamento de testar api comando.
+
+Conecta com:
+- Comando (comandos.base)
+- LogExtracaoEntity (db.entity)
+- LogExtracaoRepository (db.repository)
+- DataExportRunner (runners.dataexport)
+- GraphQLRunner (runners.graphql)
+- BannerUtil (util.console)
+- ConstantesEntidades (util.validacao)
+
+Fluxo geral:
+1) Define comportamento principal deste modulo.
+2) Interage com camadas relacionadas do sistema.
+3) Entrega resultado para o fluxo chamador.
+
+Estrutura interna:
+Metodos principais:
+- parseArgs(...1 args): realiza operacao relacionada a "parse args".
+- isEntidadeFaturasGraphQL(...1 args): retorna estado booleano de controle.
+- ParsedArgs(...2 args): realiza operacao relacionada a "parsed args".
+- validarStatusDasEntidadesExecutadas(...5 args): aplica regras de validacao e consistencia.
+- obterEntidadesEsperadas(...4 args): recupera dados configurados ou calculados.
+- normalizarEntidadeGraphQL(...1 args): realiza operacao relacionada a "normalizar entidade graph ql".
+- normalizarEntidadeDataExport(...1 args): realiza operacao relacionada a "normalizar entidade data export".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- FLAG_SEM_FATURAS_GRAPHQL: campo de estado para "flag sem faturas graphql".
+[DOC-FILE-END]============================================================== */
+
+package br.com.extrator.comandos.utilitarios;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;

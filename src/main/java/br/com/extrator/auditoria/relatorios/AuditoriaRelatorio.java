@@ -1,3 +1,32 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/auditoria/relatorios/AuditoriaRelatorio.java
+Classe  : AuditoriaRelatorio (class)
+Pacote  : br.com.extrator.auditoria.relatorios
+Modulo  : Modulo de auditoria
+Papel   : Implementa responsabilidade de auditoria relatorio.
+
+Conecta com:
+- StatusValidacao (auditoria.enums)
+- ResultadoAuditoria (auditoria.modelos)
+- ResultadoValidacaoEntidade (auditoria.modelos)
+- LoggerConsole (util.console)
+- FormatadorData (util.formatacao)
+
+Fluxo geral:
+1) Modela resultados e estado de auditoria.
+2) Apoia consolidacao de evidencias operacionais.
+3) Suporta emissao de relatorios de conformidade.
+
+Estrutura interna:
+Metodos principais:
+- gerarRelatorio(...1 args): realiza operacao relacionada a "gerar relatorio".
+- exibirResumoConsole(...1 args): realiza operacao relacionada a "exibir resumo console".
+Atributos-chave:
+- log: campo de estado para "log".
+- FORMATTER_ARQUIVO: campo de estado para "formatter arquivo".
+- FORMATTER_RELATORIO: campo de estado para "formatter relatorio".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.auditoria.relatorios;
 
 import java.io.FileWriter;

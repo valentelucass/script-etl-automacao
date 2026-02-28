@@ -1,3 +1,27 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/runners/dataexport/DataExportRunner.java
+Classe  : DataExportRunner (class)
+Pacote  : br.com.extrator.runners.dataexport
+Modulo  : Componente Java
+Papel   : Implementa comportamento de data export runner.
+
+Conecta com:
+- DataExportExtractionService (runners.dataexport.services)
+- LoggerConsole (util.console)
+
+Fluxo geral:
+1) Define comportamento principal deste modulo.
+2) Interage com camadas relacionadas do sistema.
+3) Entrega resultado para o fluxo chamador.
+
+Estrutura interna:
+Metodos principais:
+- DataExportRunner(): realiza operacao relacionada a "data export runner".
+- validarIntervalo(...2 args): aplica regras de validacao e consistencia.
+Atributos-chave:
+- log: campo de estado para "log".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.runners.dataexport;
 
 import java.time.LocalDate;

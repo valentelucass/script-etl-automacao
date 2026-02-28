@@ -1,3 +1,44 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/modelo/dataexport/faturaporcliente/FaturaPorClienteMapper.java
+Classe  : FaturaPorClienteMapper (class)
+Pacote  : br.com.extrator.modelo.dataexport.faturaporcliente
+Modulo  : DTO/Mapper DataExport
+Papel   : Implementa responsabilidade de fatura por cliente mapper.
+
+Conecta com:
+- FaturaPorClienteEntity (db.entity)
+- DataUtil (util.mapeamento)
+- MapperUtil (util.mapeamento)
+- NumeroUtil (util.mapeamento)
+
+Fluxo geral:
+1) Modela payloads da API DataExport.
+2) Mapeia resposta para entidades internas.
+3) Apoia carga e deduplicacao no destino.
+
+Estrutura interna:
+Metodos principais:
+- FaturaPorClienteMapper(): realiza operacao relacionada a "fatura por cliente mapper".
+- toEntity(...1 args): realiza operacao relacionada a "to entity".
+- calcularIdentificadorUnico(...1 args): realiza operacao relacionada a "calcular identificador unico".
+- limitarOuHashear(...1 args): realiza operacao relacionada a "limitar ou hashear".
+- montarRepresentacaoCanonica(...1 args): construi estrutura de entrada/saida.
+- appendCampo(...3 args): realiza operacao relacionada a "append campo".
+- normalizarTexto(...1 args): realiza operacao relacionada a "normalizar texto".
+- normalizarLista(...1 args): realiza operacao relacionada a "normalizar lista".
+- calcularSha256Hex(...1 args): realiza operacao relacionada a "calcular sha256 hex".
+- converterParaBigDecimal(...1 args): transforma dados entre formatos/modelos.
+- converterParaLocalDate(...1 args): transforma dados entre formatos/modelos.
+- converterParaOffsetDateTime(...1 args): transforma dados entre formatos/modelos.
+- traduzirStatus(...1 args): realiza operacao relacionada a "traduzir status".
+- traduzirTipoFrete(...1 args): realiza operacao relacionada a "traduzir tipo frete".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- UNIQUE_ID_MAX_LENGTH: campo de estado para "unique id max length".
+- HASH_PREFIX: campo de estado para "hash prefix".
+- KEY_HASH_PREFIX: campo de estado para "key hash prefix".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.modelo.dataexport.faturaporcliente;
 
 import java.math.BigDecimal;

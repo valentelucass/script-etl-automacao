@@ -1,3 +1,35 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/auditoria/validacao/AuditorEstruturaApi.java
+Classe  : AuditorEstruturaApi (class)
+Pacote  : br.com.extrator.auditoria.validacao
+Modulo  : Validador de auditoria
+Papel   : Implementa responsabilidade de auditor estrutura api.
+
+Conecta com:
+- ClienteApiDataExport (api)
+- ClienteApiGraphQL (api)
+- ResultadoExtracao (api)
+- CarregadorConfig (util.configuracao)
+- ConstantesEntidades (util.validacao)
+
+Fluxo geral:
+1) Aplica checks tecnicos sobre estrutura e dados.
+2) Sinaliza inconformidades por regra.
+3) Retorna diagnostico para camadas de relatorio.
+
+Estrutura interna:
+Metodos principais:
+- main(...1 args): ponto de entrada da execucao.
+- executar(): executa o fluxo principal desta responsabilidade.
+- coletarCampos(...4 args): realiza operacao relacionada a "coletar campos".
+- valor(...1 args): realiza operacao relacionada a "valor".
+- escape(...1 args): realiza operacao relacionada a "escape".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- NOME_ARQUIVO_FMT: campo de estado para "nome arquivo fmt".
+- ENDPOINTS: campo de estado para "endpoints".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.auditoria.validacao;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -66,7 +98,7 @@ public class AuditorEstruturaApi {
         try {
             Files.createDirectories(dir);
         } catch (final IOException e) {
-            logger.error("Falha ao criar diretÃ³rio de relatÃ³rios: {}", e.getMessage(), e);
+            logger.error("Falha ao criar diretório de relatórios: {}", e.getMessage(), e);
             return 2;
         }
 
@@ -83,7 +115,7 @@ public class AuditorEstruturaApi {
                     try {
                         final JsonNode item = obterAmostraEntidade(mapper, clienteDataExport, clienteGraphQL, entidade);
                         if (item == null || item.isNull()) {
-                            logger.warn("Resposta sem item analisÃ¡vel para {}", entidade);
+                            logger.warn("Resposta sem item analisável para {}", entidade);
                             continue;
                         }
 
@@ -115,7 +147,7 @@ public class AuditorEstruturaApi {
             return 4;
         }
 
-        logger.info("Auditoria concluÃ­da: {}", csv.toString());
+        logger.info("Auditoria concluída: {}", csv.toString());
         return 0;
     }
 

@@ -1,3 +1,51 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/db/entity/FaturaGraphQLEntity.java
+Classe  : FaturaGraphQLEntity (class)
+Pacote  : br.com.extrator.db.entity
+Modulo  : Entidade de persistencia
+Papel   : Implementa responsabilidade de fatura graph qlentity.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Define estrutura de dados persistida no banco.
+2) Representa campos de tabela/view no dominio Java.
+3) Suporta transporte de dados entre camadas.
+
+Estrutura interna:
+Metodos principais:
+- getId(): expone valor atual do estado interno.
+- setId(...1 args): ajusta valor em estado interno.
+- getDocument(): expone valor atual do estado interno.
+- setDocument(...1 args): ajusta valor em estado interno.
+- getIssueDate(): expone valor atual do estado interno.
+- setIssueDate(...1 args): ajusta valor em estado interno.
+- getDueDate(): expone valor atual do estado interno.
+- setDueDate(...1 args): ajusta valor em estado interno.
+- getOriginalDueDate(): expone valor atual do estado interno.
+- setOriginalDueDate(...1 args): ajusta valor em estado interno.
+- getValue(): expone valor atual do estado interno.
+- setValue(...1 args): ajusta valor em estado interno.
+- getPaidValue(): expone valor atual do estado interno.
+- setPaidValue(...1 args): ajusta valor em estado interno.
+Atributos-chave:
+- id: campo de estado para "id".
+- document: campo de estado para "document".
+- issueDate: campo de estado para "issue date".
+- dueDate: campo de estado para "due date".
+- originalDueDate: campo de estado para "original due date".
+- value: campo de estado para "value".
+- paidValue: campo de estado para "paid value".
+- valueToPay: campo de estado para "value to pay".
+- discountValue: campo de estado para "discount value".
+- interestValue: campo de estado para "interest value".
+- paid: campo de estado para "paid".
+- status: campo de estado para "status".
+- type: campo de estado para "type".
+- comments: campo de estado para "comments".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.db.entity;
 
 import java.math.BigDecimal;

@@ -1,5 +1,24 @@
 @echo off
 setlocal
+REM ==[DOC-FILE]===============================================================
+REM Arquivo : 03-validar_config.bat
+REM Tipo    : Script operacional Windows (.bat)
+REM Papel   : Automatiza a rotina "03-validar config" para uso operacional.
+REM
+REM Conecta com:
+REM - call: %~dp0mvn.bat
+REM - mvn (build/test/execucao Java)
+REM - call: :AUTH_CHECK
+REM - java -jar: target\extrator.jar
+REM
+REM Fluxo geral:
+REM 1) Inicializa contexto de validacao.
+REM 2) Executa comandos de verificacao no sistema.
+REM 3) Publica resumo de sucesso/erro para o operador.
+REM
+REM Variaveis-chave:
+REM - Variaveis nao mapeadas automaticamente; consulte o script abaixo.
+REM [DOC-FILE-END]===========================================================
 
 REM ================================================================
 REM Script: 03-validar_configuracoes.bat

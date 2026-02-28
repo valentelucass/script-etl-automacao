@@ -1,3 +1,43 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/runners/dataexport/services/DataExportExtractionService.java
+Classe  : DataExportExtractionService (class)
+Pacote  : br.com.extrator.runners.dataexport.services
+Modulo  : Servico de execucao DataExport
+Papel   : Implementa responsabilidade de data export extraction service.
+
+Conecta com:
+- ClienteApiDataExport (api)
+- ContasAPagarRepository (db.repository)
+- CotacaoRepository (db.repository)
+- FaturaPorClienteRepository (db.repository)
+- LocalizacaoCargaRepository (db.repository)
+- LogExtracaoRepository (db.repository)
+- ManifestoRepository (db.repository)
+- ContasAPagarMapper (modelo.dataexport.contasapagar)
+
+Fluxo geral:
+1) Coordena extractors da API DataExport.
+2) Aplica deduplicacao/normalizacao quando necessario.
+3) Encaminha resultado consolidado para o runner.
+
+Estrutura interna:
+Metodos principais:
+- DataExportExtractionService(): realiza operacao relacionada a "data export extraction service".
+- execute(...3 args): realiza operacao relacionada a "execute".
+- extractManifestos(...2 args): realiza operacao relacionada a "extract manifestos".
+- extractCotacoes(...2 args): realiza operacao relacionada a "extract cotacoes".
+- extractLocalizacoes(...2 args): realiza operacao relacionada a "extract localizacoes".
+- extractContasAPagar(...2 args): realiza operacao relacionada a "extract contas apagar".
+- extractFaturasPorCliente(...2 args): realiza operacao relacionada a "extract faturas por cliente".
+- exibirResumoConsolidado(...2 args): realiza operacao relacionada a "exibir resumo consolidado".
+- formatarNumero(...1 args): realiza operacao relacionada a "formatar numero".
+Atributos-chave:
+- apiClient: cliente de integracao externa.
+- logRepository: dependencia de acesso a banco.
+- logger: logger da classe para diagnostico.
+- log: campo de estado para "log".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.runners.dataexport.services;
 
 import java.time.Duration;

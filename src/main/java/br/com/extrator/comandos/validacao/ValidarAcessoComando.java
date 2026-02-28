@@ -1,3 +1,26 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/comandos/validacao/ValidarAcessoComando.java
+Classe  : ValidarAcessoComando (class)
+Pacote  : br.com.extrator.comandos.validacao
+Modulo  : Comando CLI (validacao)
+Papel   : Implementa responsabilidade de validar acesso comando.
+
+Conecta com:
+- Comando (comandos.base)
+- LoggerConsole (util.console)
+
+Fluxo geral:
+1) Executa validacoes de acesso, timestamps e consistencia.
+2) Compara API versus banco quando aplicavel.
+3) Emite resultado de qualidade para operacao.
+
+Estrutura interna:
+Metodos principais:
+- Metodos nao mapeados automaticamente; consulte a implementacao abaixo.
+Atributos-chave:
+- log: campo de estado para "log".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.comandos.validacao;
 
 import br.com.extrator.comandos.base.Comando;

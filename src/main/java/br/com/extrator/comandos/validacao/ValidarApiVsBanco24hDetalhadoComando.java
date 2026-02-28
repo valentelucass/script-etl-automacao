@@ -1,3 +1,47 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/comandos/validacao/ValidarApiVsBanco24hDetalhadoComando.java
+Classe  : ValidarApiVsBanco24hDetalhadoComando (class)
+Pacote  : br.com.extrator.comandos.validacao
+Modulo  : Comando CLI (validacao)
+Papel   : Implementa responsabilidade de validar api vs banco24h detalhado comando.
+
+Conecta com:
+- ClienteApiDataExport (api)
+- ClienteApiGraphQL (api)
+- ResultadoExtracao (api)
+- Comando (comandos.base)
+- ContasAPagarDataExportEntity (db.entity)
+- CotacaoEntity (db.entity)
+- FaturaPorClienteEntity (db.entity)
+- LocalizacaoCargaEntity (db.entity)
+
+Fluxo geral:
+1) Executa validacoes de acesso, timestamps e consistencia.
+2) Compara API versus banco quando aplicavel.
+3) Emite resultado de qualidade para operacao.
+
+Estrutura interna:
+Metodos principais:
+- JanelaExecucao(...2 args): realiza operacao relacionada a "janela execucao".
+- ResultadoApiChaves(...10 args): realiza operacao relacionada a "resultado api chaves".
+- ResultadoComparacao(...9 args): realiza operacao relacionada a "resultado comparacao".
+- construirDetalheComparacao(...5 args): realiza operacao relacionada a "construir detalhe comparacao".
+- amostraChaves(...1 args): realiza operacao relacionada a "amostra chaves".
+- carregarChavesManifestos(...4 args): realiza operacao relacionada a "carregar chaves manifestos".
+- carregarChavesCotacoes(...4 args): realiza operacao relacionada a "carregar chaves cotacoes".
+- carregarChavesLocalizacao(...4 args): realiza operacao relacionada a "carregar chaves localizacao".
+- carregarChavesContasAPagar(...4 args): realiza operacao relacionada a "carregar chaves contas apagar".
+- carregarChavesFaturasPorCliente(...4 args): realiza operacao relacionada a "carregar chaves faturas por cliente".
+- carregarChavesFretes(...4 args): realiza operacao relacionada a "carregar chaves fretes".
+- carregarChavesColetas(...4 args): realiza operacao relacionada a "carregar chaves coletas".
+- hashMetadata(...1 args): realiza operacao relacionada a "hash metadata".
+- chaveManifesto(...1 args): realiza operacao relacionada a "chave manifesto".
+Atributos-chave:
+- log: campo de estado para "log".
+- AMOSTRA_MAX: campo de estado para "amostra max".
+- LIMITE_BACKFILL_FATURAS_ORFAAS: campo de estado para "limite backfill faturas orfaas".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.comandos.validacao;
 
 import java.sql.Connection;
@@ -67,6 +111,7 @@ public class ValidarApiVsBanco24hDetalhadoComando implements Comando {
         int invalidos,
         Set<String> chaves,
         Map<String, String> hashesPorChave,
+        Map<String, Set<String>> hashesAceitosPorChave,
         String detalhe,
         Set<String> chavesToleradasNoBanco
     ) { }
@@ -381,7 +426,18 @@ public class ValidarApiVsBanco24hDetalhadoComando implements Comando {
         for (final String chave : chavesComparaveis) {
             final String hashApi = api.hashesPorChave.get(chave);
             final String hashBanco = hashesBanco.get(chave);
-            if (hashApi == null || hashBanco == null || !hashApi.equals(hashBanco)) {
+            final Set<String> hashesAceitos = api.hashesAceitosPorChave == null
+                ? null
+                : api.hashesAceitosPorChave.get(chave);
+            final boolean hashCompativel;
+            if (hashBanco == null) {
+                hashCompativel = false;
+            } else if (hashesAceitos != null && !hashesAceitos.isEmpty()) {
+                hashCompativel = hashesAceitos.contains(hashBanco);
+            } else {
+                hashCompativel = hashApi != null && hashApi.equals(hashBanco);
+            }
+            if (!hashCompativel) {
                 divergenciasDados.add(chave);
             }
         }
@@ -460,7 +516,7 @@ public class ValidarApiVsBanco24hDetalhadoComando implements Comando {
             hashesPorChave.put(chave, hashMetadata(e.getMetadata()));
         }
         final Set<String> chaves = new HashSet<>(hashesPorChave.keySet());
-        return new ResultadoApiChaves(bruto, chaves.size(), invalidos, chaves, hashesPorChave, null, Set.of());
+        return new ResultadoApiChaves(bruto, chaves.size(), invalidos, chaves, hashesPorChave, Map.of(), null, Set.of());
     }
 
     private ResultadoApiChaves carregarChavesCotacoes(final ClienteApiDataExport clienteApi,
@@ -491,7 +547,7 @@ public class ValidarApiVsBanco24hDetalhadoComando implements Comando {
             hashesPorChave.put(chave, hashMetadata(e.getMetadata()));
         }
         final Set<String> chaves = new HashSet<>(hashesPorChave.keySet());
-        return new ResultadoApiChaves(bruto, chaves.size(), invalidos, chaves, hashesPorChave, null, Set.of());
+        return new ResultadoApiChaves(bruto, chaves.size(), invalidos, chaves, hashesPorChave, Map.of(), null, Set.of());
     }
 
     private ResultadoApiChaves carregarChavesLocalizacao(final ClienteApiDataExport clienteApi,
@@ -522,7 +578,7 @@ public class ValidarApiVsBanco24hDetalhadoComando implements Comando {
             hashesPorChave.put(chave, hashMetadata(e.getMetadata()));
         }
         final Set<String> chaves = new HashSet<>(hashesPorChave.keySet());
-        return new ResultadoApiChaves(bruto, chaves.size(), invalidos, chaves, hashesPorChave, null, Set.of());
+        return new ResultadoApiChaves(bruto, chaves.size(), invalidos, chaves, hashesPorChave, Map.of(), null, Set.of());
     }
 
     private ResultadoApiChaves carregarChavesContasAPagar(final ClienteApiDataExport clienteApi,
@@ -553,7 +609,7 @@ public class ValidarApiVsBanco24hDetalhadoComando implements Comando {
             hashesPorChave.put(chave, hashMetadata(e.getMetadata()));
         }
         final Set<String> chaves = new HashSet<>(hashesPorChave.keySet());
-        return new ResultadoApiChaves(bruto, chaves.size(), invalidos, chaves, hashesPorChave, null, Set.of());
+        return new ResultadoApiChaves(bruto, chaves.size(), invalidos, chaves, hashesPorChave, Map.of(), null, Set.of());
     }
 
     private ResultadoApiChaves carregarChavesFaturasPorCliente(final ClienteApiDataExport clienteApi,
@@ -565,6 +621,7 @@ public class ValidarApiVsBanco24hDetalhadoComando implements Comando {
         final int bruto = dtos.size();
         int invalidos = 0;
         final List<FaturaPorClienteEntity> mapeadas = new ArrayList<>();
+        final Map<String, Set<String>> hashesAceitosPorChave = new LinkedHashMap<>();
         for (FaturaPorClienteDTO dto : dtos) {
             try {
                 final FaturaPorClienteEntity entity = mapper.toEntity(dto);
@@ -573,6 +630,10 @@ public class ValidarApiVsBanco24hDetalhadoComando implements Comando {
                     continue;
                 }
                 mapeadas.add(entity);
+                final String hash = hashMetadata(entity.getMetadata());
+                hashesAceitosPorChave
+                    .computeIfAbsent(entity.getUniqueId(), k -> new HashSet<>())
+                    .add(hash);
             } catch (RuntimeException e) {
                 invalidos++;
             }
@@ -584,7 +645,25 @@ public class ValidarApiVsBanco24hDetalhadoComando implements Comando {
             hashesPorChave.put(chave, hashMetadata(e.getMetadata()));
         }
         final Set<String> chaves = new HashSet<>(hashesPorChave.keySet());
-        return new ResultadoApiChaves(bruto, chaves.size(), invalidos, chaves, hashesPorChave, null, Set.of());
+        int chavesComHashesConflitantes = 0;
+        for (final Set<String> hashes : hashesAceitosPorChave.values()) {
+            if (hashes != null && hashes.size() > 1) {
+                chavesComHashesConflitantes++;
+            }
+        }
+        final String detalhe = chavesComHashesConflitantes > 0
+            ? "chaves_com_hashes_conflitantes=" + chavesComHashesConflitantes
+            : null;
+        return new ResultadoApiChaves(
+            bruto,
+            chaves.size(),
+            invalidos,
+            chaves,
+            hashesPorChave,
+            hashesAceitosPorChave,
+            detalhe,
+            Set.of()
+        );
     }
 
     private ResultadoApiChaves carregarChavesFretes(final ClienteApiGraphQL clienteApi,
@@ -610,7 +689,7 @@ public class ValidarApiVsBanco24hDetalhadoComando implements Comando {
             }
         }
         final Set<String> chaves = new HashSet<>(hashesPorChave.keySet());
-        return new ResultadoApiChaves(bruto, chaves.size(), invalidos, chaves, hashesPorChave, null, Set.of());
+        return new ResultadoApiChaves(bruto, chaves.size(), invalidos, chaves, hashesPorChave, Map.of(), null, Set.of());
     }
 
     private ResultadoApiChaves carregarChavesColetas(final ClienteApiGraphQL clienteApi,
@@ -635,7 +714,7 @@ public class ValidarApiVsBanco24hDetalhadoComando implements Comando {
             }
         }
         final Set<String> chaves = new HashSet<>(hashesPorChave.keySet());
-        return new ResultadoApiChaves(bruto, chaves.size(), invalidos, chaves, hashesPorChave, null, Set.of());
+        return new ResultadoApiChaves(bruto, chaves.size(), invalidos, chaves, hashesPorChave, Map.of(), null, Set.of());
     }
 
     private ResultadoApiChaves carregarChavesFaturasGraphQL(final Connection conexao,
@@ -675,7 +754,16 @@ public class ValidarApiVsBanco24hDetalhadoComando implements Comando {
         final String detalhe = "ids_fretes_janela=" + idsFretesJanela.size()
             + " | tolerancia_excedentes_referenciais_ativa=true";
 
-        return new ResultadoApiChaves(bruto, chaves.size(), invalidos, chaves, hashesPorChave, detalhe, chavesToleradasNoBanco);
+        return new ResultadoApiChaves(
+            bruto,
+            chaves.size(),
+            invalidos,
+            chaves,
+            hashesPorChave,
+            Map.of(),
+            detalhe,
+            chavesToleradasNoBanco
+        );
     }
 
     private List<Long> listarAccountingCreditIdsFretes(final Connection conexao,

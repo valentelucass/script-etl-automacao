@@ -1,3 +1,38 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/modelo/graphql/fretes/CorporationDTO.java
+Classe  : CorporationDTO (class)
+Pacote  : br.com.extrator.modelo.graphql.fretes
+Modulo  : DTO/Mapper GraphQL
+Papel   : Implementa responsabilidade de corporation dto.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Modela payloads da API GraphQL.
+2) Mapeia estrutura remota para modelo interno.
+3) Apoia persistencia e validacao do extrator.
+
+Estrutura interna:
+Metodos principais:
+- getName(): expone valor atual do estado interno.
+- setName(...1 args): ajusta valor em estado interno.
+- getId(): expone valor atual do estado interno.
+- setId(...1 args): ajusta valor em estado interno.
+- getPerson(): expone valor atual do estado interno.
+- setPerson(...1 args): ajusta valor em estado interno.
+- getNickname(): expone valor atual do estado interno.
+- setNickname(...1 args): ajusta valor em estado interno.
+- getCnpj(): expone valor atual do estado interno.
+- setCnpj(...1 args): ajusta valor em estado interno.
+Atributos-chave:
+- id: campo de estado para "id".
+- name: campo de estado para "name".
+- nickname: campo de estado para "nickname".
+- cnpj: campo de estado para "cnpj".
+- person: campo de estado para "person".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.modelo.graphql.fretes;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;

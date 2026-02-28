@@ -1,3 +1,51 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/modelo/dataexport/contasapagar/ContasAPagarDTO.java
+Classe  : ContasAPagarDTO (class)
+Pacote  : br.com.extrator.modelo.dataexport.contasapagar
+Modulo  : DTO/Mapper DataExport
+Papel   : Implementa responsabilidade de contas apagar dto.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Modela payloads da API DataExport.
+2) Mapeia resposta para entidades internas.
+3) Apoia carga e deduplicacao no destino.
+
+Estrutura interna:
+Metodos principais:
+- ContasAPagarDTO(): realiza operacao relacionada a "contas apagar dto".
+- getSequenceCode(): expone valor atual do estado interno.
+- setSequenceCode(...1 args): ajusta valor em estado interno.
+- getDocumentNumber(): expone valor atual do estado interno.
+- setDocumentNumber(...1 args): ajusta valor em estado interno.
+- getIssueDate(): expone valor atual do estado interno.
+- setIssueDate(...1 args): ajusta valor em estado interno.
+- getType(): expone valor atual do estado interno.
+- setType(...1 args): ajusta valor em estado interno.
+- getOriginalValue(): expone valor atual do estado interno.
+- setOriginalValue(...1 args): ajusta valor em estado interno.
+- getInterestValue(): expone valor atual do estado interno.
+- setInterestValue(...1 args): ajusta valor em estado interno.
+- getDiscountValue(): expone valor atual do estado interno.
+Atributos-chave:
+- sequenceCode: campo de estado para "sequence code".
+- documentNumber: campo de estado para "document number".
+- issueDate: campo de estado para "issue date".
+- type: campo de estado para "type".
+- originalValue: campo de estado para "original value".
+- interestValue: campo de estado para "interest value".
+- discountValue: campo de estado para "discount value".
+- valueToPay: campo de estado para "value to pay".
+- paid: campo de estado para "paid".
+- paidValue: campo de estado para "paid value".
+- competenceMonth: campo de estado para "competence month".
+- competenceYear: campo de estado para "competence year".
+- createdAt: campo de estado para "created at".
+- liquidationDate: campo de estado para "liquidation date".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.modelo.dataexport.contasapagar;
 
 import java.util.LinkedHashMap;

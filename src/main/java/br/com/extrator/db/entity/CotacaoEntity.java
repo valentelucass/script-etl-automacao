@@ -1,3 +1,51 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/db/entity/CotacaoEntity.java
+Classe  : CotacaoEntity (class)
+Pacote  : br.com.extrator.db.entity
+Modulo  : Entidade de persistencia
+Papel   : Implementa responsabilidade de cotacao entity.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Define estrutura de dados persistida no banco.
+2) Representa campos de tabela/view no dominio Java.
+3) Suporta transporte de dados entre camadas.
+
+Estrutura interna:
+Metodos principais:
+- getSequenceCode(): expone valor atual do estado interno.
+- setSequenceCode(...1 args): ajusta valor em estado interno.
+- getRequestedAt(): expone valor atual do estado interno.
+- setRequestedAt(...1 args): ajusta valor em estado interno.
+- getTotalValue(): expone valor atual do estado interno.
+- setTotalValue(...1 args): ajusta valor em estado interno.
+- getTaxedWeight(): expone valor atual do estado interno.
+- setTaxedWeight(...1 args): ajusta valor em estado interno.
+- getInvoicesValue(): expone valor atual do estado interno.
+- setInvoicesValue(...1 args): ajusta valor em estado interno.
+- getOriginCity(): expone valor atual do estado interno.
+- setOriginCity(...1 args): ajusta valor em estado interno.
+- getOriginState(): expone valor atual do estado interno.
+- setOriginState(...1 args): ajusta valor em estado interno.
+Atributos-chave:
+- sequenceCode: campo de estado para "sequence code".
+- requestedAt: campo de estado para "requested at".
+- operationType: campo de estado para "operation type".
+- customerDoc: campo de estado para "customer doc".
+- customerName: campo de estado para "customer name".
+- originCity: campo de estado para "origin city".
+- originState: campo de estado para "origin state".
+- destinationCity: campo de estado para "destination city".
+- destinationState: campo de estado para "destination state".
+- priceTable: campo de estado para "price table".
+- volumes: campo de estado para "volumes".
+- taxedWeight: campo de estado para "taxed weight".
+- invoicesValue: campo de estado para "invoices value".
+- totalValue: campo de estado para "total value".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.db.entity;
 
 import java.math.BigDecimal;

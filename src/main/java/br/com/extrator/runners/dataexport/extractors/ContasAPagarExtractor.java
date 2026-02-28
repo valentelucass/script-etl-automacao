@@ -1,3 +1,40 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/runners/dataexport/extractors/ContasAPagarExtractor.java
+Classe  : ContasAPagarExtractor (class)
+Pacote  : br.com.extrator.runners.dataexport.extractors
+Modulo  : Extractor DataExport
+Papel   : Implementa responsabilidade de contas apagar extractor.
+
+Conecta com:
+- ClienteApiDataExport (api)
+- ResultadoExtracao (api)
+- ContasAPagarDataExportEntity (db.entity)
+- InvalidRecordAuditRepository (db.repository)
+- ContasAPagarRepository (db.repository)
+- ContasAPagarDTO (modelo.dataexport.contasapagar)
+- ContasAPagarMapper (modelo.dataexport.contasapagar)
+- ConstantesExtracao (runners.common)
+
+Fluxo geral:
+1) Configura requisicao da API DataExport.
+2) Converte resposta em DTO/entidade de dominio.
+3) Persiste lote no repositorio correspondente.
+
+Estrutura interna:
+Metodos principais:
+- ContasAPagarExtractor(...4 args): realiza operacao relacionada a "contas apagar extractor".
+- extract(...2 args): realiza operacao relacionada a "extract".
+- getEntityName(): expone valor atual do estado interno.
+- getEmoji(): expone valor atual do estado interno.
+- auditarRegistroInvalido(...3 args): realiza operacao relacionada a "auditar registro invalido".
+Atributos-chave:
+- apiClient: cliente de integracao externa.
+- repository: dependencia de acesso a banco.
+- mapper: apoio de mapeamento de dados.
+- log: campo de estado para "log".
+- invalidRecordAuditRepository: dependencia de acesso a banco.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.runners.dataexport.extractors;
 
 import java.time.LocalDate;
@@ -20,7 +57,7 @@ import br.com.extrator.util.validacao.ConstantesEntidades;
 
 /**
  * Extractor para entidade Contas a Pagar (DataExport).
- * Inclui deduplicaÃ§Ã£o antes de salvar.
+ * Inclui deduplicação antes de salvar.
  */
 public class ContasAPagarExtractor implements DataExportEntityExtractor<ContasAPagarDTO> {
     
@@ -43,7 +80,7 @@ public class ContasAPagarExtractor implements DataExportEntityExtractor<ContasAP
     
     @Override
     public ResultadoExtracao<ContasAPagarDTO> extract(final LocalDate dataInicio, final LocalDate dataFim) {
-        // Usa intervalo informado quando disponÃ­vel; fallback para Ãºltimas 24h
+        // Usa intervalo informado quando disponível; fallback para últimas 24h
         if (dataInicio != null) {
             final LocalDate fim = (dataFim != null) ? dataFim : dataInicio;
             return apiClient.buscarContasAPagar(dataInicio, fim);
@@ -71,11 +108,11 @@ public class ContasAPagarExtractor implements DataExportEntityExtractor<ContasAP
             } catch (final RuntimeException e) {
                 registrosInvalidos++;
                 auditarRegistroInvalido(dto, "MAPEAMENTO_INVALIDO", e.getMessage());
-                log.warn("âš ï¸ Conta a pagar invÃ¡lida descartada: {}", e.getMessage());
+                log.warn("⚠️ Conta a pagar inválida descartada: {}", e.getMessage());
             }
         }
         if (registrosInvalidos > 0) {
-            log.warn("âš ï¸ {} registro(s) invÃ¡lido(s) descartado(s) em {}", registrosInvalidos, getEntityName());
+            log.warn("⚠️ {} registro(s) inválido(s) descartado(s) em {}", registrosInvalidos, getEntityName());
         }
         if (entities.isEmpty()) {
             return new SaveResult(0, 0, registrosInvalidos);

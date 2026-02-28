@@ -1,3 +1,39 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/seguranca/SegurancaRepository.java
+Classe  : SegurancaRepository (class)
+Pacote  : br.com.extrator.seguranca
+Modulo  : Modulo de seguranca
+Papel   : Implementa responsabilidade de seguranca repository.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Modela usuarios, perfis e acoes autorizadas.
+2) Implementa regras de autenticacao e senha.
+3) Gerencia repositorio de seguranca local.
+
+Estrutura interna:
+Metodos principais:
+- SegurancaRepository(): realiza operacao relacionada a "seguranca repository".
+- getDbPath(): expone valor atual do estado interno.
+- existeQualquerUsuarioAtivo(): realiza operacao relacionada a "existe qualquer usuario ativo".
+- existeUsuarioAdminAtivo(): realiza operacao relacionada a "existe usuario admin ativo".
+- buscarPorUsername(...1 args): consulta e retorna dados conforme criterio.
+- inserirUsuario(...5 args): inclui registros no destino configurado.
+- atualizarFalhaLogin(...3 args): altera estado/registros existentes.
+- registrarLoginSucesso(...1 args): grava informacoes de auditoria/log.
+- redefinirSenha(...3 args): realiza operacao relacionada a "redefinir senha".
+- desativarUsuario(...1 args): realiza operacao relacionada a "desativar usuario".
+- contarUsuariosAtivos(): realiza operacao relacionada a "contar usuarios ativos".
+- contarEventosAuditoria(): realiza operacao relacionada a "contar eventos auditoria".
+- registrarAuditoria(...5 args): grava informacoes de auditoria/log.
+- garantirDriverSqlite(): realiza operacao relacionada a "garantir driver sqlite".
+Atributos-chave:
+- dbPath: campo de estado para "db path".
+- jdbcUrl: campo de estado para "jdbc url".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.seguranca;
 
 import java.nio.file.Path;
@@ -21,6 +57,7 @@ public class SegurancaRepository {
     public SegurancaRepository() {
         this.dbPath = CaminhoBancoSegurancaResolver.resolver();
         this.jdbcUrl = "jdbc:sqlite:" + dbPath.toAbsolutePath();
+        garantirDriverSqlite();
         inicializarSchema();
     }
 
@@ -247,6 +284,14 @@ public class SegurancaRepository {
             stmt.execute("PRAGMA foreign_keys = ON");
         }
         return conn;
+    }
+
+    private void garantirDriverSqlite() {
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (final ClassNotFoundException e) {
+            throw new IllegalStateException("Driver SQLite nao encontrado no classpath.", e);
+        }
     }
 
     private void inicializarSchema() {

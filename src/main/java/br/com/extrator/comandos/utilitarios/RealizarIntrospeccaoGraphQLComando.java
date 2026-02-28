@@ -1,3 +1,25 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/comandos/utilitarios/RealizarIntrospeccaoGraphQLComando.java
+Classe  : RealizarIntrospeccaoGraphQLComando (class)
+Pacote  : br.com.extrator.comandos.utilitarios
+Modulo  : Componente Java
+Papel   : Implementa comportamento de realizar introspeccao graph qlcomando.
+
+Conecta com:
+- Comando (comandos.base)
+
+Fluxo geral:
+1) Define comportamento principal deste modulo.
+2) Interage com camadas relacionadas do sistema.
+3) Entrega resultado para o fluxo chamador.
+
+Estrutura interna:
+Metodos principais:
+- Metodos nao mapeados automaticamente; consulte a implementacao abaixo.
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.comandos.utilitarios;
 
 import org.slf4j.Logger;

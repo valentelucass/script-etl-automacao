@@ -1,3 +1,32 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/auditoria/execucao/ExecutionAuditor.java
+Classe  : ExecutionAuditor (class)
+Pacote  : br.com.extrator.auditoria.execucao
+Modulo  : Modulo de auditoria
+Papel   : Implementa responsabilidade de execution auditor.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Modela resultados e estado de auditoria.
+2) Apoia consolidacao de evidencias operacionais.
+3) Suporta emissao de relatorios de conformidade.
+
+Estrutura interna:
+Metodos principais:
+- ExecutionAuditor(): realiza operacao relacionada a "execution auditor".
+- registrarCsv(...6 args): grava informacoes de auditoria/log.
+- construirLinha(...6 args): realiza operacao relacionada a "construir linha".
+- sanitizar(...1 args): realiza operacao relacionada a "sanitizar".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- LOGS_DIR: campo de estado para "logs dir".
+- HISTORY_DIR: campo de estado para "history dir".
+- MONTH_FORMAT: campo de estado para "month format".
+- LINE_FORMAT: campo de estado para "line format".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.auditoria.execucao;
 
 import java.io.BufferedWriter;

@@ -1,3 +1,51 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/db/entity/FreteEntity.java
+Classe  : FreteEntity (class)
+Pacote  : br.com.extrator.db.entity
+Modulo  : Entidade de persistencia
+Papel   : Implementa responsabilidade de frete entity.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Define estrutura de dados persistida no banco.
+2) Representa campos de tabela/view no dominio Java.
+3) Suporta transporte de dados entre camadas.
+
+Estrutura interna:
+Metodos principais:
+- getId(): expone valor atual do estado interno.
+- setId(...1 args): ajusta valor em estado interno.
+- getServicoEm(): expone valor atual do estado interno.
+- setServicoEm(...1 args): ajusta valor em estado interno.
+- getCriadoEm(): expone valor atual do estado interno.
+- setCriadoEm(...1 args): ajusta valor em estado interno.
+- getStatus(): expone valor atual do estado interno.
+- setStatus(...1 args): ajusta valor em estado interno.
+- getModal(): expone valor atual do estado interno.
+- setModal(...1 args): ajusta valor em estado interno.
+- getTipoFrete(): expone valor atual do estado interno.
+- setTipoFrete(...1 args): ajusta valor em estado interno.
+- getAccountingCreditId(): expone valor atual do estado interno.
+- setAccountingCreditId(...1 args): ajusta valor em estado interno.
+Atributos-chave:
+- id: campo de estado para "id".
+- servicoEm: campo de estado para "servico em".
+- criadoEm: campo de estado para "criado em".
+- status: campo de estado para "status".
+- modal: campo de estado para "modal".
+- tipoFrete: campo de estado para "tipo frete".
+- accountingCreditId: campo de estado para "accounting credit id".
+- accountingCreditInstallmentId: campo de estado para "accounting credit installment id".
+- valorTotal: campo de estado para "valor total".
+- valorNotas: campo de estado para "valor notas".
+- pesoNotas: campo de estado para "peso notas".
+- idCorporacao: campo de estado para "id corporacao".
+- idCidadeDestino: campo de estado para "id cidade destino".
+- dataPrevisaoEntrega: campo de estado para "data previsao entrega".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.db.entity;
 
 import java.math.BigDecimal;

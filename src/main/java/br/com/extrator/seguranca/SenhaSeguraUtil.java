@@ -1,3 +1,34 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/seguranca/SenhaSeguraUtil.java
+Classe  : SenhaSeguraUtil (class)
+Pacote  : br.com.extrator.seguranca
+Modulo  : Modulo de seguranca
+Papel   : Implementa responsabilidade de senha segura util.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Modela usuarios, perfis e acoes autorizadas.
+2) Implementa regras de autenticacao e senha.
+3) Gerencia repositorio de seguranca local.
+
+Estrutura interna:
+Metodos principais:
+- SenhaSeguraUtil(): realiza operacao relacionada a "senha segura util".
+- gerarSaltBase64(): realiza operacao relacionada a "gerar salt base64".
+- gerarHashBase64(...3 args): realiza operacao relacionada a "gerar hash base64".
+- validarSenha(...4 args): aplica regras de validacao e consistencia.
+- comparacaoConstante(...2 args): realiza operacao relacionada a "comparacao constante".
+- combinarSenhaComPepper(...2 args): realiza operacao relacionada a "combinar senha com pepper".
+- senhaAtendePolitica(...1 args): realiza operacao relacionada a "senha atende politica".
+Atributos-chave:
+- ALGORITMO: campo de estado para "algoritmo".
+- ITERACOES: campo de estado para "iteracoes".
+- TAMANHO_HASH_BITS: campo de estado para "tamanho hash bits".
+- TAMANHO_SALT_BYTES: campo de estado para "tamanho salt bytes".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.seguranca;
 
 import java.security.NoSuchAlgorithmException;

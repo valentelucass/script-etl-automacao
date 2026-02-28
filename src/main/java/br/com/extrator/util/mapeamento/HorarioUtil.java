@@ -1,3 +1,28 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/util/mapeamento/HorarioUtil.java
+Classe  : HorarioUtil (class)
+Pacote  : br.com.extrator.util.mapeamento
+Modulo  : Utilitario compartilhado
+Papel   : Implementa responsabilidade de horario util.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Centraliza funcoes auxiliares reutilizaveis.
+2) Evita repeticao de logica transversal.
+3) Apoia configuracao, formatacao e infraestrutura.
+
+Estrutura interna:
+Metodos principais:
+- HorarioUtil(): realiza operacao relacionada a "horario util".
+- normalizarHora(...1 args): realiza operacao relacionada a "normalizar hora".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- FORMATTER_ISO: campo de estado para "formatter iso".
+- FORMATTER_HHMM: campo de estado para "formatter hhmm".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.util.mapeamento;
 
 import java.time.LocalTime;

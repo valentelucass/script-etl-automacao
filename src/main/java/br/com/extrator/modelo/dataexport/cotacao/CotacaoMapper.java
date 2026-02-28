@@ -1,3 +1,30 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/modelo/dataexport/cotacao/CotacaoMapper.java
+Classe  : CotacaoMapper (class)
+Pacote  : br.com.extrator.modelo.dataexport.cotacao
+Modulo  : DTO/Mapper DataExport
+Papel   : Implementa responsabilidade de cotacao mapper.
+
+Conecta com:
+- CotacaoEntity (db.entity)
+- ValidadorDTO (util.validacao)
+- ResultadoValidacao (util.validacao.ValidadorDTO)
+- FormatadorData (util.formatacao)
+- MapperUtil (util.mapeamento)
+
+Fluxo geral:
+1) Modela payloads da API DataExport.
+2) Mapeia resposta para entidades internas.
+3) Apoia carga e deduplicacao no destino.
+
+Estrutura interna:
+Metodos principais:
+- CotacaoMapper(): realiza operacao relacionada a "cotacao mapper".
+- toEntity(...1 args): realiza operacao relacionada a "to entity".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.modelo.dataexport.cotacao;
 
 import br.com.extrator.db.entity.CotacaoEntity;

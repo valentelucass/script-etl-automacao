@@ -1,3 +1,50 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/runners/common/ExtractionResult.java
+Classe  : ExtractionResult (class)
+Pacote  : br.com.extrator.runners.common
+Modulo  : Componente compartilhado de extracao
+Papel   : Implementa responsabilidade de extraction result.
+
+Conecta com:
+- ResultadoExtracao (api)
+- LogExtracaoEntity (db.entity)
+- ConstantesEntidades (util.validacao)
+
+Fluxo geral:
+1) Disponibiliza contratos e utilitarios transversais.
+2) Padroniza resultado, log e comportamento comum.
+3) Reduz duplicacao entre GraphQL e DataExport.
+
+Estrutura interna:
+Metodos principais:
+- ExtractionResult(...1 args): realiza operacao relacionada a "extraction result".
+- sucesso(...5 args): realiza operacao relacionada a "sucesso".
+- sucessoComUnicos(...6 args): realiza operacao relacionada a "sucesso com unicos".
+- erro(...3 args): realiza operacao relacionada a "erro".
+- erroComParcial(...5 args): realiza operacao relacionada a "erro com parcial".
+- toLogEntity(): realiza operacao relacionada a "to log entity".
+- getEntityName(): expone valor atual do estado interno.
+- isSucesso(): retorna estado booleano de controle.
+- getErro(): expone valor atual do estado interno.
+- getRegistrosSalvos(): expone valor atual do estado interno.
+- getRegistrosExtraidos(): expone valor atual do estado interno.
+- getPaginasProcessadas(): expone valor atual do estado interno.
+- getStatus(): expone valor atual do estado interno.
+- getTotalUnicos(): expone valor atual do estado interno.
+Atributos-chave:
+- entityName: campo de estado para "entity name".
+- inicio: campo de estado para "inicio".
+- fim: campo de estado para "fim".
+- status: campo de estado para "status".
+- registrosSalvos: campo de estado para "registros salvos".
+- registrosExtraidos: campo de estado para "registros extraidos".
+- totalUnicos: campo de estado para "total unicos".
+- paginasProcessadas: campo de estado para "paginas processadas".
+- mensagem: campo de estado para "mensagem".
+- sucesso: campo de estado para "sucesso".
+- erro: campo de estado para "erro".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.runners.common;
 
 import java.time.LocalDateTime;
@@ -7,7 +54,7 @@ import br.com.extrator.db.entity.LogExtracaoEntity;
 import br.com.extrator.util.validacao.ConstantesEntidades;
 
 /**
- * Wrapper para resultados de extraÃ§Ã£o, facilitando logging e tratamento de erros.
+ * Wrapper para resultados de extração, facilitando logging e tratamento de erros.
  */
 public class ExtractionResult {
     private final String entityName;
@@ -15,8 +62,8 @@ public class ExtractionResult {
     private final LocalDateTime fim;
     private final String status;
     private final int registrosSalvos;
-    private final int registrosExtraidos; // Total extraÃ­do da API (antes de deduplicaÃ§Ã£o)
-    private final int totalUnicos; // Total apÃ³s deduplicaÃ§Ã£o (para DataExport)
+    private final int registrosExtraidos; // Total extraído da API (antes de deduplicação)
+    private final int totalUnicos; // Total após deduplicação (para DataExport)
     private final int paginasProcessadas;
     private final String mensagem;
     private final boolean sucesso;
@@ -45,7 +92,7 @@ public class ExtractionResult {
             .status(resultado.isCompleto() ? ConstantesEntidades.STATUS_COMPLETO : ConstantesEntidades.STATUS_INCOMPLETO_LIMITE)
             .registrosSalvos(registrosSalvos)
             .registrosExtraidos(resultado.getRegistrosExtraidos())
-            .totalUnicos(resultado.getDados().size()) // PadrÃ£o: tamanho da lista
+            .totalUnicos(resultado.getDados().size()) // Padrão: tamanho da lista
             .paginasProcessadas(resultado.getPaginasProcessadas())
             .mensagem(mensagem)
             .sucesso(true);
@@ -79,7 +126,7 @@ public class ExtractionResult {
                                          final int registrosExtraidos,
                                          final int paginasProcessadas) {
         final String sufixoProgresso = registrosExtraidos > 0 || paginasProcessadas > 0
-            ? String.format(" | Progresso antes da falha: %d registros da API, %d pÃ¡ginas", registrosExtraidos, paginasProcessadas)
+            ? String.format(" | Progresso antes da falha: %d registros da API, %d páginas", registrosExtraidos, paginasProcessadas)
             : "";
         return new Builder(entityName, inicio)
             .status(ConstantesEntidades.STATUS_ERRO_API)
@@ -110,7 +157,7 @@ public class ExtractionResult {
             entityName,
             inicio,
             fim != null ? fim : LocalDateTime.now(),
-            status, // String - serÃ¡ convertido para enum internamente
+            status, // String - será convertido para enum internamente
             registrosParaLog,
             paginasProcessadas,
             mensagem

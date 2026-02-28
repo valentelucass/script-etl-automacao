@@ -1,3 +1,43 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/util/formatacao/FormatadorData.java
+Classe  : FormatadorData (class)
+Pacote  : br.com.extrator.util.formatacao
+Modulo  : Utilitario compartilhado
+Papel   : Implementa responsabilidade de formatador data.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Centraliza funcoes auxiliares reutilizaveis.
+2) Evita repeticao de logica transversal.
+3) Apoia configuracao, formatacao e infraestrutura.
+
+Estrutura interna:
+Metodos principais:
+- parseLocalDate(...1 args): realiza operacao relacionada a "parse local date".
+- parseLocalDate(...2 args): realiza operacao relacionada a "parse local date".
+- parseLocalDateTime(...1 args): realiza operacao relacionada a "parse local date time".
+- parseOffsetDateTime(...1 args): realiza operacao relacionada a "parse offset date time".
+- formatISO(...1 args): realiza operacao relacionada a "format iso".
+- formatBR(...1 args): realiza operacao relacionada a "format br".
+- formatFileName(...1 args): realiza operacao relacionada a "format file name".
+- formatLog(...1 args): realiza operacao relacionada a "format log".
+- agoraFormatadoLog(): realiza operacao relacionada a "agora formatado log".
+- agoraFormatadoArquivo(): realiza operacao relacionada a "agora formatado arquivo".
+- FormatadorData(): realiza operacao relacionada a "formatador data".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- ISO_DATE: campo de estado para "iso date".
+- ISO_DATE_TIME: campo de estado para "iso date time".
+- ISO_OFFSET_DATE_TIME: campo de estado para "iso offset date time".
+- BR_DATE: campo de estado para "br date".
+- BR_DATE_TIME: campo de estado para "br date time".
+- LOG_DATE_TIME: campo de estado para "log date time".
+- FILE_NAME: campo de estado para "file name".
+- OFFSET_PADRAO_SEM_TIMEZONE: campo de estado para "offset padrao sem timezone".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.util.formatacao;
 
 import java.time.LocalDate;

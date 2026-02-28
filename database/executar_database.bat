@@ -1,4 +1,23 @@
 @echo off
+REM ==[DOC-FILE]===============================================================
+REM Arquivo : database/executar_database.bat
+REM Tipo    : Script operacional Windows (.bat)
+REM Papel   : Automatiza a rotina "executar database" para uso operacional.
+REM
+REM Conecta com:
+REM - call: config.bat
+REM
+REM Fluxo geral:
+REM 1) Carrega parametros de conexao e scripts SQL.
+REM 2) Executa criacao/atualizacao de objetos no banco.
+REM 3) Exibe resultado para validacao operacional.
+REM
+REM Variaveis-chave:
+REM - AUTH_CMD: controle de estado do script.
+REM - SQLCMDPASSWORD: controle de estado do script.
+REM - CURRENT_SCRIPT: controle de estado do script.
+REM [DOC-FILE-END]===========================================================
+
 chcp 65001 >nul
 setlocal
 
@@ -54,12 +73,19 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM --- 5. Definir autenticacao: -E (Windows) ou -U -P (SQL) ---
+REM --- 5. Definir autenticacao: -E (Windows) ou -U + SQLCMDPASSWORD (SQL) ---
 if "%DB_USER%"=="" (
     set "AUTH_CMD=-E"
+    set "SQLCMDPASSWORD="
     echo Autenticacao: Windows ^(integrada^)
 ) else (
-    set AUTH_CMD=-U %DB_USER% -P "%DB_PASSWORD%"
+    if "%DB_PASSWORD%"=="" (
+        echo [ERRO] DB_PASSWORD nao definido no config.bat para autenticacao SQL
+        pause
+        exit /b 1
+    )
+    set "AUTH_CMD=-U %DB_USER%"
+    set "SQLCMDPASSWORD=%DB_PASSWORD%"
     echo Autenticacao: SQL ^(%DB_USER%^)
 )
 echo Servidor: %DB_SERVER%  ^|  Banco: %DB_NAME%
@@ -79,6 +105,7 @@ for %%F in (
     "tabelas\010_criar_tabela_page_audit.sql"
     "tabelas\011_criar_tabela_dim_usuarios.sql"
     "tabelas\012_criar_tabela_sys_execution_history.sql"
+    "tabelas\013_criar_tabela_sys_auditoria_temp.sql"
     "indices\001_criar_indices_performance.sql"
     "views\011_criar_view_faturas_por_cliente_powerbi.sql"
     "views\012_criar_view_fretes_powerbi.sql"
@@ -95,7 +122,6 @@ for %%F in (
     "views-dimensao\022_criar_view_dim_motoristas.sql"
     "views-dimensao\023_criar_view_dim_planocontas.sql"
     "views-dimensao\024_criar_view_dim_usuarios.sql"
-    "views-dimensao\027_criar_view_dim_usuarios.sql"
     "seguranca\024_configurar_permissoes_usuario.sql"
     "validacao\025_validar_views_dimensao.sql"
     "validacao\026_validar_tipo_destroy_user_id.sql"
@@ -123,6 +149,8 @@ pause
 exit /b 1
 
 :fim
+
+set "SQLCMDPASSWORD="
 
 echo.
 echo ============================================

@@ -1,8 +1,40 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/Main.java
+Classe  : Main (class)
+Pacote  : br.com.extrator
+Modulo  : Orquestrador principal
+Papel   : Orquestra a execucao da aplicacao e despacho dos comandos CLI.
+
+Conecta com:
+- ExecutionAuditor (auditoria.execucao)
+- CommandRegistry (comandos)
+- Comando (comandos.base)
+- ExibirAjudaComando (comandos.console)
+- PartialExecutionException (comandos.extracao)
+- ExecutionHistoryRepository (db.repository)
+- LoggingService (servicos)
+
+Fluxo geral:
+1) Interpreta argumentos e seleciona comando de execucao.
+2) Coordena log operacional e persistencia de historico.
+3) Centraliza tratamento de erros e codigo de saida.
+
+Estrutura interna:
+Metodos principais:
+- main(...1 args): ponto de entrada da execucao.
+- organizarLogsTxtNaPastaLogs(): realiza operacao relacionada a "organizar logs txt na pasta logs".
+- isComandoLongaDuracao(...1 args): retorna estado booleano de controle.
+- isComandoSilencioso(...1 args): retorna estado booleano de controle.
+- isErroEsperado(...1 args): retorna estado booleano de controle.
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- COMANDOS: campo de estado para "comandos".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -11,32 +43,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import br.com.extrator.auditoria.execucao.ExecutionAuditor;
-import br.com.extrator.comandos.auditoria.AuditarEstruturaApiComando;
-import br.com.extrator.comandos.auditoria.ExecutarAuditoriaComando;
+import br.com.extrator.comandos.CommandRegistry;
 import br.com.extrator.comandos.base.Comando;
-import br.com.extrator.comandos.extracao.PartialExecutionException;
 import br.com.extrator.comandos.console.ExibirAjudaComando;
-import br.com.extrator.comandos.extracao.ExecutarExtracaoPorIntervaloComando;
-import br.com.extrator.comandos.extracao.ExecutarFluxoCompletoComando;
-import br.com.extrator.comandos.extracao.LoopDaemonComando;
-import br.com.extrator.comandos.extracao.LoopExtracaoComando;
-import br.com.extrator.comandos.seguranca.AuthBootstrapComando;
-import br.com.extrator.comandos.seguranca.AuthCheckComando;
-import br.com.extrator.comandos.seguranca.AuthCreateUserComando;
-import br.com.extrator.comandos.seguranca.AuthDisableUserComando;
-import br.com.extrator.comandos.seguranca.AuthInfoComando;
-import br.com.extrator.comandos.seguranca.AuthResetPasswordComando;
-import br.com.extrator.comandos.utilitarios.ExportarCsvComando;
-import br.com.extrator.comandos.utilitarios.LimparTabelasComando;
-import br.com.extrator.comandos.utilitarios.RealizarIntrospeccaoGraphQLComando;
-import br.com.extrator.comandos.utilitarios.TestarApiComando;
-import br.com.extrator.comandos.validacao.ValidarAcessoComando;
-import br.com.extrator.comandos.validacao.ValidarApiVsBanco24hComando;
-import br.com.extrator.comandos.validacao.ValidarApiVsBanco24hDetalhadoComando;
-import br.com.extrator.comandos.validacao.ValidarDadosCompletoComando;
-import br.com.extrator.comandos.validacao.ValidarManifestosComando;
-import br.com.extrator.comandos.validacao.VerificarTimestampsComando;
-import br.com.extrator.comandos.validacao.VerificarTimezoneComando;
+import br.com.extrator.comandos.extracao.PartialExecutionException;
 import br.com.extrator.db.repository.ExecutionHistoryRepository;
 import br.com.extrator.servicos.LoggingService;
 
@@ -46,42 +56,7 @@ import br.com.extrator.servicos.LoggingService;
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
-    private static final Map<String, Comando> COMANDOS = criarMapaComandos();
-
-    private static Map<String, Comando> criarMapaComandos() {
-        final Map<String, Comando> comandos = new HashMap<>();
-        comandos.put("--fluxo-completo", new ExecutarFluxoCompletoComando());
-        comandos.put("--extracao-intervalo", new ExecutarExtracaoPorIntervaloComando());
-        comandos.put("--loop", new LoopExtracaoComando());
-        comandos.put("--validar", new ValidarAcessoComando());
-        comandos.put("--ajuda", new ExibirAjudaComando());
-        comandos.put("--help", new ExibirAjudaComando());
-        comandos.put("--introspeccao", new RealizarIntrospeccaoGraphQLComando());
-        comandos.put("--auditoria", new ExecutarAuditoriaComando());
-        comandos.put("--auditar-api", new AuditarEstruturaApiComando());
-        comandos.put("--testar-api", new TestarApiComando());
-        comandos.put("--limpar-tabelas", new LimparTabelasComando());
-        comandos.put("--verificar-timestamps", new VerificarTimestampsComando());
-        comandos.put("--verificar-timezone", new VerificarTimezoneComando());
-        comandos.put("--validar-manifestos", new ValidarManifestosComando());
-        comandos.put("--validar-dados", new ValidarDadosCompletoComando());
-        comandos.put("--validar-api-banco-24h", new ValidarApiVsBanco24hComando());
-        comandos.put("--validar-api-banco-24h-detalhado", new ValidarApiVsBanco24hDetalhadoComando());
-        comandos.put("--exportar-csv", new ExportarCsvComando());
-
-        comandos.put("--auth-check", new AuthCheckComando());
-        comandos.put("--auth-bootstrap", new AuthBootstrapComando());
-        comandos.put("--auth-create-user", new AuthCreateUserComando());
-        comandos.put("--auth-reset-password", new AuthResetPasswordComando());
-        comandos.put("--auth-disable-user", new AuthDisableUserComando());
-        comandos.put("--auth-info", new AuthInfoComando());
-
-        comandos.put("--loop-daemon-start", new LoopDaemonComando(LoopDaemonComando.Modo.START));
-        comandos.put("--loop-daemon-stop", new LoopDaemonComando(LoopDaemonComando.Modo.STOP));
-        comandos.put("--loop-daemon-status", new LoopDaemonComando(LoopDaemonComando.Modo.STATUS));
-        comandos.put("--loop-daemon-run", new LoopDaemonComando(LoopDaemonComando.Modo.RUN));
-        return comandos;
-    }
+    private static final Map<String, Comando> COMANDOS = CommandRegistry.criarMapaComandos();
 
     public static void main(final String[] args) {
         final String nomeComando = (args.length == 0) ? "--fluxo-completo" : args[0].toLowerCase();
@@ -113,7 +88,7 @@ public class Main {
             try {
                 final ExecutionHistoryRepository repo = new ExecutionHistoryRepository();
                 totalRecords = repo.calcularTotalRegistros(inicioExecucao, fimExecucao);
-            } catch (final Throwable t) {
+            } catch (final RuntimeException t) {
                 logger.warn("Falha ao calcular total de registros: {}", t.getMessage());
             }
 
@@ -137,7 +112,7 @@ public class Main {
                     errorCategoryRef.get(),
                     errorMessageRef.get()
                 );
-            } catch (final Throwable t) {
+            } catch (final RuntimeException t) {
                 logger.warn("Falha ao gravar historico de execucao no banco: {}", t.getMessage());
             }
         };
@@ -182,7 +157,10 @@ public class Main {
             exitCode = 2;
             logger.warn("Execucao concluida com falhas parciais: {}", e.getMessage());
             System.err.println("Execucao parcial: " + e.getMessage());
-        } catch (final Throwable e) {
+        } catch (final Error e) {
+            logger.error("Erro irrecuperavel durante execucao: {}", e.getMessage(), e);
+            throw e;
+        } catch (final Exception e) {
             final String mensagem = (e.getMessage() == null || e.getMessage().isBlank())
                 ? e.getClass().getSimpleName()
                 : e.getMessage();
@@ -226,7 +204,7 @@ public class Main {
             || "--loop-daemon-status".equals(nomeComando);
     }
 
-    private static boolean isErroEsperado(final Throwable e) {
+    private static boolean isErroEsperado(final Exception e) {
         return e instanceof IllegalArgumentException || e instanceof IllegalStateException;
     }
 }

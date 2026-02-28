@@ -1,3 +1,51 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/modelo/graphql/coletas/ColetaNodeDTO.java
+Classe  : ColetaNodeDTO (class)
+Pacote  : br.com.extrator.modelo.graphql.coletas
+Modulo  : DTO/Mapper GraphQL
+Papel   : Implementa responsabilidade de coleta node dto.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Modela payloads da API GraphQL.
+2) Mapeia estrutura remota para modelo interno.
+3) Apoia persistencia e validacao do extrator.
+
+Estrutura interna:
+Metodos principais:
+- add(...2 args): realiza operacao relacionada a "add".
+- getId(): expone valor atual do estado interno.
+- setId(...1 args): ajusta valor em estado interno.
+- getAgentId(): expone valor atual do estado interno.
+- setAgentId(...1 args): ajusta valor em estado interno.
+- getCancellationReason(): expone valor atual do estado interno.
+- setCancellationReason(...1 args): ajusta valor em estado interno.
+- getCancellationUserId(): expone valor atual do estado interno.
+- setCancellationUserId(...1 args): ajusta valor em estado interno.
+- getCargoClassificationId(): expone valor atual do estado interno.
+- setCargoClassificationId(...1 args): ajusta valor em estado interno.
+- getComments(): expone valor atual do estado interno.
+- setComments(...1 args): ajusta valor em estado interno.
+- getCostCenterId(): expone valor atual do estado interno.
+Atributos-chave:
+- id: campo de estado para "id".
+- agentId: campo de estado para "agent id".
+- cancellationReason: campo de estado para "cancellation reason".
+- cancellationUserId: campo de estado para "cancellation user id".
+- cargoClassificationId: campo de estado para "cargo classification id".
+- comments: campo de estado para "comments".
+- costCenterId: campo de estado para "cost center id".
+- destroyReason: campo de estado para "destroy reason".
+- destroyUserId: campo de estado para "destroy user id".
+- invoicesCubedWeight: campo de estado para "invoices cubed weight".
+- invoicesValue: campo de estado para "invoices value".
+- invoicesVolumes: campo de estado para "invoices volumes".
+- invoicesWeight: campo de estado para "invoices weight".
+- taxedWeight: campo de estado para "taxed weight".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.modelo.graphql.coletas;
 
 import java.math.BigDecimal;

@@ -1,3 +1,38 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/api/ResultadoExtracao.java
+Classe  : ResultadoExtracao (class)
+Pacote  : br.com.extrator.api
+Modulo  : Cliente de integracao API
+Papel   : Implementa responsabilidade de resultado extracao.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Monta requisicoes para endpoints externos.
+2) Trata autenticacao, timeout e parse de resposta.
+3) Entrega dados normalizados para os extractors.
+
+Estrutura interna:
+Metodos principais:
+- ResultadoExtracao(...3 args): realiza operacao relacionada a "resultado extracao".
+- ResultadoExtracao(...4 args): realiza operacao relacionada a "resultado extracao".
+- getDados(): expone valor atual do estado interno.
+- isCompleto(): retorna estado booleano de controle.
+- getMotivoInterrupcao(): expone valor atual do estado interno.
+- getPaginasProcessadas(): expone valor atual do estado interno.
+- getRegistrosExtraidos(): expone valor atual do estado interno.
+- completo(...3 args): realiza operacao relacionada a "completo".
+- incompleto(...4 args): realiza operacao relacionada a "incompleto".
+- toString(): realiza operacao relacionada a "to string".
+Atributos-chave:
+- dados: campo de estado para "dados".
+- completo: campo de estado para "completo".
+- motivoInterrupcao: campo de estado para "motivo interrupcao".
+- paginasProcessadas: campo de estado para "paginas processadas".
+- registrosExtraidos: campo de estado para "registros extraidos".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.api;
 
 import java.util.ArrayList;

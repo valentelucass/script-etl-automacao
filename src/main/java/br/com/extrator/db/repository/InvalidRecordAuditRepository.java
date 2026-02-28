@@ -1,3 +1,28 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/db/repository/InvalidRecordAuditRepository.java
+Classe  : InvalidRecordAuditRepository (class)
+Pacote  : br.com.extrator.db.repository
+Modulo  : Repositorio de dados
+Papel   : Implementa responsabilidade de invalid record audit repository.
+
+Conecta com:
+- GerenciadorConexao (util.banco)
+
+Fluxo geral:
+1) Monta comandos SQL e parametros.
+2) Executa operacoes de persistencia/consulta no banco.
+3) Converte resultado para entidades de dominio.
+
+Estrutura interna:
+Metodos principais:
+- registrarRegistroInvalido(...5 args): grava informacoes de auditoria/log.
+- limitar(...2 args): realiza operacao relacionada a "limitar".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- LOCK: campo de estado para "lock".
+- tabelaGarantida: campo de estado para "tabela garantida".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.db.repository;
 
 import java.sql.Connection;

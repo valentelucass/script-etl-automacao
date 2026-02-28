@@ -1,3 +1,26 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/comandos/utilitarios/ExportarCsvComando.java
+Classe  : ExportarCsvComando (class)
+Pacote  : br.com.extrator.comandos.utilitarios
+Modulo  : Componente Java
+Papel   : Implementa comportamento de exportar csv comando.
+
+Conecta com:
+- Comando (comandos.base)
+- ExportadorCSV (util.formatacao)
+
+Fluxo geral:
+1) Define comportamento principal deste modulo.
+2) Interage com camadas relacionadas do sistema.
+3) Entrega resultado para o fluxo chamador.
+
+Estrutura interna:
+Metodos principais:
+- Metodos nao mapeados automaticamente; consulte a implementacao abaixo.
+Atributos-chave:
+- Atributos nao mapeados automaticamente; consulte a implementacao abaixo.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.comandos.utilitarios;
 
 import br.com.extrator.comandos.base.Comando;

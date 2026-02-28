@@ -1,3 +1,51 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/modelo/dataexport/localizacaocarga/LocalizacaoCargaDTO.java
+Classe  : LocalizacaoCargaDTO (class)
+Pacote  : br.com.extrator.modelo.dataexport.localizacaocarga
+Modulo  : DTO/Mapper DataExport
+Papel   : Implementa responsabilidade de localizacao carga dto.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Modela payloads da API DataExport.
+2) Mapeia resposta para entidades internas.
+3) Apoia carga e deduplicacao no destino.
+
+Estrutura interna:
+Metodos principais:
+- add(...2 args): realiza operacao relacionada a "add".
+- getAllProperties(): expone valor atual do estado interno.
+- getSequenceNumber(): expone valor atual do estado interno.
+- setSequenceNumber(...1 args): ajusta valor em estado interno.
+- getServiceAt(): expone valor atual do estado interno.
+- setServiceAt(...1 args): ajusta valor em estado interno.
+- getStatus(): expone valor atual do estado interno.
+- setStatus(...1 args): ajusta valor em estado interno.
+- getTotalValue(): expone valor atual do estado interno.
+- setTotalValue(...1 args): ajusta valor em estado interno.
+- getPredictedDeliveryAt(): expone valor atual do estado interno.
+- setPredictedDeliveryAt(...1 args): ajusta valor em estado interno.
+- getOriginLocationName(): expone valor atual do estado interno.
+- setOriginLocationName(...1 args): ajusta valor em estado interno.
+Atributos-chave:
+- sequenceNumber: campo de estado para "sequence number".
+- type: campo de estado para "type".
+- serviceAt: campo de estado para "service at".
+- invoicesVolumes: campo de estado para "invoices volumes".
+- taxedWeight: campo de estado para "taxed weight".
+- invoicesValue: campo de estado para "invoices value".
+- totalValue: campo de estado para "total value".
+- serviceType: campo de estado para "service type".
+- branchNickname: campo de estado para "branch nickname".
+- predictedDeliveryAt: campo de estado para "predicted delivery at".
+- destinationLocationName: campo de estado para "destination location name".
+- destinationBranchNickname: campo de estado para "destination branch nickname".
+- classification: campo de estado para "classification".
+- status: campo de estado para "status".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.modelo.dataexport.localizacaocarga;
 
 import java.util.HashMap;

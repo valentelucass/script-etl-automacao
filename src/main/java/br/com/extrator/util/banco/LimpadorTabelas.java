@@ -1,3 +1,26 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/util/banco/LimpadorTabelas.java
+Classe  : LimpadorTabelas (class)
+Pacote  : br.com.extrator.util.banco
+Modulo  : Utilitario compartilhado
+Papel   : Implementa responsabilidade de limpador tabelas.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Centraliza funcoes auxiliares reutilizaveis.
+2) Evita repeticao de logica transversal.
+3) Apoia configuracao, formatacao e infraestrutura.
+
+Estrutura interna:
+Metodos principais:
+- main(...1 args): ponto de entrada da execucao.
+- limparTabela(...2 args): realiza operacao relacionada a "limpar tabela".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.util.banco;
 
 import java.sql.Connection;

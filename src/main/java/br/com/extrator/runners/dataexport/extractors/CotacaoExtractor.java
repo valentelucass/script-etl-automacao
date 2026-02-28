@@ -1,3 +1,40 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/runners/dataexport/extractors/CotacaoExtractor.java
+Classe  : CotacaoExtractor (class)
+Pacote  : br.com.extrator.runners.dataexport.extractors
+Modulo  : Extractor DataExport
+Papel   : Implementa responsabilidade de cotacao extractor.
+
+Conecta com:
+- ClienteApiDataExport (api)
+- ResultadoExtracao (api)
+- CotacaoEntity (db.entity)
+- InvalidRecordAuditRepository (db.repository)
+- CotacaoRepository (db.repository)
+- CotacaoDTO (modelo.dataexport.cotacao)
+- CotacaoMapper (modelo.dataexport.cotacao)
+- ConstantesExtracao (runners.common)
+
+Fluxo geral:
+1) Configura requisicao da API DataExport.
+2) Converte resposta em DTO/entidade de dominio.
+3) Persiste lote no repositorio correspondente.
+
+Estrutura interna:
+Metodos principais:
+- CotacaoExtractor(...4 args): realiza operacao relacionada a "cotacao extractor".
+- extract(...2 args): realiza operacao relacionada a "extract".
+- getEntityName(): expone valor atual do estado interno.
+- getEmoji(): expone valor atual do estado interno.
+- auditarRegistroInvalido(...3 args): realiza operacao relacionada a "auditar registro invalido".
+Atributos-chave:
+- apiClient: cliente de integracao externa.
+- repository: dependencia de acesso a banco.
+- mapper: apoio de mapeamento de dados.
+- log: campo de estado para "log".
+- invalidRecordAuditRepository: dependencia de acesso a banco.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.runners.dataexport.extractors;
 
 import java.time.LocalDate;
@@ -19,8 +56,8 @@ import br.com.extrator.util.mapeamento.MapperUtil;
 import br.com.extrator.util.validacao.ConstantesEntidades;
 
 /**
- * Extractor para entidade CotaÃ§Ãµes (DataExport).
- * Inclui deduplicaÃ§Ã£o antes de salvar.
+ * Extractor para entidade Cotações (DataExport).
+ * Inclui deduplicação antes de salvar.
  */
 public class CotacaoExtractor implements DataExportEntityExtractor<CotacaoDTO> {
     
@@ -43,7 +80,7 @@ public class CotacaoExtractor implements DataExportEntityExtractor<CotacaoDTO> {
     
     @Override
     public ResultadoExtracao<CotacaoDTO> extract(final LocalDate dataInicio, final LocalDate dataFim) {
-        // Usa intervalo informado quando disponÃ­vel; fallback para Ãºltimas 24h
+        // Usa intervalo informado quando disponível; fallback para últimas 24h
         if (dataInicio != null) {
             final LocalDate fim = (dataFim != null) ? dataFim : dataInicio;
             return apiClient.buscarCotacoes(dataInicio, fim);
@@ -71,11 +108,11 @@ public class CotacaoExtractor implements DataExportEntityExtractor<CotacaoDTO> {
             } catch (final RuntimeException e) {
                 registrosInvalidos++;
                 auditarRegistroInvalido(dto, "MAPEAMENTO_INVALIDO", e.getMessage());
-                log.warn("âš ï¸ CotaÃ§Ã£o invÃ¡lida descartada: {}", e.getMessage());
+                log.warn("⚠️ Cotação inválida descartada: {}", e.getMessage());
             }
         }
         if (registrosInvalidos > 0) {
-            log.warn("âš ï¸ {} registro(s) invÃ¡lido(s) descartado(s) em {}", registrosInvalidos, getEntityName());
+            log.warn("⚠️ {} registro(s) inválido(s) descartado(s) em {}", registrosInvalidos, getEntityName());
         }
         if (entities.isEmpty()) {
             return new SaveResult(0, 0, registrosInvalidos);

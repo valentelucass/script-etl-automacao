@@ -1,3 +1,51 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/modelo/dataexport/faturaporcliente/FaturaPorClienteDTO.java
+Classe  : FaturaPorClienteDTO (class)
+Pacote  : br.com.extrator.modelo.dataexport.faturaporcliente
+Modulo  : DTO/Mapper DataExport
+Papel   : Implementa responsabilidade de fatura por cliente dto.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Modela payloads da API DataExport.
+2) Mapeia resposta para entidades internas.
+3) Apoia carga e deduplicacao no destino.
+
+Estrutura interna:
+Metodos principais:
+- getNfseNumber(): expone valor atual do estado interno.
+- setNfseNumber(...1 args): ajusta valor em estado interno.
+- getCteNumber(): expone valor atual do estado interno.
+- setCteNumber(...1 args): ajusta valor em estado interno.
+- getCteIssuedAt(): expone valor atual do estado interno.
+- setCteIssuedAt(...1 args): ajusta valor em estado interno.
+- getCteKey(): expone valor atual do estado interno.
+- setCteKey(...1 args): ajusta valor em estado interno.
+- getCteStatusResult(): expone valor atual do estado interno.
+- setCteStatusResult(...1 args): ajusta valor em estado interno.
+- getCteStatus(): expone valor atual do estado interno.
+- setCteStatus(...1 args): ajusta valor em estado interno.
+- getFaturaDocument(): expone valor atual do estado interno.
+- setFaturaDocument(...1 args): ajusta valor em estado interno.
+Atributos-chave:
+- nfseNumber: campo de estado para "nfse number".
+- cteNumber: campo de estado para "cte number".
+- cteIssuedAt: campo de estado para "cte issued at".
+- cteKey: campo de estado para "cte key".
+- cteStatusResult: campo de estado para "cte status result".
+- cteStatus: campo de estado para "cte status".
+- faturaDocument: campo de estado para "fatura document".
+- faturaIssueDate: campo de estado para "fatura issue date".
+- faturaValue: campo de estado para "fatura value".
+- faturaDueDate: campo de estado para "fatura due date".
+- faturaBaixaDate: campo de estado para "fatura baixa date".
+- faturaOriginalDueDate: campo de estado para "fatura original due date".
+- valorFrete: campo de estado para "valor frete".
+- thirdPartyCtesValue: campo de estado para "third party ctes value".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.modelo.dataexport.faturaporcliente;
 
 import java.util.LinkedHashMap;

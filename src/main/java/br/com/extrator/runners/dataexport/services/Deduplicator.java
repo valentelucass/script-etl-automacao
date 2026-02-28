@@ -1,3 +1,37 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/runners/dataexport/services/Deduplicator.java
+Classe  : Deduplicator (class)
+Pacote  : br.com.extrator.runners.dataexport.services
+Modulo  : Servico de execucao DataExport
+Papel   : Implementa responsabilidade de deduplicator.
+
+Conecta com:
+- ContasAPagarDataExportEntity (db.entity)
+- CotacaoEntity (db.entity)
+- FaturaPorClienteEntity (db.entity)
+- LocalizacaoCargaEntity (db.entity)
+- ManifestoEntity (db.entity)
+
+Fluxo geral:
+1) Coordena extractors da API DataExport.
+2) Aplica deduplicacao/normalizacao quando necessario.
+3) Encaminha resultado consolidado para o runner.
+
+Estrutura interna:
+Metodos principais:
+- Deduplicator(): realiza operacao relacionada a "deduplicator".
+- deduplicarManifestos(...1 args): realiza operacao relacionada a "deduplicar manifestos".
+- obterMaisRecenteManifesto(...2 args): recupera dados configurados ou calculados.
+- deduplicarCotacoes(...1 args): realiza operacao relacionada a "deduplicar cotacoes".
+- obterMaisRecenteCotacao(...2 args): recupera dados configurados ou calculados.
+- deduplicarLocalizacoes(...1 args): realiza operacao relacionada a "deduplicar localizacoes".
+- obterMaisRecenteLocalizacao(...2 args): recupera dados configurados ou calculados.
+- deduplicarFaturasAPagar(...1 args): realiza operacao relacionada a "deduplicar faturas apagar".
+- deduplicarFaturasPorCliente(...1 args): realiza operacao relacionada a "deduplicar faturas por cliente".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.runners.dataexport.services;
 
 import java.time.OffsetDateTime;

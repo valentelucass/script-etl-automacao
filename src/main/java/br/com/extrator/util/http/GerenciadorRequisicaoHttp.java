@@ -1,3 +1,41 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/util/http/GerenciadorRequisicaoHttp.java
+Classe  : GerenciadorRequisicaoHttp (class)
+Pacote  : br.com.extrator.util.http
+Modulo  : Utilitario compartilhado
+Papel   : Implementa responsabilidade de gerenciador requisicao http.
+
+Conecta com:
+- ThreadUtil (util)
+- CarregadorConfig (util.configuracao)
+
+Fluxo geral:
+1) Centraliza funcoes auxiliares reutilizaveis.
+2) Evita repeticao de logica transversal.
+3) Apoia configuracao, formatacao e infraestrutura.
+
+Estrutura interna:
+Metodos principais:
+- getInstance(): expone valor atual do estado interno.
+- GerenciadorRequisicaoHttp(): realiza operacao relacionada a "gerenciador requisicao http".
+- aguardarComTratamentoInterrupcao(...2 args): realiza operacao relacionada a "aguardar com tratamento interrupcao".
+- deveRetentar(...1 args): verifica comportamento esperado em teste automatizado.
+- executarRequisicao(...3 args): executa o fluxo principal desta responsabilidade.
+- executarRequisicaoComCharset(...4 args): executa o fluxo principal desta responsabilidade.
+- aplicarThrottling(): realiza operacao relacionada a "aplicar throttling".
+- calcularDelayBackoffExponencial(...1 args): realiza operacao relacionada a "calcular delay backoff exponencial".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- circuitBreaker: campo de estado para "circuit breaker".
+- lockThrottling: campo de estado para "lock throttling".
+- ultimaRequisicaoTimestamp: campo de estado para "ultima requisicao timestamp".
+- maxTentativas: campo de estado para "max tentativas".
+- delayBaseMs: campo de estado para "delay base ms".
+- multiplicador: campo de estado para "multiplicador".
+- throttlingMinimoMs: campo de estado para "throttling minimo ms".
+- DELAY_HTTP_429_MS: campo de estado para "delay http 429 ms".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.util.http;
 
 import org.slf4j.Logger;

@@ -1,5 +1,37 @@
 @echo off
 setlocal EnableDelayedExpansion
+REM ==[DOC-FILE]===============================================================
+REM Arquivo : 04-extracao_por_intervalo.bat
+REM Tipo    : Script operacional Windows (.bat)
+REM Papel   : Automatiza a rotina "04-extracao por intervalo" para uso operacional.
+REM
+REM Conecta com:
+REM - java -jar: target\extrator.jar
+REM - call: :VALIDAR_DATA
+REM - call: :CONFIGURAR_FATURAS_GRAPHQL
+REM - call: %~dp0mvn.bat
+REM - mvn (build/test/execucao Java)
+REM
+REM Fluxo geral:
+REM 1) Prepara parametros de periodo e escopo de extracao.
+REM 2) Executa o jar com comando alvo.
+REM 3) Consolida log e retorno da rodada.
+REM
+REM Variaveis-chave:
+REM - FINAL_EXIT_CODE: controle de estado do script.
+REM - FLAG_FATURAS_GRAPHQL: controle de estado do script.
+REM - PARAM_FLAG_FATURAS: controle de estado do script.
+REM - DATA_INICIO: controle de estado do script.
+REM - DATA_FIM: controle de estado do script.
+REM - API_ESCOLHIDA: controle de estado do script.
+REM - ENTIDADE_ESCOLHIDA: controle de estado do script.
+REM - CMD_ARGS: controle de estado do script.
+REM - JAVA_EXIT_CODE: controle de estado do script.
+REM - RET_CODE: controle de estado do script.
+REM - DATA_TESTE: controle de estado do script.
+REM - DATA_NUMERICA: controle de estado do script.
+REM [DOC-FILE-END]===========================================================
+
 if /i not "%EXTRATOR_SKIP_CHCP%"=="1" chcp 65001 >nul
 set "FINAL_EXIT_CODE=0"
 set "FLAG_FATURAS_GRAPHQL="
@@ -526,4 +558,3 @@ set "DATA_NUMERICA=%DATA_TESTE:-=%"
 if not "%DATA_NUMERICA:~8,1%"=="" exit /b 1
 for /f "delims=0123456789" %%A in ("%DATA_NUMERICA%") do exit /b 1
 exit /b 0
-

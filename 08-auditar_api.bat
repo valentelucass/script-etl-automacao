@@ -1,5 +1,26 @@
 @echo off
 setlocal enableextensions
+REM ==[DOC-FILE]===============================================================
+REM Arquivo : 08-auditar_api.bat
+REM Tipo    : Script operacional Windows (.bat)
+REM Papel   : Automatiza a rotina "08-auditar api" para uso operacional.
+REM
+REM Conecta com:
+REM - call: %~dp0mvn.bat
+REM - mvn (build/test/execucao Java)
+REM - call: :AUTH_CHECK
+REM - java -jar: target\extrator.jar
+REM
+REM Fluxo geral:
+REM 1) Aciona rotina de auditoria tecnica.
+REM 2) Coleta evidencias e gera saida de analise.
+REM 3) Finaliza com status e orientacao de proximo passo.
+REM
+REM Variaveis-chave:
+REM - JAVA_HOME: controle de estado do script.
+REM - EXITCODE: controle de estado do script.
+REM [DOC-FILE-END]===========================================================
+
 if /i not "%EXTRATOR_SKIP_CHCP%"=="1" chcp 65001 >nul
 
 REM ================================================================
@@ -113,5 +134,3 @@ if errorlevel 1 (
     exit /b 1
 )
 exit /b 0
-
-

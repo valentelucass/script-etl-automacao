@@ -1,3 +1,29 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/db/repository/FreteRepository.java
+Classe  : FreteRepository (class)
+Pacote  : br.com.extrator.db.repository
+Modulo  : Repositorio de dados
+Papel   : Implementa responsabilidade de frete repository.
+
+Conecta com:
+- FreteEntity (db.entity)
+- ConstantesEntidades (util.validacao)
+
+Fluxo geral:
+1) Monta comandos SQL e parametros.
+2) Executa operacoes de persistencia/consulta no banco.
+3) Converte resultado para entidades de dominio.
+
+Estrutura interna:
+Metodos principais:
+- getNomeTabela(): expone valor atual do estado interno.
+- parseIssuedAt(...1 args): realiza operacao relacionada a "parse issued at".
+- extrairDiscriminacaoDoXml(...1 args): realiza operacao relacionada a "extrair discriminacao do xml".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- NOME_TABELA: campo de estado para "nome tabela".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.db.repository;
 
 import java.sql.Connection;

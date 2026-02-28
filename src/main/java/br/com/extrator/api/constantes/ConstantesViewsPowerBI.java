@@ -1,3 +1,28 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/api/constantes/ConstantesViewsPowerBI.java
+Classe  : ConstantesViewsPowerBI (class)
+Pacote  : br.com.extrator.api.constantes
+Modulo  : Cliente de integracao API
+Papel   : Implementa responsabilidade de constantes views power bi.
+
+Conecta com:
+- ConstantesEntidades (util.validacao)
+
+Fluxo geral:
+1) Monta requisicoes para endpoints externos.
+2) Trata autenticacao, timeout e parse de resposta.
+3) Entrega dados normalizados para os extractors.
+
+Estrutura interna:
+Metodos principais:
+- ConstantesViewsPowerBI(): realiza operacao relacionada a "constantes views power bi".
+- possuiView(...1 args): realiza operacao relacionada a "possui view".
+- obterNomeView(...1 args): recupera dados configurados ou calculados.
+- obterMapaViews(): recupera dados configurados ou calculados.
+Atributos-chave:
+- VIEWS: campo de estado para "views".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.api.constantes;
 
 import java.util.HashMap;

@@ -1,5 +1,28 @@
 @echo off
 setlocal EnableDelayedExpansion
+REM ==[DOC-FILE]===============================================================
+REM Arquivo : 02-testar_api_especifica.bat
+REM Tipo    : Script operacional Windows (.bat)
+REM Papel   : Automatiza a rotina "02-testar api especifica" para uso operacional.
+REM
+REM Conecta com:
+REM - call: %~dp0mvn.bat
+REM - mvn (build/test/execucao Java)
+REM - call: :AUTH_CHECK
+REM - java -jar: target\extrator.jar
+REM
+REM Fluxo geral:
+REM 1) Valida argumentos ou abre menu interativo.
+REM 2) Monta o comando Java para API/entidade escolhida.
+REM 3) Executa o teste e retorna codigo de status.
+REM
+REM Variaveis-chave:
+REM - FLAG_FATURAS_GRAPHQL: controle de estado do script.
+REM - API: controle de estado do script.
+REM - ENTIDADE: controle de estado do script.
+REM - JAVA_HOME: controle de estado do script.
+REM - CMD_ARGS: controle de estado do script.
+REM [DOC-FILE-END]===========================================================
 
 REM Ajusta code page para evitar erros de parsing com acentos e parenteses
 if /i not "%EXTRATOR_SKIP_CHCP%"=="1" chcp 1252 >nul
@@ -340,5 +363,3 @@ if errorlevel 1 (
     exit /b 1
 )
 exit /b 0
-
-

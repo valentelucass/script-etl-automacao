@@ -1,5 +1,31 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
+REM ==[DOC-FILE]===============================================================
+REM Arquivo : 00-PRODUCAO_START.bat
+REM Tipo    : Script operacional Windows (.bat)
+REM Papel   : Automatiza a rotina "00-producao start" para uso operacional.
+REM
+REM Conecta com:
+REM - call: :ensure_java
+REM - call: :check_jar
+REM - call: %~dp001-executar_extracao_completa.bat
+REM - call: %~dp002-testar_api_especifica.bat
+REM - call: %~dp003-validar_config.bat
+REM - call: %~dp004-extracao_por_intervalo.bat
+REM - call: %~dp005-loop_extracao_30min.bat
+REM - call: %~dp006-relatorio-completo-validacao.bat
+REM
+REM Fluxo geral:
+REM 1) Carrega configuracao e prepara ambiente de producao.
+REM 2) Apresenta opcoes de operacao para o operador.
+REM 3) Encaminha para o script de execucao selecionado.
+REM
+REM Variaveis-chave:
+REM - PROD_MODE: controle de estado do script.
+REM - JAR_PATH: controle de estado do script.
+REM - OP: controle de estado do script.
+REM - JAVA_HOME: controle de estado do script.
+REM [DOC-FILE-END]===========================================================
 
 if /i not "%EXTRATOR_SKIP_CHCP%"=="1" chcp 65001 >nul
 pushd "%~dp0"
@@ -17,17 +43,17 @@ echo            suporte: lucasmac.dev@gmail.com
 echo            by: @valentelucass
 echo ================================================================
 echo.
-echo  1. Extracao completa (ultimas 24h, com escolha de Faturas GraphQL)
-echo  2. Loop de extracao 30 minutos ^(segundo plano^)
-echo  3. Extracao por intervalo (com escolha de Faturas GraphQL)
-echo  4. Testar API especifica
-echo  5. Validar configuracoes
-echo  6. Relatorio completo de validacao
-echo  7. Exportar CSV
-echo  8. Auditar estrutura das APIs
-echo  9. Ver ajuda de comandos
+echo 01. Extracao completa ultimas 24h
+echo 02. Gerenciar loop de extracao 30 minutos
+echo 03. Extracao por intervalo
+echo 04. Testar API especifica
+echo 05. Validar configuracoes
+echo 06. Relatorio completo de validacao
+echo 07. Exportar CSV
+echo 08. Auditar estrutura das APIs
+echo 09. Ver ajuda de comandos
 echo 10. Gerenciar usuarios de acesso
-echo  0. Sair
+echo 00. Sair
 echo.
 set "OP="
 set /p "OP=Escolha uma opcao: " || (
@@ -38,16 +64,26 @@ set /p "OP=Escolha uma opcao: " || (
 set "OP=%OP: =%"
 
 if "%OP%"=="1" goto :RUN_01
+if "%OP%"=="01" goto :RUN_01
 if "%OP%"=="2" goto :RUN_05
+if "%OP%"=="02" goto :RUN_05
 if "%OP%"=="3" goto :RUN_04
+if "%OP%"=="03" goto :RUN_04
 if "%OP%"=="4" goto :RUN_02
+if "%OP%"=="04" goto :RUN_02
 if "%OP%"=="5" goto :RUN_03
+if "%OP%"=="05" goto :RUN_03
 if "%OP%"=="6" goto :RUN_06
+if "%OP%"=="06" goto :RUN_06
 if "%OP%"=="7" goto :RUN_07
+if "%OP%"=="07" goto :RUN_07
 if "%OP%"=="8" goto :RUN_08
+if "%OP%"=="08" goto :RUN_08
 if "%OP%"=="9" goto :RUN_AJUDA
+if "%OP%"=="09" goto :RUN_AJUDA
 if "%OP%"=="10" goto :RUN_09
 if "%OP%"=="0" goto :TRY_EXIT
+if "%OP%"=="00" goto :TRY_EXIT
 
 echo.
 echo Opcao invalida.
@@ -176,5 +212,3 @@ goto :eof
 popd
 endlocal
 exit /b 0
-
-

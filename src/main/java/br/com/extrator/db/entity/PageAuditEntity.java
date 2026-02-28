@@ -1,3 +1,51 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/db/entity/PageAuditEntity.java
+Classe  : PageAuditEntity (class)
+Pacote  : br.com.extrator.db.entity
+Modulo  : Entidade de persistencia
+Papel   : Implementa responsabilidade de page audit entity.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Define estrutura de dados persistida no banco.
+2) Representa campos de tabela/view no dominio Java.
+3) Suporta transporte de dados entre camadas.
+
+Estrutura interna:
+Metodos principais:
+- getExecutionUuid(): expone valor atual do estado interno.
+- setExecutionUuid(...1 args): ajusta valor em estado interno.
+- getRunUuid(): expone valor atual do estado interno.
+- setRunUuid(...1 args): ajusta valor em estado interno.
+- getTemplateId(): expone valor atual do estado interno.
+- setTemplateId(...1 args): ajusta valor em estado interno.
+- getPage(): expone valor atual do estado interno.
+- setPage(...1 args): ajusta valor em estado interno.
+- getPer(): expone valor atual do estado interno.
+- setPer(...1 args): ajusta valor em estado interno.
+- getJanelaInicio(): expone valor atual do estado interno.
+- setJanelaInicio(...1 args): ajusta valor em estado interno.
+- getJanelaFim(): expone valor atual do estado interno.
+- setJanelaFim(...1 args): ajusta valor em estado interno.
+Atributos-chave:
+- executionUuid: campo de estado para "execution uuid".
+- runUuid: campo de estado para "run uuid".
+- templateId: campo de estado para "template id".
+- page: campo de estado para "page".
+- per: campo de estado para "per".
+- janelaInicio: campo de estado para "janela inicio".
+- janelaFim: campo de estado para "janela fim".
+- reqHash: campo de estado para "req hash".
+- respHash: campo de estado para "resp hash".
+- totalItens: campo de estado para "total itens".
+- idKey: campo de estado para "id key".
+- idMinNum: campo de estado para "id min num".
+- idMaxNum: campo de estado para "id max num".
+- idMinStr: campo de estado para "id min str".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.db.entity;
 
 import java.time.LocalDate;

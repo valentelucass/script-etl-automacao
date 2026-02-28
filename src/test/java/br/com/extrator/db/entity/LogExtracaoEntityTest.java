@@ -1,3 +1,28 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/test/java/br/com/extrator/db/entity/LogExtracaoEntityTest.java
+Classe  : LogExtracaoEntityTest (class)
+Pacote  : br.com.extrator.db.entity
+Modulo  : Teste automatizado
+Papel   : Valida comportamento da unidade LogExtracaoEntity.
+
+Conecta com:
+- StatusExtracao (db.entity.LogExtracaoEntity)
+
+Fluxo geral:
+1) Prepara cenarios e dados de teste.
+2) Executa casos para validar comportamento de LogExtracaoEntity.
+3) Assegura regressao controlada nas regras principais.
+
+Estrutura interna:
+Metodos principais:
+- deveMapearStatusEspecificosSemCoercao(): verifica comportamento esperado em teste automatizado.
+- deveManterStatusLegadoIncompletoSemForcarLimite(): verifica comportamento esperado em teste automatizado.
+- deveMapearAliasLegadosParaStatusAtual(): verifica comportamento esperado em teste automatizado.
+- deveLancarErroParaStatusInvalido(): verifica comportamento esperado em teste automatizado.
+Atributos-chave:
+- Atributos nao mapeados automaticamente; consulte a implementacao abaixo.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.db.entity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

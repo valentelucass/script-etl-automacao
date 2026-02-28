@@ -5,11 +5,14 @@
 last_run.properties
 last_successful_run.properties
 docs/08-arquivos-secretos/
+database/config.bat
 
 # Build e artefatos
 target/
 build/
 out/
+dist/
+coverage/
 *.class
 *.jar
 *.war
@@ -18,11 +21,14 @@ out/
 # Logs e temporarios
 logs/
 tmp/
+temp/
 *.log
 *.out
 *.err
 *.tmp
 *.temp
+*.pid
+*.state
 *~
 
 # Saidas geradas pelo projeto
@@ -48,9 +54,16 @@ backups/
 
 # Python local
 .venv/
+venv/
 __pycache__/
+**/__pycache__/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 *.pyc
+*.pyo
+*.pyd
+.python-version
 
 # Node local
 node_modules/

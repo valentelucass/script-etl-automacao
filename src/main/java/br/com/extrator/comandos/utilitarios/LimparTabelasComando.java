@@ -1,3 +1,27 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/comandos/utilitarios/LimparTabelasComando.java
+Classe  : LimparTabelasComando (class)
+Pacote  : br.com.extrator.comandos.utilitarios
+Modulo  : Componente Java
+Papel   : Implementa comportamento de limpar tabelas comando.
+
+Conecta com:
+- Comando (comandos.base)
+- GerenciadorConexao (util.banco)
+
+Fluxo geral:
+1) Define comportamento principal deste modulo.
+2) Interage com camadas relacionadas do sistema.
+3) Entrega resultado para o fluxo chamador.
+
+Estrutura interna:
+Metodos principais:
+- executar(...1 args): executa o fluxo principal desta responsabilidade.
+- limparTabela(...2 args): realiza operacao relacionada a "limpar tabela".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.comandos.utilitarios;
 
 import java.sql.Connection;

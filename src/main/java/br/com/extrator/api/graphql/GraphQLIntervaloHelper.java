@@ -1,3 +1,34 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/api/graphql/GraphQLIntervaloHelper.java
+Classe  : GraphQLIntervaloHelper (class)
+Pacote  : br.com.extrator.api.graphql
+Modulo  : Cliente de integracao API
+Papel   : Implementa responsabilidade de graph qlintervalo helper.
+
+Conecta com:
+- ResultadoExtracao (api)
+- ThreadUtil (util)
+- CarregadorConfig (util.configuracao)
+
+Fluxo geral:
+1) Monta requisicoes para endpoints externos.
+2) Trata autenticacao, timeout e parse de resposta.
+3) Entrega dados normalizados para os extractors.
+
+Estrutura interna:
+Metodos principais:
+- GraphQLIntervaloHelper(): realiza operacao relacionada a "graph qlintervalo helper".
+- executarPorDia(...5 args): executa o fluxo principal desta responsabilidade.
+- executarPorDia(...6 args): executa o fluxo principal desta responsabilidade.
+- executarDiaComRetry(...6 args): executa o fluxo principal desta responsabilidade.
+- deveRetentarDia(...1 args): verifica comportamento esperado em teste automatizado.
+- aguardarRetry(...3 args): realiza operacao relacionada a "aguardar retry".
+- calcularDelay(...3 args): realiza operacao relacionada a "calcular delay".
+- selecionarMotivoInterrupcao(...2 args): realiza operacao relacionada a "selecionar motivo interrupcao".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.api.graphql;
 
 import java.time.LocalDate;

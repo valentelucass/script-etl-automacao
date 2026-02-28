@@ -1,3 +1,40 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/runners/dataexport/extractors/ManifestoExtractor.java
+Classe  : ManifestoExtractor (class)
+Pacote  : br.com.extrator.runners.dataexport.extractors
+Modulo  : Extractor DataExport
+Papel   : Implementa responsabilidade de manifesto extractor.
+
+Conecta com:
+- ClienteApiDataExport (api)
+- ResultadoExtracao (api)
+- ManifestoEntity (db.entity)
+- InvalidRecordAuditRepository (db.repository)
+- ManifestoRepository (db.repository)
+- ManifestoDTO (modelo.dataexport.manifestos)
+- ManifestoMapper (modelo.dataexport.manifestos)
+- ConstantesExtracao (runners.common)
+
+Fluxo geral:
+1) Configura requisicao da API DataExport.
+2) Converte resposta em DTO/entidade de dominio.
+3) Persiste lote no repositorio correspondente.
+
+Estrutura interna:
+Metodos principais:
+- ManifestoExtractor(...4 args): realiza operacao relacionada a "manifesto extractor".
+- extract(...2 args): realiza operacao relacionada a "extract".
+- getEntityName(): expone valor atual do estado interno.
+- getEmoji(): expone valor atual do estado interno.
+- auditarRegistroInvalido(...3 args): realiza operacao relacionada a "auditar registro invalido".
+Atributos-chave:
+- apiClient: cliente de integracao externa.
+- repository: dependencia de acesso a banco.
+- mapper: apoio de mapeamento de dados.
+- log: campo de estado para "log".
+- invalidRecordAuditRepository: dependencia de acesso a banco.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.runners.dataexport.extractors;
 
 import java.time.LocalDate;
@@ -20,7 +57,7 @@ import br.com.extrator.util.validacao.ConstantesEntidades;
 
 /**
  * Extractor para entidade Manifestos (DataExport).
- * Inclui deduplicaÃ§Ã£o antes de salvar.
+ * Inclui deduplicação antes de salvar.
  */
 public class ManifestoExtractor implements DataExportEntityExtractor<ManifestoDTO> {
     
@@ -43,7 +80,7 @@ public class ManifestoExtractor implements DataExportEntityExtractor<ManifestoDT
     
     @Override
     public ResultadoExtracao<ManifestoDTO> extract(final LocalDate dataInicio, final LocalDate dataFim) {
-        // Usa intervalo informado quando disponÃ­vel; fallback para Ãºltimas 24h
+        // Usa intervalo informado quando disponível; fallback para últimas 24h
         if (dataInicio != null) {
             final LocalDate fim = (dataFim != null) ? dataFim : dataInicio;
             return apiClient.buscarManifestos(dataInicio, fim);
@@ -71,11 +108,11 @@ public class ManifestoExtractor implements DataExportEntityExtractor<ManifestoDT
             } catch (final RuntimeException e) {
                 registrosInvalidos++;
                 auditarRegistroInvalido(dto, "MAPEAMENTO_INVALIDO", e.getMessage());
-                log.warn("âš ï¸ Manifesto invÃ¡lido descartado: {}", e.getMessage());
+                log.warn("⚠️ Manifesto inválido descartado: {}", e.getMessage());
             }
         }
         if (registrosInvalidos > 0) {
-            log.warn("âš ï¸ {} registro(s) invÃ¡lido(s) descartado(s) em {}", registrosInvalidos, getEntityName());
+            log.warn("⚠️ {} registro(s) inválido(s) descartado(s) em {}", registrosInvalidos, getEntityName());
         }
         if (entities.isEmpty()) {
             return new SaveResult(0, 0, registrosInvalidos);

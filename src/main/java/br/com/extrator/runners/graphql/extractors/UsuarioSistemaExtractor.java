@@ -1,3 +1,39 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/runners/graphql/extractors/UsuarioSistemaExtractor.java
+Classe  : UsuarioSistemaExtractor (class)
+Pacote  : br.com.extrator.runners.graphql.extractors
+Modulo  : Extractor GraphQL
+Papel   : Implementa responsabilidade de usuario sistema extractor.
+
+Conecta com:
+- ClienteApiGraphQL (api)
+- ResultadoExtracao (api)
+- UsuarioSistemaEntity (db.entity)
+- UsuarioSistemaRepository (db.repository)
+- IndividualNodeDTO (modelo.graphql.usuarios)
+- UsuarioSistemaMapper (modelo.graphql.usuarios)
+- ConstantesExtracao (runners.common)
+- EntityExtractor (runners.common)
+
+Fluxo geral:
+1) Configura query e parametros para entidade alvo.
+2) Invoca cliente GraphQL com paginacao segura.
+3) Encaminha dados para camada de persistencia.
+
+Estrutura interna:
+Metodos principais:
+- UsuarioSistemaExtractor(...3 args): realiza operacao relacionada a "usuario sistema extractor".
+- extract(...2 args): realiza operacao relacionada a "extract".
+- deduplicarPorUserId(...1 args): realiza operacao relacionada a "deduplicar por user id".
+- getEntityName(): expone valor atual do estado interno.
+- getEmoji(): expone valor atual do estado interno.
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- apiClient: cliente de integracao externa.
+- repository: dependencia de acesso a banco.
+- mapper: apoio de mapeamento de dados.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.runners.graphql.extractors;
 
 import java.time.LocalDate;

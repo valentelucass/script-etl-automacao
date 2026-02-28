@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Run Unit Tests
+        run: mvn -B -ntp test
+
+      - name: Build Packaged JAR
+        run: mvn -B -ntp -DskipTests package
+
+      - name: Smoke Test Packaged JAR
+        run: bash scripts/ci/smoke_packaged_jar.sh
+
+      - name: Basic Static Analysis (PMD Report)
+        run: mvn -B -ntp -DskipTests=true org.apache.maven.plugins:maven-pmd-plugin:3.28.0:pmd
+
+      - name: Dependency Audit (Maven Analyze)
+        run: mvn -B -ntp -DskipTests=true org.apache.maven.plugins:maven-dependency-plugin:3.7.1:analyze-only
+
+      - name: Duplicate SQL Guard
+        run: python3 scripts/ci/check_duplicate_sql.py
+
+      - name: Encoding Guard (UTF-8 / No Mojibake Regression)
+        run: bash scripts/ci/check_mojibake_regression.sh
+
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Dependency Review (Vulnerabilities)
+        uses: actions/dependency-review-action@v4

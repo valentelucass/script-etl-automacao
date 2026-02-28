@@ -1,3 +1,44 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/auditoria/modelos/ResultadoAuditoria.java
+Classe  : ResultadoAuditoria (class)
+Pacote  : br.com.extrator.auditoria.modelos
+Modulo  : Modulo de auditoria
+Papel   : Implementa responsabilidade de resultado auditoria.
+
+Conecta com:
+- StatusAuditoria (auditoria.enums)
+- StatusValidacao (auditoria.enums)
+
+Fluxo geral:
+1) Modela resultados e estado de auditoria.
+2) Apoia consolidacao de evidencias operacionais.
+3) Suporta emissao de relatorios de conformidade.
+
+Estrutura interna:
+Metodos principais:
+- ResultadoAuditoria(): realiza operacao relacionada a "resultado auditoria".
+- ResultadoAuditoria(...3 args): realiza operacao relacionada a "resultado auditoria".
+- getDataInicio(): expone valor atual do estado interno.
+- setDataInicio(...1 args): ajusta valor em estado interno.
+- getDataFim(): expone valor atual do estado interno.
+- setDataFim(...1 args): ajusta valor em estado interno.
+- getResultadosValidacao(): expone valor atual do estado interno.
+- setResultadosValidacao(...1 args): ajusta valor em estado interno.
+- getStatusGeral(): expone valor atual do estado interno.
+- setStatusGeral(...1 args): ajusta valor em estado interno.
+- getErro(): expone valor atual do estado interno.
+- setErro(...1 args): ajusta valor em estado interno.
+- setDataExecucao(...1 args): ajusta valor em estado interno.
+- adicionarValidacao(...2 args): realiza operacao relacionada a "adicionar validacao".
+Atributos-chave:
+- dataInicio: campo de estado para "data inicio".
+- dataFim: campo de estado para "data fim".
+- resultadosValidacao: campo de estado para "resultados validacao".
+- resultadosValidacaoMap: campo de estado para "resultados validacao map".
+- statusGeral: campo de estado para "status geral".
+- erro: campo de estado para "erro".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.auditoria.modelos;
 
 import java.time.Instant;

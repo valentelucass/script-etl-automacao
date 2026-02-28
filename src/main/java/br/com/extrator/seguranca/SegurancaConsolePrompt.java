@@ -1,3 +1,32 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/seguranca/SegurancaConsolePrompt.java
+Classe  : SegurancaConsolePrompt (class)
+Pacote  : br.com.extrator.seguranca
+Modulo  : Modulo de seguranca
+Papel   : Implementa responsabilidade de seguranca console prompt.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Modela usuarios, perfis e acoes autorizadas.
+2) Implementa regras de autenticacao e senha.
+3) Gerencia repositorio de seguranca local.
+
+Estrutura interna:
+Metodos principais:
+- SegurancaConsolePrompt(): realiza operacao relacionada a "seguranca console prompt".
+- solicitarCredenciais(...1 args): realiza operacao relacionada a "solicitar credenciais".
+- solicitarTextoObrigatorio(...1 args): realiza operacao relacionada a "solicitar texto obrigatorio".
+- solicitarTextoOpcional(...1 args): realiza operacao relacionada a "solicitar texto opcional".
+- solicitarSenhaObrigatoria(...1 args): realiza operacao relacionada a "solicitar senha obrigatoria".
+- solicitarSenhaComConfirmacao(...2 args): realiza operacao relacionada a "solicitar senha com confirmacao".
+- solicitarSenha(...1 args): realiza operacao relacionada a "solicitar senha".
+- Credenciais(...2 args): realiza operacao relacionada a "credenciais".
+Atributos-chave:
+- SCANNER: campo de estado para "scanner".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.seguranca;
 
 import java.io.Console;

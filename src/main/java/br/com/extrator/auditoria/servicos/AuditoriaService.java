@@ -1,3 +1,38 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/auditoria/servicos/AuditoriaService.java
+Classe  : AuditoriaService (class)
+Pacote  : br.com.extrator.auditoria.servicos
+Modulo  : Servico de auditoria
+Papel   : Implementa responsabilidade de auditoria service.
+
+Conecta com:
+- StatusAuditoria (auditoria.enums)
+- StatusValidacao (auditoria.enums)
+- ResultadoAuditoria (auditoria.modelos)
+- ResultadoValidacaoEntidade (auditoria.modelos)
+- AuditoriaRelatorio (auditoria.relatorios)
+- AuditoriaValidator (auditoria.validacao)
+- GerenciadorConexao (util.banco)
+- ConstantesEntidades (util.validacao)
+
+Fluxo geral:
+1) Executa regras de validacao de qualidade/ETL.
+2) Consolida indicadores e status de auditoria.
+3) Publica resultado para relatorio tecnico.
+
+Estrutura interna:
+Metodos principais:
+- AuditoriaService(): realiza operacao relacionada a "auditoria service".
+- executarAuditoriaCompleta(): executa o fluxo principal desta responsabilidade.
+- executarAuditoriaPorPeriodo(...2 args): executa o fluxo principal desta responsabilidade.
+- executarAuditoriaRapida(): executa o fluxo principal desta responsabilidade.
+- validarEntidadeEspecifica(...1 args): aplica regras de validacao e consistencia.
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- validator: campo de estado para "validator".
+- relatorio: campo de estado para "relatorio".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.auditoria.servicos;
 
 import java.sql.Connection;

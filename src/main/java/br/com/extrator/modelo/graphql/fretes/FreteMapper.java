@@ -1,3 +1,29 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/modelo/graphql/fretes/FreteMapper.java
+Classe  : FreteMapper (class)
+Pacote  : br.com.extrator.modelo.graphql.fretes
+Modulo  : DTO/Mapper GraphQL
+Papel   : Implementa responsabilidade de frete mapper.
+
+Conecta com:
+- FreteEntity (db.entity)
+- MapperUtil (util.mapeamento)
+- NumeroUtil (util.mapeamento)
+
+Fluxo geral:
+1) Modela payloads da API GraphQL.
+2) Mapeia estrutura remota para modelo interno.
+3) Apoia persistencia e validacao do extrator.
+
+Estrutura interna:
+Metodos principais:
+- FreteMapper(): realiza operacao relacionada a "frete mapper".
+- parseIntegerOrNull(...1 args): realiza operacao relacionada a "parse integer or null".
+- toEntity(...1 args): realiza operacao relacionada a "to entity".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.modelo.graphql.fretes;
 
 import java.time.LocalDate;

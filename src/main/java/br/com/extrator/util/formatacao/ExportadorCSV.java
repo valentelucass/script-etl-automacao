@@ -1,3 +1,30 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/util/formatacao/ExportadorCSV.java
+Classe  : ExportadorCSV (class)
+Pacote  : br.com.extrator.util.formatacao
+Modulo  : Utilitario compartilhado
+Papel   : Implementa responsabilidade de exportador csv.
+
+Conecta com:
+- ConstantesViewsPowerBI (api.constantes)
+- GerenciadorConexao (util.banco)
+- LoggerConsole (util.console)
+- ConstantesEntidades (util.validacao)
+
+Fluxo geral:
+1) Centraliza funcoes auxiliares reutilizaveis.
+2) Evita repeticao de logica transversal.
+3) Apoia configuracao, formatacao e infraestrutura.
+
+Estrutura interna:
+Metodos principais:
+- main(...1 args): ponto de entrada da execucao.
+Atributos-chave:
+- log: campo de estado para "log".
+- PASTA_DESTINO: campo de estado para "pasta destino".
+- FORMATTER: campo de estado para "formatter".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.util.formatacao;
 
  

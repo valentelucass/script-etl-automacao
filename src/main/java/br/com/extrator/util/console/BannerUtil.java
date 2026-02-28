@@ -1,3 +1,37 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/util/console/BannerUtil.java
+Classe  : BannerUtil (class)
+Pacote  : br.com.extrator.util.console
+Modulo  : Utilitario compartilhado
+Papel   : Implementa responsabilidade de banner util.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Centraliza funcoes auxiliares reutilizaveis.
+2) Evita repeticao de logica transversal.
+3) Apoia configuracao, formatacao e infraestrutura.
+
+Estrutura interna:
+Metodos principais:
+- exibirBannerExtracaoCompleta(): realiza operacao relacionada a "exibir banner extracao completa".
+- exibirBannerApiRest(): realiza operacao relacionada a "exibir banner api rest".
+- exibirBannerApiGraphQL(): realiza operacao relacionada a "exibir banner api graph ql".
+- exibirBannerApiDataExport(): realiza operacao relacionada a "exibir banner api data export".
+- exibirBannerSucesso(): realiza operacao relacionada a "exibir banner sucesso".
+- exibirBannerErro(): realiza operacao relacionada a "exibir banner erro".
+- exibirBanner(...1 args): realiza operacao relacionada a "exibir banner".
+- exibirEstatisticas(...3 args): realiza operacao relacionada a "exibir estatisticas".
+- exibirSeparador(): realiza operacao relacionada a "exibir separador".
+- exibirProgresso(...1 args): realiza operacao relacionada a "exibir progresso".
+- exibirSucessoMensagem(...1 args): realiza operacao relacionada a "exibir sucesso mensagem".
+- exibirErroMensagem(...1 args): realiza operacao relacionada a "exibir erro mensagem".
+- exibirAvisoMensagem(...1 args): realiza operacao relacionada a "exibir aviso mensagem".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.util.console;
 
 import java.io.BufferedReader;

@@ -1,3 +1,27 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/util/mapeamento/DataUtil.java
+Classe  : DataUtil (class)
+Pacote  : br.com.extrator.util.mapeamento
+Modulo  : Utilitario compartilhado
+Papel   : Implementa responsabilidade de data util.
+
+Conecta com:
+- FormatadorData (util.formatacao)
+
+Fluxo geral:
+1) Centraliza funcoes auxiliares reutilizaveis.
+2) Evita repeticao de logica transversal.
+3) Apoia configuracao, formatacao e infraestrutura.
+
+Estrutura interna:
+Metodos principais:
+- DataUtil(): realiza operacao relacionada a "data util".
+- parseLocalDate(...1 args): realiza operacao relacionada a "parse local date".
+- parseOffsetDateTime(...1 args): realiza operacao relacionada a "parse offset date time".
+Atributos-chave:
+- Atributos nao mapeados automaticamente; consulte a implementacao abaixo.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.util.mapeamento;
 
 import java.time.LocalDate;

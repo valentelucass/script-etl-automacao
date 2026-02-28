@@ -1,3 +1,25 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/comandos/base/Comando.java
+Classe  : Comando (interface)
+Pacote  : br.com.extrator.comandos.base
+Modulo  : Componente Java
+Papel   : Implementa comportamento de comando.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Define comportamento principal deste modulo.
+2) Interage com camadas relacionadas do sistema.
+3) Entrega resultado para o fluxo chamador.
+
+Estrutura interna:
+Metodos principais:
+- Metodos nao mapeados automaticamente; consulte a implementacao abaixo.
+Atributos-chave:
+- Atributos nao mapeados automaticamente; consulte a implementacao abaixo.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.comandos.base;
 
 /**

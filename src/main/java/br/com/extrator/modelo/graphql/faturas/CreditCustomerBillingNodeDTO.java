@@ -1,3 +1,51 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/modelo/graphql/faturas/CreditCustomerBillingNodeDTO.java
+Classe  : CreditCustomerBillingNodeDTO (class)
+Pacote  : br.com.extrator.modelo.graphql.faturas
+Modulo  : DTO/Mapper GraphQL
+Papel   : Implementa responsabilidade de credit customer billing node dto.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Modela payloads da API GraphQL.
+2) Mapeia estrutura remota para modelo interno.
+3) Apoia persistencia e validacao do extrator.
+
+Estrutura interna:
+Metodos principais:
+- getId(): expone valor atual do estado interno.
+- setId(...1 args): ajusta valor em estado interno.
+- getDocument(): expone valor atual do estado interno.
+- setDocument(...1 args): ajusta valor em estado interno.
+- getIssueDate(): expone valor atual do estado interno.
+- setIssueDate(...1 args): ajusta valor em estado interno.
+- getDueDate(): expone valor atual do estado interno.
+- setDueDate(...1 args): ajusta valor em estado interno.
+- getValue(): expone valor atual do estado interno.
+- setValue(...1 args): ajusta valor em estado interno.
+- getPaidValue(): expone valor atual do estado interno.
+- setPaidValue(...1 args): ajusta valor em estado interno.
+- getValueToPay(): expone valor atual do estado interno.
+- setValueToPay(...1 args): ajusta valor em estado interno.
+Atributos-chave:
+- id: campo de estado para "id".
+- document: campo de estado para "document".
+- issueDate: campo de estado para "issue date".
+- dueDate: campo de estado para "due date".
+- value: campo de estado para "value".
+- paidValue: campo de estado para "paid value".
+- valueToPay: campo de estado para "value to pay".
+- discountValue: campo de estado para "discount value".
+- interestValue: campo de estado para "interest value".
+- paid: campo de estado para "paid".
+- type: campo de estado para "type".
+- comments: campo de estado para "comments".
+- sequenceCode: campo de estado para "sequence code".
+- competenceMonth: campo de estado para "competence month".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.modelo.graphql.faturas;
 
 import java.math.BigDecimal;

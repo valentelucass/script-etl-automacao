@@ -1,5 +1,30 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
+REM ==[DOC-FILE]===============================================================
+REM Arquivo : 05-loop_extracao_30min.bat
+REM Tipo    : Script operacional Windows (.bat)
+REM Papel   : Automatiza a rotina "05-loop extracao 30min" para uso operacional.
+REM
+REM Conecta com:
+REM - call: %~dp0mvn.bat
+REM - call: :AUTH_CHECK
+REM - call: :ASK_FATURAS_GRAPHQL_LOOP
+REM - java -jar: %~dp0target\extrator.jar
+REM
+REM Fluxo geral:
+REM 1) Prepara parametros de periodo e escopo de extracao.
+REM 2) Executa o jar com comando alvo.
+REM 3) Consolida log e retorno da rodada.
+REM
+REM Variaveis-chave:
+REM - JAVA_HOME: controle de estado do script.
+REM - LOOP_STATUS_AUTH_CACHE: controle de estado do script.
+REM - OP: controle de estado do script.
+REM - AUTH_ACTION: controle de estado do script.
+REM - FLAG_FATURAS_GRAPHQL: controle de estado do script.
+REM - OP_FATURAS: controle de estado do script.
+REM [DOC-FILE-END]===========================================================
+
 REM Em cmd.exe, set /p com entrada redirecionada falha com CP 65001.
 REM CP 1252 preserva compatibilidade em execucao interativa e automatizada.
 if /i not "%EXTRATOR_SKIP_CHCP%"=="1" chcp 1252 >nul
@@ -54,12 +79,12 @@ echo.
 echo ================================================================
 echo MENU LOOP
 echo ================================================================
-echo  1. Iniciar loop de extracao ^(segundo plano, continua mesmo fechando terminal^)
-echo  2. Status do loop de extracao
-echo  3. Parar loop de extracao
-echo  4. Reconfigurar Faturas GraphQL do loop ^(reinicia loop^)
-echo  5. Acompanhar logs da extracao ^(tempo real^)
-echo  0. Voltar
+echo 01. Iniciar loop de extracao ^(segundo plano, continua mesmo fechando terminal^)
+echo 02. Status do loop de extracao
+echo 03. Parar loop de extracao
+echo 04. Reconfigurar Faturas GraphQL do loop ^(reinicia loop^)
+echo 05. Acompanhar logs da extracao ^(tempo real^)
+echo 00. Voltar
 echo.
 set "OP="
 set /p OP="Escolha uma opcao: " || (
@@ -70,11 +95,17 @@ set /p OP="Escolha uma opcao: " || (
 set "OP=%OP: =%"
 
 if "%OP%"=="1" goto :START
+if "%OP%"=="01" goto :START
 if "%OP%"=="2" goto :STATUS
+if "%OP%"=="02" goto :STATUS
 if "%OP%"=="3" goto :STOP
+if "%OP%"=="03" goto :STOP
 if "%OP%"=="4" goto :RECONFIG_DAEMON
+if "%OP%"=="04" goto :RECONFIG_DAEMON
 if "%OP%"=="5" goto :TAIL_LOGS
+if "%OP%"=="05" goto :TAIL_LOGS
 if "%OP%"=="0" goto :EXIT_LOOP
+if "%OP%"=="00" goto :EXIT_LOOP
 
 echo Opcao invalida.
 timeout /t 2 /nobreak >nul 2>&1
@@ -194,9 +225,9 @@ echo.
 echo ================================================================
 echo CONFIGURAR FATURAS GRAPHQL NO LOOP
 echo ================================================================
-echo  1. Incluir Faturas GraphQL
-echo  2. Desabilitar Faturas GraphQL ^(--sem-faturas-graphql^)
-echo  0. Cancelar inicio do loop
+echo 01. Incluir Faturas GraphQL
+echo 02. Desabilitar Faturas GraphQL ^(--sem-faturas-graphql^)
+echo 00. Cancelar inicio do loop
 echo.
 set "OP_FATURAS="
 set /p OP_FATURAS="Escolha uma opcao: " || (
@@ -209,11 +240,23 @@ if "%OP_FATURAS%"=="1" (
   set "FLAG_FATURAS_GRAPHQL="
   exit /b 0
 )
+if "%OP_FATURAS%"=="01" (
+  set "FLAG_FATURAS_GRAPHQL="
+  exit /b 0
+)
 if "%OP_FATURAS%"=="2" (
   set "FLAG_FATURAS_GRAPHQL=--sem-faturas-graphql"
   exit /b 0
 )
+if "%OP_FATURAS%"=="02" (
+  set "FLAG_FATURAS_GRAPHQL=--sem-faturas-graphql"
+  exit /b 0
+)
 if "%OP_FATURAS%"=="0" (
+  echo Inicio do loop cancelado.
+  exit /b 1
+)
+if "%OP_FATURAS%"=="00" (
   echo Inicio do loop cancelado.
   exit /b 1
 )
@@ -226,5 +269,3 @@ goto :ASK_FATURAS_GRAPHQL_LOOP
 popd
 endlocal
 exit /b 0
-
-

@@ -1,5 +1,28 @@
 @echo off
 setlocal
+REM ==[DOC-FILE]===============================================================
+REM Arquivo : 06-relatorio-completo-validacao.bat
+REM Tipo    : Script operacional Windows (.bat)
+REM Papel   : Automatiza a rotina "06-relatorio-completo-validacao" para uso operacional.
+REM
+REM Conecta com:
+REM - call: %~dp0mvn.bat
+REM - call: :AUTH_CHECK
+REM - java -jar: target\extrator.jar
+REM
+REM Fluxo geral:
+REM 1) Inicializa variaveis de controle do script.
+REM 2) Executa rotina principal com validacoes basicas.
+REM 3) Finaliza com codigo de retorno apropriado.
+REM
+REM Variaveis-chave:
+REM - JAVA_HOME: controle de estado do script.
+REM - VALIDAR_EXIT: controle de estado do script.
+REM - VALIDAR_DADOS_EXIT: controle de estado do script.
+REM - AUDITORIA_EXIT: controle de estado do script.
+REM - VALIDAR_MANIFESTOS_EXIT: controle de estado do script.
+REM - TOTAL_ERROS: controle de estado do script.
+REM [DOC-FILE-END]===========================================================
 
 REM ================================================================
 REM Script: 06-relatorio-completo-validacao.bat
@@ -211,4 +234,3 @@ if errorlevel 1 (
     exit /b 1
 )
 exit /b 0
-

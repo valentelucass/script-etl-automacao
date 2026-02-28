@@ -1,3 +1,29 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/test/java/br/com/extrator/modelo/dataexport/faturaporcliente/FaturaPorClienteMapperTest.java
+Classe  : FaturaPorClienteMapperTest (class)
+Pacote  : br.com.extrator.modelo.dataexport.faturaporcliente
+Modulo  : Teste automatizado
+Papel   : Valida comportamento da unidade FaturaPorClienteMapper.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Prepara cenarios e dados de teste.
+2) Executa casos para validar comportamento de FaturaPorClienteMapper.
+3) Assegura regressao controlada nas regras principais.
+
+Estrutura interna:
+Metodos principais:
+- deveUsarNfseQuandoDisponivel(): verifica comportamento esperado em teste automatizado.
+- deveUsarChaveCteQuandoNaoHaNfse(): verifica comportamento esperado em teste automatizado.
+- deveGerarHashDeterministicoQuandoNaoHaChaveNatural(): verifica comportamento esperado em teste automatizado.
+- deveAlterarHashQuandoCampoCanonicoMuda(): verifica comportamento esperado em teste automatizado.
+- criarDtoSemChaveNatural(): instancia ou monta estrutura de dados.
+Atributos-chave:
+- mapper: apoio de mapeamento de dados.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.modelo.dataexport.faturaporcliente;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

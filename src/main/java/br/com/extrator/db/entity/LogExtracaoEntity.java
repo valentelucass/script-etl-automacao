@@ -1,10 +1,52 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/db/entity/LogExtracaoEntity.java
+Classe  : LogExtracaoEntity (class)
+Pacote  : br.com.extrator.db.entity
+Modulo  : Entidade de persistencia
+Papel   : Implementa responsabilidade de log extracao entity.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Define estrutura de dados persistida no banco.
+2) Representa campos de tabela/view no dominio Java.
+3) Suporta transporte de dados entre camadas.
+
+Estrutura interna:
+Metodos principais:
+- LogExtracaoEntity(): realiza operacao relacionada a "log extracao entity".
+- LogExtracaoEntity(...7 args): realiza operacao relacionada a "log extracao entity".
+- getId(): expone valor atual do estado interno.
+- setId(...1 args): ajusta valor em estado interno.
+- getEntidade(): expone valor atual do estado interno.
+- setEntidade(...1 args): ajusta valor em estado interno.
+- getTimestampInicio(): expone valor atual do estado interno.
+- setTimestampInicio(...1 args): ajusta valor em estado interno.
+- getTimestampFim(): expone valor atual do estado interno.
+- setTimestampFim(...1 args): ajusta valor em estado interno.
+- getStatusFinal(): expone valor atual do estado interno.
+- setStatusFinal(...1 args): ajusta valor em estado interno.
+- getRegistrosExtraidos(): expone valor atual do estado interno.
+- setRegistrosExtraidos(...1 args): ajusta valor em estado interno.
+Atributos-chave:
+- id: campo de estado para "id".
+- entidade: campo de estado para "entidade".
+- timestampInicio: campo de estado para "timestamp inicio".
+- timestampFim: campo de estado para "timestamp fim".
+- statusFinal: campo de estado para "status final".
+- registrosExtraidos: campo de estado para "registros extraidos".
+- paginasProcessadas: campo de estado para "paginas processadas".
+- mensagem: campo de estado para "mensagem".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.db.entity;
 
 import java.time.LocalDateTime;
 import java.util.Locale;
 
 /**
- * Entidade para controle de status das extraÃ§Ãµes de dados
+ * Entidade para controle de status das extrações de dados
  */
 public class LogExtracaoEntity {
     
@@ -37,11 +79,11 @@ public class LogExtracaoEntity {
         
         public static StatusExtracao fromString(final String valor) {
             if (valor == null || valor.isBlank()) {
-                throw new IllegalArgumentException("Status invÃ¡lido: valor nulo/vazio");
+                throw new IllegalArgumentException("Status inválido: valor nulo/vazio");
             }
             final String normalizado = valor.trim().toUpperCase(Locale.ROOT);
 
-            // Compatibilidade com status antigos/alternativos gravados em versÃµes anteriores
+            // Compatibilidade com status antigos/alternativos gravados em versões anteriores
             if ("INCOMPLETO_DADOS_INVALIDOS".equals(normalizado)) {
                 return INCOMPLETO_DADOS;
             }
@@ -54,7 +96,7 @@ public class LogExtracaoEntity {
                     return status;
                 }
             }
-            throw new IllegalArgumentException("Status invÃ¡lido: " + valor);
+            throw new IllegalArgumentException("Status inválido: " + valor);
         }
     }
     

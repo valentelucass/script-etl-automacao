@@ -12,7 +12,9 @@ Centralizar o que guia a execucao tecnica:
 
 - `verdades/VERDADES-OPERACIONAIS.md`: registro vivo de fatos confirmados
 - `planos/PLANO-ACAO-DAEMON-RECONCILIACAO-2026-02.md`: plano por prioridade
+- `planos/PLANO-ACAO-QUALIDADE-TESTES-2026-02-28.md`: plano de robustez da esteira de testes
 - `TODO-EXECUCAO-DAEMON.md`: checklist executavel
+- `TODO-QUALIDADE-TESTES-2026-02-28.md`: checklist executavel de qualidade e regressao
 
 ## Regra de manutencao
 

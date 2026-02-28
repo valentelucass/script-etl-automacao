@@ -1,3 +1,33 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/test/java/br/com/extrator/runners/common/ExtractionLoggerTest.java
+Classe  : ExtractionLoggerTest (class)
+Pacote  : br.com.extrator.runners.common
+Modulo  : Teste automatizado
+Papel   : Valida comportamento da unidade ExtractionLogger.
+
+Conecta com:
+- ResultadoExtracao (api)
+- ConstantesEntidades (util.validacao)
+
+Fluxo geral:
+1) Prepara cenarios e dados de teste.
+2) Executa casos para validar comportamento de ExtractionLogger.
+3) Assegura regressao controlada nas regras principais.
+
+Estrutura interna:
+Metodos principais:
+- deveClassificarComoCompletoQuandoSemDivergencias(): verifica comportamento esperado em teste automatizado.
+- deveClassificarComoIncompletoDadosQuandoHaInvalidos(): verifica comportamento esperado em teste automatizado.
+- deveClassificarComoIncompletoDbQuandoHaDivergenciaPersistencia(): verifica comportamento esperado em teste automatizado.
+- deveConsiderarCompletoFaturasGraphqlQuandoBackfillAumentaVolumeSalvo(): verifica comportamento esperado em teste automatizado.
+- deveClassificarComoErroApiQuandoMotivoForErroApi(): verifica comportamento esperado em teste automatizado.
+- deveClassificarComoIncompletoLimiteQuandoMotivoNaoForErroApi(): verifica comportamento esperado em teste automatizado.
+- executar(...2 args): executa o fluxo principal desta responsabilidade.
+- executarGraphqlFaturas(...2 args): executa o fluxo principal desta responsabilidade.
+Atributos-chave:
+- Atributos nao mapeados automaticamente; consulte a implementacao abaixo.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.runners.common;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

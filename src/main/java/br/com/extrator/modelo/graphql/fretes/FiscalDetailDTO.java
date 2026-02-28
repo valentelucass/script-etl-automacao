@@ -1,3 +1,49 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/modelo/graphql/fretes/FiscalDetailDTO.java
+Classe  : FiscalDetailDTO (class)
+Pacote  : br.com.extrator.modelo.graphql.fretes
+Modulo  : DTO/Mapper GraphQL
+Papel   : Implementa responsabilidade de fiscal detail dto.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Modela payloads da API GraphQL.
+2) Mapeia estrutura remota para modelo interno.
+3) Apoia persistencia e validacao do extrator.
+
+Estrutura interna:
+Metodos principais:
+- getCstType(): expone valor atual do estado interno.
+- setCstType(...1 args): ajusta valor em estado interno.
+- getTaxValue(): expone valor atual do estado interno.
+- setTaxValue(...1 args): ajusta valor em estado interno.
+- getPisValue(): expone valor atual do estado interno.
+- setPisValue(...1 args): ajusta valor em estado interno.
+- getCofinsValue(): expone valor atual do estado interno.
+- setCofinsValue(...1 args): ajusta valor em estado interno.
+- getCfopCode(): expone valor atual do estado interno.
+- setCfopCode(...1 args): ajusta valor em estado interno.
+- getCalculationBasis(): expone valor atual do estado interno.
+- setCalculationBasis(...1 args): ajusta valor em estado interno.
+- getTaxRate(): expone valor atual do estado interno.
+- setTaxRate(...1 args): ajusta valor em estado interno.
+Atributos-chave:
+- cstType: campo de estado para "cst type".
+- taxValue: campo de estado para "tax value".
+- pisValue: campo de estado para "pis value".
+- cofinsValue: campo de estado para "cofins value".
+- cfopCode: campo de estado para "cfop code".
+- calculationBasis: campo de estado para "calculation basis".
+- taxRate: campo de estado para "tax rate".
+- pisRate: campo de estado para "pis rate".
+- cofinsRate: campo de estado para "cofins rate".
+- hasDifal: campo de estado para "has difal".
+- difalTaxValueOrigin: campo de estado para "difal tax value origin".
+- difalTaxValueDestination: campo de estado para "difal tax value destination".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.modelo.graphql.fretes;
 
 import com.fasterxml.jackson.annotation.JsonProperty;

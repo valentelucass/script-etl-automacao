@@ -1,3 +1,34 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/api/constantes/ConstantesApiGraphQL.java
+Classe  : ConstantesApiGraphQL (class)
+Pacote  : br.com.extrator.api.constantes
+Modulo  : Cliente de integracao API
+Papel   : Implementa responsabilidade de constantes api graph ql.
+
+Conecta com:
+- GraphQLQueries (api.graphql)
+- ConstantesEntidades (util.validacao)
+
+Fluxo geral:
+1) Monta requisicoes para endpoints externos.
+2) Trata autenticacao, timeout e parse de resposta.
+3) Entrega dados normalizados para os extractors.
+
+Estrutura interna:
+Metodos principais:
+- ConstantesApiGraphQL(): realiza operacao relacionada a "constantes api graph ql".
+- ConfiguracaoGraphQL(...4 args): realiza operacao relacionada a "configuracao graph ql".
+- obterConfiguracao(...1 args): recupera dados configurados ou calculados.
+- possuiConfiguracao(...1 args): realiza operacao relacionada a "possui configuracao".
+- obterCampoFiltro(...1 args): recupera dados configurados ou calculados.
+- obterQuery(...1 args): recupera dados configurados ou calculados.
+- obterNomeEntidadeApi(...1 args): recupera dados configurados ou calculados.
+- suportaIntervalo(...1 args): realiza operacao relacionada a "suporta intervalo".
+Atributos-chave:
+- ENDPOINT_GRAPHQL: campo de estado para "endpoint graphql".
+- TEMPLATE_ID_AUDIT: campo de estado para "template id audit".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.api.constantes;
 
 import java.util.Map;

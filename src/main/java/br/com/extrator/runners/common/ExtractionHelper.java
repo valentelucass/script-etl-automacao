@@ -1,3 +1,31 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/runners/common/ExtractionHelper.java
+Classe  : ExtractionHelper (class)
+Pacote  : br.com.extrator.runners.common
+Modulo  : Componente compartilhado de extracao
+Papel   : Implementa responsabilidade de extraction helper.
+
+Conecta com:
+- LogExtracaoRepository (db.repository)
+- ConstantesEntidades (util.validacao)
+
+Fluxo geral:
+1) Disponibiliza contratos e utilitarios transversais.
+2) Padroniza resultado, log e comportamento comum.
+3) Reduz duplicacao entre GraphQL e DataExport.
+
+Estrutura interna:
+Metodos principais:
+- ExtractionHelper(): realiza operacao relacionada a "extraction helper".
+- appendAvisoSeguranca(...1 args): realiza operacao relacionada a "append aviso seguranca".
+- drenarAvisosSeguranca(): realiza operacao relacionada a "drenar avisos seguranca".
+- limparAvisosSeguranca(): realiza operacao relacionada a "limpar avisos seguranca".
+- executarExtracao(...6 args): executa o fluxo principal desta responsabilidade.
+- aplicarDelay(): realiza operacao relacionada a "aplicar delay".
+Atributos-chave:
+- AVISOS_SEGURANCA: campo de estado para "avisos seguranca".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.runners.common;
 
 import java.time.LocalDate;

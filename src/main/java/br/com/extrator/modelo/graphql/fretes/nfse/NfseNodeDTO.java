@@ -1,3 +1,49 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/modelo/graphql/fretes/nfse/NfseNodeDTO.java
+Classe  : NfseNodeDTO (class)
+Pacote  : br.com.extrator.modelo.graphql.fretes.nfse
+Modulo  : DTO/Mapper GraphQL
+Papel   : Implementa responsabilidade de nfse node dto.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Modela payloads da API GraphQL.
+2) Mapeia estrutura remota para modelo interno.
+3) Apoia persistencia e validacao do extrator.
+
+Estrutura interna:
+Metodos principais:
+- getId(): expone valor atual do estado interno.
+- setId(...1 args): ajusta valor em estado interno.
+- getNumber(): expone valor atual do estado interno.
+- setNumber(...1 args): ajusta valor em estado interno.
+- getStatus(): expone valor atual do estado interno.
+- setStatus(...1 args): ajusta valor em estado interno.
+- getRpsSeries(): expone valor atual do estado interno.
+- setRpsSeries(...1 args): ajusta valor em estado interno.
+- getIssuedAt(): expone valor atual do estado interno.
+- setIssuedAt(...1 args): ajusta valor em estado interno.
+- getCancelationReason(): expone valor atual do estado interno.
+- setCancelationReason(...1 args): ajusta valor em estado interno.
+- getPdfServiceUrl(): expone valor atual do estado interno.
+- setPdfServiceUrl(...1 args): ajusta valor em estado interno.
+Atributos-chave:
+- id: campo de estado para "id".
+- number: campo de estado para "number".
+- status: campo de estado para "status".
+- rpsSeries: campo de estado para "rps series".
+- issuedAt: campo de estado para "issued at".
+- cancelationReason: campo de estado para "cancelation reason".
+- pdfServiceUrl: campo de estado para "pdf service url".
+- xmlDocument: campo de estado para "xml document".
+- corporationId: campo de estado para "corporation id".
+- nfseService: servico de negocio/coordenacao.
+- freightId: campo de estado para "freight id".
+- freight: campo de estado para "freight".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.modelo.graphql.fretes.nfse;
 
 import com.fasterxml.jackson.annotation.JsonProperty;

@@ -1,9 +1,32 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/test/java/br/com/extrator/comandos/extracao/LoopDaemonComandoReconciliacaoHistoryTest.java
+Classe  : LoopDaemonComandoReconciliacaoHistoryTest (class)
+Pacote  : br.com.extrator.comandos.extracao
+Modulo  : Teste automatizado
+Papel   : Valida comportamento da unidade LoopDaemonComandoReconciliacaoHistory.
+
+Conecta com:
+- DaemonHistoryWriter (comandos.extracao.daemon)
+- LoopReconciliationService (comandos.extracao.reconciliacao)
+- ReconciliationSummary (comandos.extracao.reconciliacao.LoopReconciliationService)
+
+Fluxo geral:
+1) Prepara cenarios e dados de teste.
+2) Executa casos para validar comportamento de LoopDaemonComandoReconciliacaoHistory.
+3) Assegura regressao controlada nas regras principais.
+
+Estrutura interna:
+Metodos principais:
+- Metodos nao mapeados automaticamente; consulte a implementacao abaixo.
+Atributos-chave:
+- HISTORY_OVERRIDE_KEY: campo de estado para "history override key".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.comandos.extracao;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,6 +38,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import br.com.extrator.comandos.extracao.daemon.DaemonHistoryWriter;
 import br.com.extrator.comandos.extracao.reconciliacao.LoopReconciliationService;
 import br.com.extrator.comandos.extracao.reconciliacao.LoopReconciliationService.ReconciliationSummary;
 
@@ -52,17 +76,15 @@ class LoopDaemonComandoReconciliacaoHistoryTest {
             );
             final ReconciliationSummary resumo = service.processarPosCiclo(inicio, fimExtracao, true, true);
 
-            final LoopDaemonComando comando = new LoopDaemonComando(LoopDaemonComando.Modo.STATUS);
-            final Method registrar = LoopDaemonComando.class.getDeclaredMethod(
-                "registrarHistoricoReconciliacao",
-                LocalDateTime.class,
-                LocalDateTime.class,
-                boolean.class,
-                ReconciliationSummary.class,
-                Path.class
+            final DaemonHistoryWriter writer = new DaemonHistoryWriter(
+                tempDir,
+                tempDir.resolve("ciclos"),
+                tempDir.resolve("history"),
+                tempDir.resolve("default-reconciliacao"),
+                HISTORY_OVERRIDE_KEY
             );
-            registrar.setAccessible(true);
-            registrar.invoke(comando, inicio, fimExtracao, true, resumo, cicloLog);
+            writer.ensureDirectories();
+            writer.registerReconciliationHistory(inicio, fimExtracao, true, resumo, cicloLog);
 
             assertTrue(Files.exists(csvEsperado), "CSV de reconciliacao deve ser criado");
             final List<String> linhas = Files.readAllLines(csvEsperado, StandardCharsets.UTF_8);

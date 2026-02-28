@@ -114,3 +114,21 @@
 - Evidencia: query paginada de `creditCustomerBilling(params:{id:'4025751'})` em `/graphql` retornou `graphql_records=1`.
 - Impacto: confirma que o orfao pode ser efeito de falha transitoria/forma de consulta, nao necessariamente inexistencia da fatura.
 - Decisao: manter backfill por ID com retentativa e validar endpoint/header antes de concluir ausencia real.
+
+### V-20260228-01 | ATIVA
+- Fato: o modulo de seguranca agora aceita override de caminho do SQLite via `-Dextrator.security.db.path`.
+- Evidencia: `CaminhoBancoSegurancaResolver` passou a priorizar `system property` antes de variaveis de ambiente.
+- Impacto: testes e smoke podem isolar banco de seguranca em pasta temporaria sem afetar ambiente operacional.
+- Decisao: padrao de testes automatizados deve usar o override por `system property`.
+
+### V-20260228-02 | ATIVA
+- Fato: existe smoke test automatizado do JAR empacotado cobrindo inicializacao de seguranca/SQLite.
+- Evidencia: script `scripts/ci/smoke_packaged_jar.sh`, integrado no workflow `.github/workflows/ci.yml`.
+- Impacto: regressao de classpath/driver no artefato final tende a ser detectada antes do uso em producao.
+- Decisao: manter o smoke do JAR como gate obrigatorio de CI.
+
+### V-20260228-03 | ATIVA
+- Fato: a validacao API x banco 24h pode falhar por drift temporal se a extracao de referencia estiver antiga.
+- Evidencia: comparacao detalhada com janela antiga falhou (`ok=3 | falhas=4`) e, apos extracao fresca, passou (`ok=7 | falhas=0`).
+- Impacto: rodada de validacao sem extracao previa pode gerar falso negativo operacional.
+- Decisao: executar extracao fresca antes da validacao 24h, com script de rodada consistente (`scripts/ci/rodada_24h_consistente.ps1`).

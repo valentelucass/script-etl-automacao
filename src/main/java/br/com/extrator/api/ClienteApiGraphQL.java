@@ -1,3 +1,58 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/api/ClienteApiGraphQL.java
+Classe  : ClienteApiGraphQL (class)
+Pacote  : br.com.extrator.api
+Modulo  : Cliente de integracao API
+Papel   : Implementa responsabilidade de cliente api graph ql.
+
+Conecta com:
+- PageAuditEntity (db.entity)
+- PageAuditRepository (db.repository)
+- ConstantesApiGraphQL (api.constantes)
+- GraphQLIntervaloHelper (api.graphql)
+- GraphQLQueries (api.graphql)
+- ConstantesEntidades (util.validacao)
+- ColetaNodeDTO (modelo.graphql.coletas)
+- FreteNodeDTO (modelo.graphql.fretes)
+
+Fluxo geral:
+1) Monta requisicoes para endpoints externos.
+2) Trata autenticacao, timeout e parse de resposta.
+3) Entrega dados normalizados para os extractors.
+
+Estrutura interna:
+Metodos principais:
+- executarQueryPaginada(...5 args): executa o fluxo principal desta responsabilidade.
+- ClienteApiGraphQL(): realiza operacao relacionada a "cliente api graph ql".
+- setExecutionUuid(...1 args): ajusta valor em estado interno.
+- buscarColetas(...1 args): consulta e retorna dados conforme criterio.
+- buscarFretes(...1 args): consulta e retorna dados conforme criterio.
+- buscarColetas(...2 args): consulta e retorna dados conforme criterio.
+- buscarColetasComFiltrosCombinados(...2 args): consulta e retorna dados conforme criterio.
+- selecionarMotivoInterrupcao(...2 args): realiza operacao relacionada a "selecionar motivo interrupcao".
+- deduplicarColetasPorId(...1 args): realiza operacao relacionada a "deduplicar coletas por id".
+- buscarColetasDia(...1 args): consulta e retorna dados conforme criterio.
+- buscarColetasDiaComCampo(...2 args): consulta e retorna dados conforme criterio.
+- suportaFiltroPick(...1 args): realiza operacao relacionada a "suporta filtro pick".
+- listarCamposInputPick(): retorna colecao de itens processados.
+- buscarFretes(...2 args): consulta e retorna dados conforme criterio.
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- INTERVALO_LOG_PROGRESSO: campo de estado para "intervalo log progresso".
+- MAX_FALHAS_CONSECUTIVAS: campo de estado para "max falhas consecutivas".
+- contadorFalhasConsecutivas: campo de estado para "contador falhas consecutivas".
+- entidadesComCircuitAberto: campo de estado para "entidades com circuit aberto".
+- urlBase: campo de estado para "url base".
+- endpointGraphQL: campo de estado para "endpoint graph ql".
+- token: campo de estado para "token".
+- clienteHttp: campo de estado para "cliente http".
+- mapeadorJson: campo de estado para "mapeador json".
+- gerenciadorRequisicao: campo de estado para "gerenciador requisicao".
+- timeoutRequisicao: campo de estado para "timeout requisicao".
+- pageAuditRepository: dependencia de acesso a banco.
+- executionUuid: campo de estado para "execution uuid".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.api;
 
 import java.net.URI;
@@ -40,14 +95,14 @@ import br.com.extrator.util.http.GerenciadorRequisicaoHttp;
 import br.com.extrator.util.formatacao.FormatadorData;
 
 /**
- * Cliente especializado para comunicaÃƒÂ§ÃƒÂ£o com a API GraphQL do ESL Cloud
- * ResponsÃƒÂ¡vel por buscar dados de Coletas atravÃƒÂ©s de queries GraphQL
- * com proteÃƒÂ§ÃƒÂµes contra loops infinitos e circuit breaker.
+ * Cliente especializado para comunicação com a API GraphQL do ESL Cloud
+ * Responsável por buscar dados de Coletas através de queries GraphQL
+ * com proteções contra loops infinitos e circuit breaker.
  */
 public class ClienteApiGraphQL {
     private static final Logger logger = LoggerFactory.getLogger(ClienteApiGraphQL.class);
     
-    // PROTEÃƒâ€¡Ãƒâ€¢ES CONTRA LOOPS INFINITOS - Replicadas do ClienteApiRest
+    // PROTEÇÕES CONTRA LOOPS INFINITOS - Replicadas do ClienteApiRest
     // PROBLEMA #7 CORRIGIDO: Valor agora obtido de CarregadorConfig
     private static final int INTERVALO_LOG_PROGRESSO = 50;
     
@@ -68,13 +123,13 @@ public class ClienteApiGraphQL {
     private volatile Set<String> camposPickInputCache;
 
     /**
-     * Executa uma query GraphQL com paginaÃƒÂ§ÃƒÂ£o automÃƒÂ¡tica e proteÃƒÂ§ÃƒÂµes contra loops infinitos
+     * Executa uma query GraphQL com paginação automática e proteções contra loops infinitos
      * 
      * @param query Query GraphQL a ser executada
      * @param nomeEntidade Nome da entidade na resposta GraphQL
-     * @param variaveis VariÃƒÂ¡veis da query GraphQL
-     * @param tipoClasse Classe para desserializaÃƒÂ§ÃƒÂ£o tipada
-     * @return ResultadoExtracao indicando se a extraÃƒÂ§ÃƒÂ£o foi completa ou interrompida
+     * @param variaveis Variáveis da query GraphQL
+     * @param tipoClasse Classe para desserialização tipada
+     * @return ResultadoExtracao indicando se a extração foi completa ou interrompida
      */
     private <T> ResultadoExtracao<T> executarQueryPaginada(final String query,
                                                            final String nomeEntidade,
@@ -270,7 +325,7 @@ public class ClienteApiGraphQL {
 
     /**
      * Construtor da classe ClienteApiGraphQL
-     * Inicializa as configuraÃƒÂ§ÃƒÂµes necessÃƒÂ¡rias para comunicaÃƒÂ§ÃƒÂ£o com a API GraphQL
+     * Inicializa as configurações necessárias para comunicação com a API GraphQL
      */
     public ClienteApiGraphQL() {
         this.urlBase = CarregadorConfig.obterUrlBaseApi();
@@ -290,10 +345,10 @@ public class ClienteApiGraphQL {
         this.executionUuid = uuid;
     }
     /**
-     * Busca coletas via GraphQL para as ÃƒÂºltimas 24h (ontem + hoje).
-     * MÃƒÂ©todo de conveniÃƒÂªncia que delega para buscarColetas(dataInicio, dataFim).
+     * Busca coletas via GraphQL para as últimas 24h (ontem + hoje).
+     * Método de conveniência que delega para buscarColetas(dataInicio, dataFim).
      * 
-     * @param dataReferencia Data de referÃƒÂªncia para buscar as coletas (LocalDate)
+     * @param dataReferencia Data de referência para buscar as coletas (LocalDate)
      * @return ResultadoExtracao indicando se a busca foi completa ou interrompida
      */
     public ResultadoExtracao<ColetaNodeDTO> buscarColetas(final LocalDate dataReferencia) {
@@ -306,10 +361,10 @@ public class ClienteApiGraphQL {
 
 
     /**
-     * Busca fretes via GraphQL para as ÃƒÂºltimas 24 horas a partir de uma data de referÃƒÂªncia.
-     * MÃƒÂ©todo de conveniÃƒÂªncia que delega para buscarFretes(dataInicio, dataFim).
+     * Busca fretes via GraphQL para as últimas 24 horas a partir de uma data de referência.
+     * Método de conveniência que delega para buscarFretes(dataInicio, dataFim).
      * 
-     * @param dataReferencia Data de referÃƒÂªncia que representa o FIM do intervalo de busca.
+     * @param dataReferencia Data de referência que representa o FIM do intervalo de busca.
      * @return ResultadoExtracao indicando se a busca foi completa ou interrompida
      */
     public ResultadoExtracao<FreteNodeDTO> buscarFretes(final LocalDate dataReferencia) {
@@ -319,19 +374,19 @@ public class ClienteApiGraphQL {
 
     /**
      * Busca coletas via GraphQL para um intervalo de datas.
-     * Utiliza GraphQLIntervaloHelper para iterar dia a dia (API nÃƒÂ£o suporta intervalo).
+     * Utiliza GraphQLIntervaloHelper para iterar dia a dia (API não suporta intervalo).
      * 
-     * @param dataInicio Data de inÃƒÂ­cio do perÃƒÂ­odo
-     * @param dataFim Data de fim do perÃƒÂ­odo
+     * @param dataInicio Data de início do período
+     * @param dataFim Data de fim do período
      * @return ResultadoExtracao indicando se a busca foi completa ou interrompida
      */
     public ResultadoExtracao<ColetaNodeDTO> buscarColetas(final LocalDate dataInicio, final LocalDate dataFim) {
         final boolean suportaServiceDate = suportaFiltroPick("serviceDate");
         if (suportaServiceDate) {
-            logger.info("Ã°Å¸â€Â Coletas: usando filtros combinados requestDate + serviceDate para reduzir perdas referenciais.");
+            logger.info("🔍 Coletas: usando filtros combinados requestDate + serviceDate para reduzir perdas referenciais.");
             return buscarColetasComFiltrosCombinados(dataInicio, dataFim);
         }
-        logger.info("Ã¢â€žÂ¹Ã¯Â¸Â Coletas: filtro serviceDate nÃƒÂ£o disponÃƒÂ­vel no schema atual, usando requestDate.");
+        logger.info("ℹ️ Coletas: filtro serviceDate não disponível no schema atual, usando requestDate.");
         return GraphQLIntervaloHelper.executarPorDia(
             dataInicio,
             dataFim,
@@ -367,7 +422,7 @@ public class ClienteApiGraphQL {
         final List<ColetaNodeDTO> deduplicado = deduplicarColetasPorId(acumulado);
         final int duplicadosRemovidos = acumulado.size() - deduplicado.size();
         if (duplicadosRemovidos > 0) {
-            logger.info("Ã¢â€žÂ¹Ã¯Â¸Â Coletas combinadas: {} duplicado(s) removido(s) por id/sequenceCode.", duplicadosRemovidos);
+            logger.info("ℹ️ Coletas combinadas: {} duplicado(s) removido(s) por id/sequenceCode.", duplicadosRemovidos);
         }
 
         if (completo) {
@@ -410,10 +465,10 @@ public class ClienteApiGraphQL {
     }
 
     /**
-     * Busca coletas para um ÃƒÂºnico dia especÃƒÂ­fico.
-     * MÃƒÂ©todo auxiliar usado pelo GraphQLIntervaloHelper.
+     * Busca coletas para um único dia específico.
+     * Método auxiliar usado pelo GraphQLIntervaloHelper.
      * 
-     * @param data Data especÃƒÂ­fica para buscar coletas
+     * @param data Data específica para buscar coletas
      * @return ResultadoExtracao das coletas do dia
      */
     private ResultadoExtracao<ColetaNodeDTO> buscarColetasDia(final LocalDate data) {
@@ -474,14 +529,14 @@ public class ClienteApiGraphQL {
      * Busca fretes via GraphQL para um intervalo de datas.
      * API de fretes suporta intervalo diretamente via serviceAt.
      * 
-     * @param dataInicio Data de inÃƒÂ­cio do perÃƒÂ­odo
-     * @param dataFim Data de fim do perÃƒÂ­odo
+     * @param dataInicio Data de início do período
+     * @param dataFim Data de fim do período
      * @return ResultadoExtracao indicando se a busca foi completa ou interrompida
      */
     public ResultadoExtracao<FreteNodeDTO> buscarFretes(final LocalDate dataInicio, final LocalDate dataFim) {
-        logger.info("Ã°Å¸â€Â Buscando fretes via GraphQL - PerÃƒÂ­odo: {} a {}", dataInicio, dataFim);
+        logger.info("🔍 Buscando fretes via GraphQL - Período: {} a {}", dataInicio, dataFim);
         
-        // Usar formato "dataInicio - dataFim" no filtro serviceAt (jÃƒÂ¡ suportado pela API)
+        // Usar formato "dataInicio - dataFim" no filtro serviceAt (já suportado pela API)
         final String intervaloServiceAt = formatarDataParaApiGraphQL(dataInicio) + " - " + formatarDataParaApiGraphQL(dataFim);
         
         final Map<String, Object> variaveis = Map.of(
@@ -493,9 +548,9 @@ public class ClienteApiGraphQL {
     }
 
     /**
-     * Busca usuÃƒÂ¡rios do sistema (Individual) via GraphQL.
-     * NÃƒÂ£o utiliza filtro de data, apenas filtra por enabled: true.
-     * Utiliza paginaÃƒÂ§ÃƒÂ£o cursor-based para extrair todos os usuÃƒÂ¡rios ativos.
+     * Busca usuários do sistema (Individual) via GraphQL.
+     * Não utiliza filtro de data, apenas filtra por enabled: true.
+     * Utiliza paginação cursor-based para extrair todos os usuários ativos.
      * 
      * @return ResultadoExtracao indicando se a busca foi completa ou interrompida
      */
@@ -504,7 +559,7 @@ public class ClienteApiGraphQL {
             final Map<String, Object> variaveis = new HashMap<>();
             variaveis.put("params", Map.of("enabled", true));
             
-            logger.info("Buscando UsuÃƒÂ¡rios do Sistema via GraphQL (enabled: true)");
+            logger.info("Buscando Usuários do Sistema via GraphQL (enabled: true)");
             return executarQueryPaginada(
                 GraphQLQueries.QUERY_USUARIOS_SISTEMA, 
                 ConstantesApiGraphQL.obterNomeEntidadeApi(ConstantesEntidades.USUARIOS_SISTEMA), 
@@ -512,7 +567,7 @@ public class ClienteApiGraphQL {
                 br.com.extrator.modelo.graphql.usuarios.IndividualNodeDTO.class
             );
         } catch (final RuntimeException e) {
-            logger.warn("Falha ao buscar UsuÃƒÂ¡rios do Sistema: {}", e.getMessage());
+            logger.warn("Falha ao buscar Usuários do Sistema: {}", e.getMessage());
             final List<br.com.extrator.modelo.graphql.usuarios.IndividualNodeDTO> vazio = new ArrayList<>();
             return ResultadoExtracao.incompleto(vazio, ResultadoExtracao.MotivoInterrupcao.ERRO_API, 0, 0);
         }
@@ -520,7 +575,7 @@ public class ClienteApiGraphQL {
 
     /**
      * Busca NFSe diretamente via GraphQL para enriquecer fretes com metadados.
-     * Utiliza paginaÃƒÂ§ÃƒÂ£o e traz campos diretos e o XML bruto.
+     * Utiliza paginação e traz campos diretos e o XML bruto.
      */
     public ResultadoExtracao<br.com.extrator.modelo.graphql.fretes.nfse.NfseNodeDTO> buscarNfseDireta(final LocalDate dataReferencia) {
         try {
@@ -529,7 +584,7 @@ public class ClienteApiGraphQL {
             final Map<String, Object> variaveis = Map.of(
                 "params", Map.of("issuedAt", intervaloIssuedAt)
             );
-            logger.info("Buscando NFSe via GraphQL - PerÃƒÂ­odo: {}", intervaloIssuedAt);
+            logger.info("Buscando NFSe via GraphQL - Período: {}", intervaloIssuedAt);
             return executarQueryPaginada(GraphQLQueries.QUERY_NFSE, 
                 ConstantesApiGraphQL.obterNomeEntidadeApi("nfse"), variaveis, br.com.extrator.modelo.graphql.fretes.nfse.NfseNodeDTO.class);
         } catch (final RuntimeException e) {
@@ -540,10 +595,10 @@ public class ClienteApiGraphQL {
     }
 
     /**
-     * Busca capa de faturas via GraphQL para a data de referÃƒÂªncia.
-     * Utiliza janela configurÃƒÂ¡vel para buscar dias anteriores.
+     * Busca capa de faturas via GraphQL para a data de referência.
+     * Utiliza janela configurável para buscar dias anteriores.
      * 
-     * @param dataReferencia Data de referÃƒÂªncia (normalmente hoje)
+     * @param dataReferencia Data de referência (normalmente hoje)
      * @return ResultadoExtracao das faturas encontradas
      */
     public ResultadoExtracao<br.com.extrator.modelo.graphql.faturas.CreditCustomerBillingNodeDTO> buscarCapaFaturas(final LocalDate dataReferencia) {
@@ -553,11 +608,11 @@ public class ClienteApiGraphQL {
     }
 
     /**
-     * Busca capa de faturas via GraphQL para um intervalo de datas especÃƒÂ­fico.
-     * Utiliza GraphQLIntervaloHelper para iterar dia a dia (API nÃƒÂ£o suporta intervalo).
+     * Busca capa de faturas via GraphQL para um intervalo de datas específico.
+     * Utiliza GraphQLIntervaloHelper para iterar dia a dia (API não suporta intervalo).
      * 
-     * @param dataInicio Data de inÃƒÂ­cio do perÃƒÂ­odo
-     * @param dataFim Data de fim do perÃƒÂ­odo
+     * @param dataInicio Data de início do período
+     * @param dataFim Data de fim do período
      * @return ResultadoExtracao indicando se a busca foi completa ou interrompida
      */
     public ResultadoExtracao<br.com.extrator.modelo.graphql.faturas.CreditCustomerBillingNodeDTO> buscarCapaFaturas(final LocalDate dataInicio, final LocalDate dataFim) {
@@ -570,10 +625,10 @@ public class ClienteApiGraphQL {
     }
     
     /**
-     * Busca capa de faturas para um ÃƒÂºnico dia especÃƒÂ­fico.
-     * MÃƒÂ©todo auxiliar usado pelo GraphQLIntervaloHelper.
+     * Busca capa de faturas para um único dia específico.
+     * Método auxiliar usado pelo GraphQLIntervaloHelper.
      * 
-     * @param data Data especÃƒÂ­fica para buscar faturas
+     * @param data Data específica para buscar faturas
      * @return ResultadoExtracao das faturas do dia
      */
     private ResultadoExtracao<br.com.extrator.modelo.graphql.faturas.CreditCustomerBillingNodeDTO> buscarCapaFaturasDia(final LocalDate data) {
@@ -598,7 +653,7 @@ public class ClienteApiGraphQL {
             }
 
             logger.warn(
-                "Falha transitória ao buscar Capa Faturas em {} usando filtro '{}'. Tentando filtro alternativo...",
+                "Falha transit?ria ao buscar Capa Faturas em {} usando filtro '{}'. Tentando filtro alternativo...",
                 data,
                 campoFiltro
             );
@@ -662,10 +717,10 @@ public class ClienteApiGraphQL {
     }
 
     /**
-     * Lista os campos disponÃƒÂ­veis no tipo CreditCustomerBillingInput via introspection.
+     * Lista os campos disponíveis no tipo CreditCustomerBillingInput via introspection.
      * Usado para determinar qual campo de filtro usar (dueDate, issueDate, etc).
      * 
-     * @return Lista de nomes de campos disponÃƒÂ­veis
+     * @return Lista de nomes de campos disponíveis
      */
     private List<String> listarCamposInputCreditCustomerBilling() {
         try {
@@ -698,17 +753,17 @@ public class ClienteApiGraphQL {
     }
 
     /**
-     * Executa uma query GraphQL de forma genÃƒÂ©rica e robusta com desserializaÃƒÂ§ÃƒÂ£o tipada
+     * Executa uma query GraphQL de forma genérica e robusta com desserialização tipada
      * 
      * @param query        A query GraphQL a ser executada
      * @param nomeEntidade Nome da entidade para logs e tratamento de erros
-     * @param variaveis    VariÃƒÂ¡veis da query GraphQL
-     * @param tipoClasse   Classe para desserializaÃƒÂ§ÃƒÂ£o tipada
-     * @return Resposta paginada contendo entidades tipadas e informaÃƒÂ§ÃƒÂµes de paginaÃƒÂ§ÃƒÂ£o
+     * @param variaveis    Variáveis da query GraphQL
+     * @param tipoClasse   Classe para desserialização tipada
+     * @return Resposta paginada contendo entidades tipadas e informações de paginação
      */
     private <T> PaginatedGraphQLResponse<T> executarQueryGraphQLTipado(final String query, final String nomeEntidade,
             final Map<String, Object> variaveis, final Class<T> tipoClasse) {
-        logger.debug("Executando query GraphQL tipada para {} - URL: {}{}, Variáveis: {}",
+        logger.debug("Executando query GraphQL tipada para {} - URL: {}{}, Vari?veis: {}",
             nomeEntidade, urlBase, endpointGraphQL, variaveis);
         final List<T> entidades = new ArrayList<>();
 
@@ -959,18 +1014,18 @@ public class ClienteApiGraphQL {
     }
 
     /**
-     * Valida se as credenciais de acesso ÃƒÂ  API GraphQL estÃƒÂ£o funcionando
+     * Valida se as credenciais de acesso à API GraphQL estão funcionando
      * 
-     * @return true se a validaÃƒÂ§ÃƒÂ£o foi bem-sucedida, false caso contrÃƒÂ¡rio
+     * @return true se a validação foi bem-sucedida, false caso contrário
      */
     public boolean validarAcessoApi() {
-        logger.info("Validando acesso ÃƒÂ  API GraphQL...");
+        logger.info("Validando acesso à API GraphQL...");
 
         try {
             // Query simples para testar a conectividade
             final String queryTeste = "{ __schema { queryType { name } } }";
 
-            // Construir o corpo da requisiÃƒÂ§ÃƒÂ£o GraphQL usando ObjectMapper
+            // Construir o corpo da requisição GraphQL usando ObjectMapper
             final ObjectNode corpoJson = mapeadorJson.createObjectNode();
             corpoJson.put("query", queryTeste);
             final String corpoRequisicao = mapeadorJson.writeValueAsString(corpoJson);
@@ -990,33 +1045,33 @@ public class ClienteApiGraphQL {
                 final boolean sucesso = !respostaJson.has("errors");
 
                 if (sucesso) {
-                    logger.info("Ã¢Å“â€¦ ValidaÃƒÂ§ÃƒÂ£o da API GraphQL bem-sucedida");
+                    logger.info("✅ Validação da API GraphQL bem-sucedida");
                 } else {
-                    logger.error("Ã¢ÂÅ’ Erro na validaÃƒÂ§ÃƒÂ£o da API GraphQL: {}", respostaJson.get("errors"));
+                    logger.error("❌ Erro na validação da API GraphQL: {}", respostaJson.get("errors"));
                 }
 
                 return sucesso;
             } else {
-                logger.error("Ã¢ÂÅ’ Falha na validaÃƒÂ§ÃƒÂ£o da API GraphQL. Status: {}", resposta.statusCode());
+                logger.error("❌ Falha na validação da API GraphQL. Status: {}", resposta.statusCode());
                 return false;
             }
 
         } catch (java.io.IOException | InterruptedException e) {
-            logger.error("Ã¢ÂÅ’ Erro durante validaÃƒÂ§ÃƒÂ£o da API GraphQL: {}", e.getMessage(), e);
+            logger.error("❌ Erro durante validação da API GraphQL: {}", e.getMessage(), e);
             return false;
         }
     }
 
     /**
-     * Busca dados de enriquecimento de uma fatura especÃƒÂ­fica via GraphQL.
-     * Executa a query EnriquecerFaturas para obter NÃ‚Â° NFS-e, Carteira e InstruÃƒÂ§ÃƒÂ£o Customizada.
+     * Busca dados de enriquecimento de uma fatura específica via GraphQL.
+     * Executa a query EnriquecerFaturas para obter N° NFS-e, Carteira e Instrução Customizada.
      * 
-     * @param billingId ID da cobranÃƒÂ§a (creditCustomerBilling)
-     * @return Optional com CreditCustomerBillingNodeDTO contendo os dados enriquecidos, ou empty se nÃƒÂ£o encontrado
+     * @param billingId ID da cobrança (creditCustomerBilling)
+     * @return Optional com CreditCustomerBillingNodeDTO contendo os dados enriquecidos, ou empty se não encontrado
      */
     public java.util.Optional<CreditCustomerBillingNodeDTO> enriquecerFatura(final String billingId) {
         if (billingId == null || billingId.isBlank()) {
-            logger.warn("Ã¢Å¡Â Ã¯Â¸Â Tentativa de enriquecer fatura com ID nulo ou vazio");
+            logger.warn("⚠️ Tentativa de enriquecer fatura com ID nulo ou vazio");
             return java.util.Optional.empty();
         }
         
@@ -1036,21 +1091,21 @@ public class ClienteApiGraphQL {
             
             return java.util.Optional.empty();
         } catch (final Exception e) {
-            logger.error("Ã¢ÂÅ’ Erro ao enriquecer fatura com ID {}: {}", billingId, e.getMessage(), e);
+            logger.error("❌ Erro ao enriquecer fatura com ID {}: {}", billingId, e.getMessage(), e);
             return java.util.Optional.empty();
         }
     }
     
     /**
-     * Enriquece fatura usando o nÃƒÂºmero do documento (fallback quando billingId nÃƒÂ£o estÃƒÂ¡ disponÃƒÂ­vel).
-     * Usa fit_ant_document do DataExport para buscar a cobranÃƒÂ§a no GraphQL.
+     * Enriquece fatura usando o número do documento (fallback quando billingId não está disponível).
+     * Usa fit_ant_document do DataExport para buscar a cobrança no GraphQL.
      * 
-     * @param document NÃƒÂºmero do documento da fatura (ex: "112025/1-3")
-     * @return Optional com os dados de enriquecimento ou empty se nÃƒÂ£o encontrado
+     * @param document Número do documento da fatura (ex: "112025/1-3")
+     * @return Optional com os dados de enriquecimento ou empty se não encontrado
      */
     public java.util.Optional<CreditCustomerBillingNodeDTO> enriquecerFaturaPorDocumento(final String document) {
         if (document == null || document.isBlank()) {
-            logger.warn("Ã¢Å¡Â Ã¯Â¸Â Tentativa de enriquecer fatura com documento nulo ou vazio");
+            logger.warn("⚠️ Tentativa de enriquecer fatura com documento nulo ou vazio");
             return java.util.Optional.empty();
         }
         
@@ -1065,14 +1120,14 @@ public class ClienteApiGraphQL {
                 );
             
             if (resposta.getEntidades() != null && !resposta.getEntidades().isEmpty()) {
-                logger.debug("Ã¢Å“â€¦ Fatura encontrada via documento: {}", document);
+                logger.debug("✅ Fatura encontrada via documento: {}", document);
                 return java.util.Optional.of(resposta.getEntidades().get(0));
             }
             
-            logger.debug("Ã¢Å¡Â Ã¯Â¸Â Fatura nÃƒÂ£o encontrada via documento: {}", document);
+            logger.debug("⚠️ Fatura não encontrada via documento: {}", document);
             return java.util.Optional.empty();
         } catch (final Exception e) {
-            logger.error("Ã¢ÂÅ’ Erro ao enriquecer fatura por documento {}: {}", document, e.getMessage(), e);
+            logger.error("❌ Erro ao enriquecer fatura por documento {}: {}", document, e.getMessage(), e);
             return java.util.Optional.empty();
         }
     }
@@ -1127,10 +1182,10 @@ public class ClienteApiGraphQL {
     }
 
     /**
-     * Incrementa o contador de falhas consecutivas e ativa o circuit breaker se necessÃƒÂ¡rio.
+     * Incrementa o contador de falhas consecutivas e ativa o circuit breaker se necessário.
      * 
      * @param chaveEntidade Chave identificadora da entidade GraphQL
-     * @param nomeEntidade Nome amigÃƒÂ¡vel da entidade para logs
+     * @param nomeEntidade Nome amigável da entidade para logs
      */
     private void incrementarContadorFalhas(final String chaveEntidade, final String nomeEntidade) {
         final int falhas = contadorFalhasConsecutivas.getOrDefault(chaveEntidade, 0) + 1;
@@ -1138,23 +1193,23 @@ public class ClienteApiGraphQL {
         
         if (falhas >= MAX_FALHAS_CONSECUTIVAS) {
             entidadesComCircuitAberto.add(chaveEntidade);
-            logger.error("Ã°Å¸Å¡Â¨ CIRCUIT BREAKER ATIVADO - Entidade {} ({}): {} falhas consecutivas. Entidade temporariamente desabilitada.", 
+            logger.error("🚨 CIRCUIT BREAKER ATIVADO - Entidade {} ({}): {} falhas consecutivas. Entidade temporariamente desabilitada.", 
                     chaveEntidade, nomeEntidade, falhas);
         } else {
-            logger.warn("Ã¢Å¡Â Ã¯Â¸Â Falha {}/{} para entidade {} ({})", falhas, MAX_FALHAS_CONSECUTIVAS, chaveEntidade, nomeEntidade);
+            logger.warn("⚠️ Falha {}/{} para entidade {} ({})", falhas, MAX_FALHAS_CONSECUTIVAS, chaveEntidade, nomeEntidade);
         }
     }
     
     /**
-     * Busca dados de enriquecimento de uma cobranÃƒÂ§a especÃƒÂ­fica via GraphQL.
-     * Retorna ticketAccountId, NFS-e e mÃƒÂ©todo de pagamento da primeira parcela.
+     * Busca dados de enriquecimento de uma cobrança específica via GraphQL.
+     * Retorna ticketAccountId, NFS-e e método de pagamento da primeira parcela.
      * 
-     * @param billingId ID da cobranÃƒÂ§a (creditCustomerBilling)
-     * @return Optional com CreditCustomerBillingNodeDTO contendo os dados enriquecidos, ou empty se nÃƒÂ£o encontrado
+     * @param billingId ID da cobrança (creditCustomerBilling)
+     * @return Optional com CreditCustomerBillingNodeDTO contendo os dados enriquecidos, ou empty se não encontrado
      */
     public java.util.Optional<CreditCustomerBillingNodeDTO> buscarDadosCobranca(final Long billingId) {
         if (billingId == null) {
-            logger.warn("Ã¢Å¡Â Ã¯Â¸Â Tentativa de buscar dados de cobranÃƒÂ§a com ID nulo");
+            logger.warn("⚠️ Tentativa de buscar dados de cobrança com ID nulo");
             return java.util.Optional.empty();
         }
         
@@ -1174,21 +1229,21 @@ public class ClienteApiGraphQL {
             
             return java.util.Optional.empty();
         } catch (final Exception e) {
-            logger.error("Ã¢ÂÅ’ Erro ao buscar dados de cobranÃƒÂ§a com ID {}: {}", billingId, e.getMessage(), e);
+            logger.error("❌ Erro ao buscar dados de cobrança com ID {}: {}", billingId, e.getMessage(), e);
             return java.util.Optional.empty();
         }
     }
     
     /**
-     * Busca detalhes de uma conta bancÃƒÂ¡ria via GraphQL.
+     * Busca detalhes de uma conta bancária via GraphQL.
      * Usado para resolver dados do banco via ticketAccountId (cache otimizado).
      * 
-     * @param bankAccountId ID da conta bancÃƒÂ¡ria (ticketAccountId)
-     * @return Optional com BankAccountNodeDTO contendo os detalhes do banco, ou empty se nÃƒÂ£o encontrado
+     * @param bankAccountId ID da conta bancária (ticketAccountId)
+     * @return Optional com BankAccountNodeDTO contendo os detalhes do banco, ou empty se não encontrado
      */
     public java.util.Optional<BankAccountNodeDTO> buscarDetalhesBanco(final Integer bankAccountId) {
         if (bankAccountId == null) {
-            logger.warn("Ã¢Å¡Â Ã¯Â¸Â Tentativa de buscar detalhes de banco com ID nulo");
+            logger.warn("⚠️ Tentativa de buscar detalhes de banco com ID nulo");
             return java.util.Optional.empty();
         }
         
@@ -1208,7 +1263,7 @@ public class ClienteApiGraphQL {
             
             return java.util.Optional.empty();
         } catch (final Exception e) {
-            logger.error("Ã¢ÂÅ’ Erro ao buscar detalhes de banco com ID {}: {}", bankAccountId, e.getMessage(), e);
+            logger.error("❌ Erro ao buscar detalhes de banco com ID {}: {}", bankAccountId, e.getMessage(), e);
             return java.util.Optional.empty();
         }
     }

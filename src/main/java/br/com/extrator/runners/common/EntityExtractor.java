@@ -1,3 +1,25 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/runners/common/EntityExtractor.java
+Classe  : EntityExtractor (interface)
+Pacote  : br.com.extrator.runners.common
+Modulo  : Componente compartilhado de extracao
+Papel   : Implementa responsabilidade de entity extractor.
+
+Conecta com:
+- ResultadoExtracao (api)
+
+Fluxo geral:
+1) Disponibiliza contratos e utilitarios transversais.
+2) Padroniza resultado, log e comportamento comum.
+3) Reduz duplicacao entre GraphQL e DataExport.
+
+Estrutura interna:
+Metodos principais:
+- getEmoji(): expone valor atual do estado interno.
+Atributos-chave:
+- Atributos nao mapeados automaticamente; consulte a implementacao abaixo.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.runners.common;
 
 import java.time.LocalDate;

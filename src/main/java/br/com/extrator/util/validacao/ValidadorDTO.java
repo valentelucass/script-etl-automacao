@@ -1,3 +1,35 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/util/validacao/ValidadorDTO.java
+Classe  : ValidadorDTO (class)
+Pacote  : br.com.extrator.util.validacao
+Modulo  : Utilitario compartilhado
+Papel   : Implementa responsabilidade de validador dto.
+
+Conecta com:
+- FormatadorData (util.formatacao)
+
+Fluxo geral:
+1) Centraliza funcoes auxiliares reutilizaveis.
+2) Evita repeticao de logica transversal.
+3) Apoia configuracao, formatacao e infraestrutura.
+
+Estrutura interna:
+Metodos principais:
+- ValidadorDTO(): realiza operacao relacionada a "validador dto".
+- validarCampoObrigatorio(...3 args): aplica regras de validacao e consistencia.
+- validarId(...3 args): aplica regras de validacao e consistencia.
+- validarIdString(...3 args): aplica regras de validacao e consistencia.
+- validarRange(...5 args): aplica regras de validacao e consistencia.
+- validarNaoNegativo(...3 args): aplica regras de validacao e consistencia.
+- validarTamanhoMaximo(...4 args): aplica regras de validacao e consistencia.
+- validarCnpj(...3 args): aplica regras de validacao e consistencia.
+- validarCpf(...3 args): aplica regras de validacao e consistencia.
+- validarDataISO(...3 args): aplica regras de validacao e consistencia.
+- criarValidacao(...1 args): instancia ou monta estrutura de dados.
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.util.validacao;
 
 import java.util.ArrayList;

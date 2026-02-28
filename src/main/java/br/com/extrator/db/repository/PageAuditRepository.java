@@ -1,3 +1,26 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/db/repository/PageAuditRepository.java
+Classe  : PageAuditRepository (class)
+Pacote  : br.com.extrator.db.repository
+Modulo  : Repositorio de dados
+Papel   : Implementa responsabilidade de page audit repository.
+
+Conecta com:
+- PageAuditEntity (db.entity)
+- GerenciadorConexao (util.banco)
+
+Fluxo geral:
+1) Monta comandos SQL e parametros.
+2) Executa operacoes de persistencia/consulta no banco.
+3) Converte resultado para entidades de dominio.
+
+Estrutura interna:
+Metodos principais:
+- inserir(...1 args): inclui registros no destino configurado.
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.db.repository;
 
 import java.sql.Connection;

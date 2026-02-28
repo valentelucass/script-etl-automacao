@@ -1,3 +1,25 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/runners/common/DataExportEntityExtractor.java
+Classe  : DataExportEntityExtractor (interface)
+Pacote  : br.com.extrator.runners.common
+Modulo  : Componente compartilhado de extracao
+Papel   : Implementa responsabilidade de data export entity extractor.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Disponibiliza contratos e utilitarios transversais.
+2) Padroniza resultado, log e comportamento comum.
+3) Reduz duplicacao entre GraphQL e DataExport.
+
+Estrutura interna:
+Metodos principais:
+- Metodos nao mapeados automaticamente; consulte a implementacao abaixo.
+Atributos-chave:
+- Atributos nao mapeados automaticamente; consulte a implementacao abaixo.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.runners.common;
 
 import java.util.List;

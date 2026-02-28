@@ -1,3 +1,33 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/auditoria/enums/StatusValidacao.java
+Classe  : StatusValidacao (enum)
+Pacote  : br.com.extrator.auditoria.enums
+Modulo  : Modulo de auditoria
+Papel   : Implementa responsabilidade de status validacao.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Modela resultados e estado de auditoria.
+2) Apoia consolidacao de evidencias operacionais.
+3) Suporta emissao de relatorios de conformidade.
+
+Estrutura interna:
+Metodos principais:
+- StatusValidacao(...2 args): realiza operacao relacionada a "status validacao".
+- getDescricao(): expone valor atual do estado interno.
+- getIcone(): expone valor atual do estado interno.
+- getDescricaoCompleta(): expone valor atual do estado interno.
+- isSucesso(): retorna estado booleano de controle.
+- temProblema(): verifica presenca/condicao esperada.
+- isErroCritico(): retorna estado booleano de controle.
+- toString(): realiza operacao relacionada a "to string".
+Atributos-chave:
+- descricao: campo de estado para "descricao".
+- icone: campo de estado para "icone".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.auditoria.enums;
 
 /**

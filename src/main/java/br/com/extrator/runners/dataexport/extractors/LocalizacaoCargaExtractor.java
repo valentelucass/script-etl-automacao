@@ -1,3 +1,40 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/runners/dataexport/extractors/LocalizacaoCargaExtractor.java
+Classe  : LocalizacaoCargaExtractor (class)
+Pacote  : br.com.extrator.runners.dataexport.extractors
+Modulo  : Extractor DataExport
+Papel   : Implementa responsabilidade de localizacao carga extractor.
+
+Conecta com:
+- ClienteApiDataExport (api)
+- ResultadoExtracao (api)
+- LocalizacaoCargaEntity (db.entity)
+- InvalidRecordAuditRepository (db.repository)
+- LocalizacaoCargaRepository (db.repository)
+- LocalizacaoCargaDTO (modelo.dataexport.localizacaocarga)
+- LocalizacaoCargaMapper (modelo.dataexport.localizacaocarga)
+- ConstantesExtracao (runners.common)
+
+Fluxo geral:
+1) Configura requisicao da API DataExport.
+2) Converte resposta em DTO/entidade de dominio.
+3) Persiste lote no repositorio correspondente.
+
+Estrutura interna:
+Metodos principais:
+- LocalizacaoCargaExtractor(...4 args): realiza operacao relacionada a "localizacao carga extractor".
+- extract(...2 args): realiza operacao relacionada a "extract".
+- getEntityName(): expone valor atual do estado interno.
+- getEmoji(): expone valor atual do estado interno.
+- auditarRegistroInvalido(...3 args): realiza operacao relacionada a "auditar registro invalido".
+Atributos-chave:
+- apiClient: cliente de integracao externa.
+- repository: dependencia de acesso a banco.
+- mapper: apoio de mapeamento de dados.
+- log: campo de estado para "log".
+- invalidRecordAuditRepository: dependencia de acesso a banco.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.runners.dataexport.extractors;
 
 import java.time.LocalDate;
@@ -19,8 +56,8 @@ import br.com.extrator.util.mapeamento.MapperUtil;
 import br.com.extrator.util.validacao.ConstantesEntidades;
 
 /**
- * Extractor para entidade LocalizaÃ§Ã£o de Cargas (DataExport).
- * Inclui deduplicaÃ§Ã£o antes de salvar.
+ * Extractor para entidade Localização de Cargas (DataExport).
+ * Inclui deduplicação antes de salvar.
  */
 public class LocalizacaoCargaExtractor implements DataExportEntityExtractor<LocalizacaoCargaDTO> {
     
@@ -43,7 +80,7 @@ public class LocalizacaoCargaExtractor implements DataExportEntityExtractor<Loca
     
     @Override
     public ResultadoExtracao<LocalizacaoCargaDTO> extract(final LocalDate dataInicio, final LocalDate dataFim) {
-        // Usa intervalo informado quando disponÃ­vel; fallback para Ãºltimas 24h
+        // Usa intervalo informado quando disponível; fallback para últimas 24h
         if (dataInicio != null) {
             final LocalDate fim = (dataFim != null) ? dataFim : dataInicio;
             return apiClient.buscarLocalizacaoCarga(dataInicio, fim);
@@ -71,11 +108,11 @@ public class LocalizacaoCargaExtractor implements DataExportEntityExtractor<Loca
             } catch (final RuntimeException e) {
                 registrosInvalidos++;
                 auditarRegistroInvalido(dto, "MAPEAMENTO_INVALIDO", e.getMessage());
-                log.warn("âš ï¸ LocalizaÃ§Ã£o de Carga invÃ¡lida descartada: {}", e.getMessage());
+                log.warn("⚠️ Localização de Carga inválida descartada: {}", e.getMessage());
             }
         }
         if (registrosInvalidos > 0) {
-            log.warn("âš ï¸ {} registro(s) invÃ¡lido(s) descartado(s) em {}", registrosInvalidos, getEntityName());
+            log.warn("⚠️ {} registro(s) inválido(s) descartado(s) em {}", registrosInvalidos, getEntityName());
         }
         if (entities.isEmpty()) {
             return new SaveResult(0, 0, registrosInvalidos);

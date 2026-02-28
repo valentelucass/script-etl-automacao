@@ -1,3 +1,51 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/db/entity/ContasAPagarDataExportEntity.java
+Classe  : ContasAPagarDataExportEntity (class)
+Pacote  : br.com.extrator.db.entity
+Modulo  : Entidade de persistencia
+Papel   : Implementa responsabilidade de contas apagar data export entity.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Define estrutura de dados persistida no banco.
+2) Representa campos de tabela/view no dominio Java.
+3) Suporta transporte de dados entre camadas.
+
+Estrutura interna:
+Metodos principais:
+- ContasAPagarDataExportEntity(): realiza operacao relacionada a "contas apagar data export entity".
+- getSequenceCode(): expone valor atual do estado interno.
+- setSequenceCode(...1 args): ajusta valor em estado interno.
+- getDocumentNumber(): expone valor atual do estado interno.
+- setDocumentNumber(...1 args): ajusta valor em estado interno.
+- getIssueDate(): expone valor atual do estado interno.
+- setIssueDate(...1 args): ajusta valor em estado interno.
+- getTipoLancamento(): expone valor atual do estado interno.
+- setTipoLancamento(...1 args): ajusta valor em estado interno.
+- getValorOriginal(): expone valor atual do estado interno.
+- setValorOriginal(...1 args): ajusta valor em estado interno.
+- getValorJuros(): expone valor atual do estado interno.
+- setValorJuros(...1 args): ajusta valor em estado interno.
+- getValorDesconto(): expone valor atual do estado interno.
+Atributos-chave:
+- sequenceCode: campo de estado para "sequence code".
+- documentNumber: campo de estado para "document number".
+- issueDate: campo de estado para "issue date".
+- tipoLancamento: campo de estado para "tipo lancamento".
+- valorOriginal: campo de estado para "valor original".
+- valorJuros: campo de estado para "valor juros".
+- valorDesconto: campo de estado para "valor desconto".
+- valorAPagar: campo de estado para "valor apagar".
+- valorPago: campo de estado para "valor pago".
+- statusPagamento: campo de estado para "status pagamento".
+- mesCompetencia: campo de estado para "mes competencia".
+- anoCompetencia: campo de estado para "ano competencia".
+- dataCriacao: campo de estado para "data criacao".
+- dataLiquidacao: campo de estado para "data liquidacao".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.db.entity;
 
 import java.math.BigDecimal;

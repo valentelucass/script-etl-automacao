@@ -1,3 +1,29 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/seguranca/AcaoSeguranca.java
+Classe  : AcaoSeguranca (enum)
+Pacote  : br.com.extrator.seguranca
+Modulo  : Modulo de seguranca
+Papel   : Implementa responsabilidade de acao seguranca.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Modela usuarios, perfis e acoes autorizadas.
+2) Implementa regras de autenticacao e senha.
+3) Gerencia repositorio de seguranca local.
+
+Estrutura interna:
+Metodos principais:
+- AcaoSeguranca(...2 args): realiza operacao relacionada a "acao seguranca".
+- permite(...1 args): realiza operacao relacionada a "permite".
+- getDescricao(): expone valor atual do estado interno.
+- fromToken(...1 args): realiza operacao relacionada a "from token".
+Atributos-chave:
+- perfisPermitidos: campo de estado para "perfis permitidos".
+- descricao: campo de estado para "descricao".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.seguranca;
 
 import java.util.Arrays;

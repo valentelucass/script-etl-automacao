@@ -1,3 +1,28 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/comandos/validacao/VerificarTimestampsComando.java
+Classe  : VerificarTimestampsComando (class)
+Pacote  : br.com.extrator.comandos.validacao
+Modulo  : Comando CLI (validacao)
+Papel   : Implementa responsabilidade de verificar timestamps comando.
+
+Conecta com:
+- Comando (comandos.base)
+- GerenciadorConexao (util.banco)
+- ConstantesEntidades (util.validacao)
+
+Fluxo geral:
+1) Executa validacoes de acesso, timestamps e consistencia.
+2) Compara API versus banco quando aplicavel.
+3) Emite resultado de qualidade para operacao.
+
+Estrutura interna:
+Metodos principais:
+- verificarTimestampsTabela(...2 args): realiza operacao relacionada a "verificar timestamps tabela".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- FORMATTER: campo de estado para "formatter".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.comandos.validacao;
 
 import org.slf4j.Logger;

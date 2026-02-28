@@ -1,3 +1,45 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/auditoria/servicos/CompletudeValidator.java
+Classe  : CompletudeValidator (class)
+Pacote  : br.com.extrator.auditoria.servicos
+Modulo  : Servico de auditoria
+Papel   : Implementa responsabilidade de completude validator.
+
+Conecta com:
+- ClienteApiDataExport (api)
+- ClienteApiGraphQL (api)
+- GerenciadorConexao (util.banco)
+- ConstantesEntidades (util.validacao)
+
+Fluxo geral:
+1) Executa regras de validacao de qualidade/ETL.
+2) Consolida indicadores e status de auditoria.
+3) Publica resultado para relatorio tecnico.
+
+Estrutura interna:
+Metodos principais:
+- CompletudeValidator(): realiza operacao relacionada a "completude validator".
+- CompletudeValidator(...2 args): realiza operacao relacionada a "completude validator".
+- buscarTotaisEslCloud(...1 args): consulta e retorna dados conforme criterio.
+- validarCompletudePorLogs(...1 args): aplica regras de validacao e consistencia.
+- validarCompletude(...3 args): aplica regras de validacao e consistencia.
+- extrairMetricaInteira(...2 args): realiza operacao relacionada a "extrair metrica inteira".
+- determinarStatusValidacao(...2 args): realiza operacao relacionada a "determinar status validacao".
+- obterIconeStatus(...1 args): recupera dados configurados ou calculados.
+- validarGapsOcorrencias(...1 args): aplica regras de validacao e consistencia.
+- validarJanelaTemporal(...1 args): aplica regras de validacao e consistencia.
+- validarJanelaTemporalEntidade(...3 args): aplica regras de validacao e consistencia.
+- contarRegistrosDuranteJanela(...3 args): realiza operacao relacionada a "contar registros durante janela".
+- contarRegistrosApiGraphQL(...3 args): realiza operacao relacionada a "contar registros api graph ql".
+- contarRegistrosApiDataExport(...3 args): realiza operacao relacionada a "contar registros api data export".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- PADRAO_DB_UPSERTS: campo de estado para "padrao db upserts".
+- PADRAO_UNIQUE_COUNT: campo de estado para "padrao unique count".
+- clienteApiGraphQL: campo de estado para "cliente api graph ql".
+- clienteApiDataExport: campo de estado para "cliente api data export".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.auditoria.servicos;
 
 import java.sql.Connection;

@@ -1,3 +1,39 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/runners/graphql/extractors/FreteExtractor.java
+Classe  : FreteExtractor (class)
+Pacote  : br.com.extrator.runners.graphql.extractors
+Modulo  : Extractor GraphQL
+Papel   : Implementa responsabilidade de frete extractor.
+
+Conecta com:
+- ClienteApiGraphQL (api)
+- ResultadoExtracao (api)
+- FreteEntity (db.entity)
+- FreteRepository (db.repository)
+- FreteMapper (modelo.graphql.fretes)
+- FreteNodeDTO (modelo.graphql.fretes)
+- ConstantesExtracao (runners.common)
+- EntityExtractor (runners.common)
+
+Fluxo geral:
+1) Configura query e parametros para entidade alvo.
+2) Invoca cliente GraphQL com paginacao segura.
+3) Encaminha dados para camada de persistencia.
+
+Estrutura interna:
+Metodos principais:
+- FreteExtractor(...3 args): realiza operacao relacionada a "frete extractor".
+- extract(...2 args): realiza operacao relacionada a "extract".
+- deduplicarPorId(...1 args): realiza operacao relacionada a "deduplicar por id".
+- getEntityName(): expone valor atual do estado interno.
+- getEmoji(): expone valor atual do estado interno.
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- apiClient: cliente de integracao externa.
+- repository: dependencia de acesso a banco.
+- mapper: apoio de mapeamento de dados.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.runners.graphql.extractors;
 
 import java.time.LocalDate;

@@ -1,5 +1,24 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
+REM ==[DOC-FILE]===============================================================
+REM Arquivo : 09-gerenciar_usuarios.bat
+REM Tipo    : Script operacional Windows (.bat)
+REM Papel   : Automatiza a rotina "09-gerenciar usuarios" para uso operacional.
+REM
+REM Conecta com:
+REM - call: %~dp0mvn.bat
+REM - java -jar: %~dp0target\extrator.jar
+REM
+REM Fluxo geral:
+REM 1) Inicializa variaveis de controle do script.
+REM 2) Executa rotina principal com validacoes basicas.
+REM 3) Finaliza com codigo de retorno apropriado.
+REM
+REM Variaveis-chave:
+REM - JAVA_HOME: controle de estado do script.
+REM - OP: controle de estado do script.
+REM [DOC-FILE-END]===========================================================
+
 if /i not "%EXTRATOR_SKIP_CHCP%"=="1" chcp 65001 >nul
 
 echo ================================================================
@@ -116,5 +135,3 @@ goto :MENU
 :END
 endlocal
 exit /b 0
-
-

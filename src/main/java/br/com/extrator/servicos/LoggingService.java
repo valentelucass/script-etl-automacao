@@ -1,3 +1,50 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/servicos/LoggingService.java
+Classe  : LoggingService (class)
+Pacote  : br.com.extrator.servicos
+Modulo  : Servico de negocio
+Papel   : Implementa responsabilidade de logging service.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Encapsula regras de processo.
+2) Coordena validacoes e limites operacionais.
+3) Expone API interna para comandos/runners.
+
+Estrutura interna:
+Metodos principais:
+- LoggingService(): realiza operacao relacionada a "logging service".
+- iniciarCaptura(...1 args): inicia recursos e prepara o processamento.
+- pararCaptura(): encerra recursos e finaliza operacao com seguranca.
+- pararCaptura(...1 args): encerra recursos e finaliza operacao com seguranca.
+- centralizarLinha(...1 args): realiza operacao relacionada a "centralizar linha".
+- salvarLogsEmArquivo(...2 args): persiste dados em armazenamento.
+- formatarDuracao(...1 args): realiza operacao relacionada a "formatar duracao".
+- formatarTamanho(...1 args): realiza operacao relacionada a "formatar tamanho".
+- formatarNumero(...1 args): realiza operacao relacionada a "formatar numero".
+- contarLinhas(...1 args): realiza operacao relacionada a "contar linhas".
+- gerarNomeArquivoLog(): realiza operacao relacionada a "gerar nome arquivo log".
+- criarDiretorioLogs(): instancia ou monta estrutura de dados.
+- aplicarRetencaoLogs(): realiza operacao relacionada a "aplicar retencao logs".
+- organizarLogsTxtNaPastaLogs(): realiza operacao relacionada a "organizar logs txt na pasta logs".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- DIRETORIO_LOGS: campo de estado para "diretorio logs".
+- FORMATTER_ARQUIVO: campo de estado para "formatter arquivo".
+- FORMATTER_LOG: campo de estado para "formatter log".
+- MAX_LOG_FILES: campo de estado para "max log files".
+- originalOut: campo de estado para "original out".
+- originalErr: campo de estado para "original err".
+- outputBuffer: campo de estado para "output buffer".
+- errorBuffer: campo de estado para "error buffer".
+- teeOut: campo de estado para "tee out".
+- teeErr: campo de estado para "tee err".
+- nomeOperacao: campo de estado para "nome operacao".
+- inicioOperacao: campo de estado para "inicio operacao".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.servicos;
 
 import java.io.ByteArrayOutputStream;

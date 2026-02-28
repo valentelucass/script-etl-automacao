@@ -1,3 +1,51 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/db/entity/ColetaEntity.java
+Classe  : ColetaEntity (class)
+Pacote  : br.com.extrator.db.entity
+Modulo  : Entidade de persistencia
+Papel   : Implementa responsabilidade de coleta entity.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Define estrutura de dados persistida no banco.
+2) Representa campos de tabela/view no dominio Java.
+3) Suporta transporte de dados entre camadas.
+
+Estrutura interna:
+Metodos principais:
+- getId(): expone valor atual do estado interno.
+- setId(...1 args): ajusta valor em estado interno.
+- getSequenceCode(): expone valor atual do estado interno.
+- setSequenceCode(...1 args): ajusta valor em estado interno.
+- getRequestDate(): expone valor atual do estado interno.
+- setRequestDate(...1 args): ajusta valor em estado interno.
+- getServiceDate(): expone valor atual do estado interno.
+- setServiceDate(...1 args): ajusta valor em estado interno.
+- getStatus(): expone valor atual do estado interno.
+- setStatus(...1 args): ajusta valor em estado interno.
+- getTotalValue(): expone valor atual do estado interno.
+- setTotalValue(...1 args): ajusta valor em estado interno.
+- getTotalWeight(): expone valor atual do estado interno.
+- setTotalWeight(...1 args): ajusta valor em estado interno.
+Atributos-chave:
+- id: campo de estado para "id".
+- sequenceCode: campo de estado para "sequence code".
+- requestDate: campo de estado para "request date".
+- serviceDate: campo de estado para "service date".
+- status: campo de estado para "status".
+- totalValue: campo de estado para "total value".
+- totalWeight: campo de estado para "total weight".
+- totalVolumes: campo de estado para "total volumes".
+- clienteId: campo de estado para "cliente id".
+- clienteNome: campo de estado para "cliente nome".
+- clienteDoc: campo de estado para "cliente doc".
+- localColeta: campo de estado para "local coleta".
+- numeroColeta: campo de estado para "numero coleta".
+- complementoColeta: campo de estado para "complemento coleta".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.db.entity;
 
 import java.math.BigDecimal;

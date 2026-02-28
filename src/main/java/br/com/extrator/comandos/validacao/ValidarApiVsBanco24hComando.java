@@ -1,3 +1,32 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/comandos/validacao/ValidarApiVsBanco24hComando.java
+Classe  : ValidarApiVsBanco24hComando (class)
+Pacote  : br.com.extrator.comandos.validacao
+Modulo  : Comando CLI (validacao)
+Papel   : Implementa responsabilidade de validar api vs banco24h comando.
+
+Conecta com:
+- CompletudeValidator (auditoria.servicos)
+- Comando (comandos.base)
+- GerenciadorConexao (util.banco)
+- LoggerConsole (util.console)
+- ConstantesEntidades (util.validacao)
+
+Fluxo geral:
+1) Executa validacoes de acesso, timestamps e consistencia.
+2) Compara API versus banco quando aplicavel.
+3) Emite resultado de qualidade para operacao.
+
+Estrutura interna:
+Metodos principais:
+- JanelaExecucao(...5 args): realiza operacao relacionada a "janela execucao".
+- extrairNumeroCampoMensagem(...2 args): realiza operacao relacionada a "extrair numero campo mensagem".
+- mapearTabela(...1 args): mapeia campos para DTO/entidade de destino.
+- possuiFlag(...2 args): realiza operacao relacionada a "possui flag".
+Atributos-chave:
+- log: campo de estado para "log".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.comandos.validacao;
 
 import java.sql.Connection;

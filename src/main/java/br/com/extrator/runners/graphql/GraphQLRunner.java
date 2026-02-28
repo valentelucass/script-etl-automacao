@@ -1,3 +1,27 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/runners/graphql/GraphQLRunner.java
+Classe  : GraphQLRunner (class)
+Pacote  : br.com.extrator.runners.graphql
+Modulo  : Componente Java
+Papel   : Implementa comportamento de graph qlrunner.
+
+Conecta com:
+- GraphQLExtractionService (runners.graphql.services)
+- LoggerConsole (util.console)
+
+Fluxo geral:
+1) Define comportamento principal deste modulo.
+2) Interage com camadas relacionadas do sistema.
+3) Entrega resultado para o fluxo chamador.
+
+Estrutura interna:
+Metodos principais:
+- GraphQLRunner(): realiza operacao relacionada a "graph qlrunner".
+- validarIntervalo(...2 args): aplica regras de validacao e consistencia.
+Atributos-chave:
+- log: campo de estado para "log".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.runners.graphql;
 
 import java.time.LocalDate;

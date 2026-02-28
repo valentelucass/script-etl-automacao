@@ -1,3 +1,25 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/comandos/console/ExibirAjudaComando.java
+Classe  : ExibirAjudaComando (class)
+Pacote  : br.com.extrator.comandos.console
+Modulo  : Componente Java
+Papel   : Implementa comportamento de exibir ajuda comando.
+
+Conecta com:
+- Comando (comandos.base)
+
+Fluxo geral:
+1) Define comportamento principal deste modulo.
+2) Interage com camadas relacionadas do sistema.
+3) Entrega resultado para o fluxo chamador.
+
+Estrutura interna:
+Metodos principais:
+- Metodos nao mapeados automaticamente; consulte a implementacao abaixo.
+Atributos-chave:
+- Atributos nao mapeados automaticamente; consulte a implementacao abaixo.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.comandos.console;
 
 import br.com.extrator.comandos.base.Comando;

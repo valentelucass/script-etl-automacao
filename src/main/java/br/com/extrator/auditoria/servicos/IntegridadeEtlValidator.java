@@ -1,3 +1,34 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/auditoria/servicos/IntegridadeEtlValidator.java
+Classe  : IntegridadeEtlValidator (class)
+Pacote  : br.com.extrator.auditoria.servicos
+Modulo  : Servico de auditoria
+Papel   : Implementa responsabilidade de integridade etl validator.
+
+Conecta com:
+- CarregadorConfig (util.configuracao)
+- GerenciadorConexao (util.banco)
+- ConstantesEntidades (util.validacao)
+
+Fluxo geral:
+1) Executa regras de validacao de qualidade/ETL.
+2) Consolida indicadores e status de auditoria.
+3) Publica resultado para relatorio tecnico.
+
+Estrutura interna:
+Metodos principais:
+- criarSpecs(): instancia ou monta estrutura de dados.
+- validarExecucao(...3 args): aplica regras de validacao e consistencia.
+- validarExecucao(...4 args): aplica regras de validacao e consistencia.
+- registrarFalha(...3 args): grava informacoes de auditoria/log.
+- registrarEventoInfo(...3 args): grava informacoes de auditoria/log.
+- registrarEventoAviso(...2 args): grava informacoes de auditoria/log.
+- resumirMensagem(...1 args): realiza operacao relacionada a "resumir mensagem".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- SPECS: campo de estado para "specs".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.auditoria.servicos;
 
 import java.sql.Connection;
@@ -23,7 +54,7 @@ import br.com.extrator.util.validacao.ConstantesEntidades;
 
 /**
  * Validador estrito de integridade do pipeline ETL.
- * Qualquer divergÃªncia Ã© tratada como falha bloqueante.
+ * Qualquer divergência é tratada como falha bloqueante.
  */
 public class IntegridadeEtlValidator {
 
@@ -171,7 +202,7 @@ public class IntegridadeEtlValidator {
         final Set<String> entidades = new LinkedHashSet<>(entidadesEsperadas);
 
         if (entidades.isEmpty()) {
-            registrarFalha(falhas, "SEM_ENTIDADES", "Nenhuma entidade informada para validaÃ§Ã£o de integridade.");
+            registrarFalha(falhas, "SEM_ENTIDADES", "Nenhuma entidade informada para validação de integridade.");
             return new ResultadoValidacao(false, falhas);
         }
 
@@ -180,7 +211,7 @@ public class IntegridadeEtlValidator {
                 final EntidadeSpec spec = SPECS.get(entidade);
                 if (spec == null) {
                     registrarFalha(falhas, "ENTIDADE_NAO_SUPORTADA",
-                        "Entidade sem spec de validaÃ§Ã£o: " + entidade);
+                        "Entidade sem spec de validação: " + entidade);
                     continue;
                 }
 
@@ -189,7 +220,7 @@ public class IntegridadeEtlValidator {
                 final Optional<JanelaLog> logJanela = buscarLogDaExecucao(conexao, entidade, inicioExecucao, fimExecucao);
                 if (logJanela.isEmpty()) {
                     registrarFalha(falhas, "LOG_AUSENTE",
-                        "Sem log_extracoes para entidade '" + entidade + "' na execuÃ§Ã£o atual.");
+                        "Sem log_extracoes para entidade '" + entidade + "' na execução atual.");
                     continue;
                 }
 
@@ -207,7 +238,7 @@ public class IntegridadeEtlValidator {
                 final int totalBanco = contarRegistrosNoIntervalo(conexao, spec, logEntidade.inicio, logEntidade.fim);
                 if (totalBanco != logEntidade.registrosExtraidos) {
                     registrarFalha(falhas, "DIVERGENCIA_CONTAGEM",
-                        String.format("Entidade '%s': origem=%d, destino=%d (janela %s atÃ© %s).",
+                        String.format("Entidade '%s': origem=%d, destino=%d (janela %s até %s).",
                             entidade, logEntidade.registrosExtraidos, totalBanco, logEntidade.inicio, logEntidade.fim));
                 } else {
                     registrarEventoInfo("CONTAGEM_OK", entidade,
@@ -230,7 +261,7 @@ public class IntegridadeEtlValidator {
             validarIntegridadeReferencial(conexao, inicioExecucao, fimExecucao, entidades, falhas, modoLoopDaemon);
         } catch (final SQLException e) {
             registrarFalha(falhas, "ERRO_SQL_VALIDACAO",
-                "Falha SQL durante validaÃ§Ã£o de integridade: " + e.getMessage());
+                "Falha SQL durante validação de integridade: " + e.getMessage());
         }
 
         return new ResultadoValidacao(falhas.isEmpty(), falhas);
@@ -254,7 +285,7 @@ public class IntegridadeEtlValidator {
 
         if (!colunasFaltantes.isEmpty()) {
             registrarFalha(falhas, "SCHEMA_INCOMPATIVEL",
-                "Tabela '" + spec.tabela + "' sem colunas obrigatÃ³rias: " + String.join(", ", colunasFaltantes));
+                "Tabela '" + spec.tabela + "' sem colunas obrigatórias: " + String.join(", ", colunasFaltantes));
         } else {
             registrarEventoInfo("SCHEMA_OK", spec.entidade, "tabela=" + spec.tabela);
         }
@@ -487,7 +518,7 @@ public class IntegridadeEtlValidator {
                     """;
                 final List<Long> amostraOrfaos = executarListaLong(conexao, sqlFretesOrfaosAmostra, inicioExecucao, fimExecucao);
                 registrarFalha(falhas, "INTEGRIDADE_REFERENCIAL_FRETES",
-                    "Fretes Ã³rfÃ£os (accounting_credit_id sem faturas_graphql.id): " + orfaosFretes
+                    "Fretes órfãos (accounting_credit_id sem faturas_graphql.id): " + orfaosFretes
                         + " | amostra_accounting_credit_id=" + amostraOrfaos);
             } else {
                 registrarEventoInfo("REFERENCIAL_OK", ConstantesEntidades.FRETES,

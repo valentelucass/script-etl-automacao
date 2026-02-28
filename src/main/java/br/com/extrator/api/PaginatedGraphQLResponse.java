@@ -1,3 +1,45 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/api/PaginatedGraphQLResponse.java
+Classe  : PaginatedGraphQLResponse (class)
+Pacote  : br.com.extrator.api
+Modulo  : Cliente de integracao API
+Papel   : Implementa responsabilidade de paginated graph qlresponse.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Monta requisicoes para endpoints externos.
+2) Trata autenticacao, timeout e parse de resposta.
+3) Entrega dados normalizados para os extractors.
+
+Estrutura interna:
+Metodos principais:
+- PaginatedGraphQLResponse(...8 args): realiza operacao relacionada a "paginated graph qlresponse".
+- PaginatedGraphQLResponse(...10 args): realiza operacao relacionada a "paginated graph qlresponse".
+- getEntidades(): expone valor atual do estado interno.
+- getHasNextPage(): expone valor atual do estado interno.
+- getEndCursor(): expone valor atual do estado interno.
+- getStatusCode(): expone valor atual do estado interno.
+- getDuracaoMs(): expone valor atual do estado interno.
+- getReqHash(): expone valor atual do estado interno.
+- getRespHash(): expone valor atual do estado interno.
+- getTotalItens(): expone valor atual do estado interno.
+- isErroApi(): retorna estado booleano de controle.
+- getErroDetalhe(): expone valor atual do estado interno.
+Atributos-chave:
+- entidades: campo de estado para "entidades".
+- hasNextPage: campo de estado para "has next page".
+- endCursor: campo de estado para "end cursor".
+- statusCode: campo de estado para "status code".
+- duracaoMs: campo de estado para "duracao ms".
+- reqHash: campo de estado para "req hash".
+- respHash: campo de estado para "resp hash".
+- totalItens: campo de estado para "total itens".
+- erroApi: campo de estado para "erro api".
+- erroDetalhe: campo de estado para "erro detalhe".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.api;
 
 import java.util.List;

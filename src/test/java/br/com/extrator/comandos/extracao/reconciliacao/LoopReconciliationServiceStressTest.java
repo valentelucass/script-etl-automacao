@@ -1,3 +1,31 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/test/java/br/com/extrator/comandos/extracao/reconciliacao/LoopReconciliationServiceStressTest.java
+Classe  : LoopReconciliationServiceStressTest (class)
+Pacote  : br.com.extrator.comandos.extracao.reconciliacao
+Modulo  : Teste automatizado
+Papel   : Valida comportamento da unidade LoopReconciliationServiceStress.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Prepara cenarios e dados de teste.
+2) Executa casos para validar comportamento de LoopReconciliationServiceStress.
+3) Assegura regressao controlada nas regras principais.
+
+Estrutura interna:
+Metodos principais:
+- setUp(): ajusta valor em estado interno.
+- deveDrenarBacklogGrandeComFalhasIntermitentesSemPerda(): verifica comportamento esperado em teste automatizado.
+- deveSuportarMuitosDiasComReconciliacaoDiariaSemAcumularPendencias(): verifica comportamento esperado em teste automatizado.
+- intervalo(...2 args): realiza operacao relacionada a "intervalo".
+- salvarEstadoInicial(...2 args): persiste dados em armazenamento.
+- carregarEstado(...1 args): realiza operacao relacionada a "carregar estado".
+Atributos-chave:
+- stateFile: campo de estado para "state file".
+- clock: campo de estado para "clock".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.comandos.extracao.reconciliacao;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

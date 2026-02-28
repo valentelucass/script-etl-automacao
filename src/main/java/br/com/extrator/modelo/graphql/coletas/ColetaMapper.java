@@ -1,3 +1,31 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/modelo/graphql/coletas/ColetaMapper.java
+Classe  : ColetaMapper (class)
+Pacote  : br.com.extrator.modelo.graphql.coletas
+Modulo  : DTO/Mapper GraphQL
+Papel   : Implementa responsabilidade de coleta mapper.
+
+Conecta com:
+- ColetaEntity (db.entity)
+- MapperUtil (util.mapeamento)
+
+Fluxo geral:
+1) Modela payloads da API GraphQL.
+2) Mapeia estrutura remota para modelo interno.
+3) Apoia persistencia e validacao do extrator.
+
+Estrutura interna:
+Metodos principais:
+- ColetaMapper(): realiza operacao relacionada a "coleta mapper".
+- toEntity(...1 args): realiza operacao relacionada a "to entity".
+- validarCampoHora(...1 args): aplica regras de validacao e consistencia.
+- traduzirStatus(...1 args): realiza operacao relacionada a "traduzir status".
+- calcularAcaoOcorrencia(...2 args): realiza operacao relacionada a "calcular acao ocorrencia".
+- calcularNumeroTentativas(...1 args): realiza operacao relacionada a "calcular numero tentativas".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.modelo.graphql.coletas;
 
 import java.time.LocalDate;

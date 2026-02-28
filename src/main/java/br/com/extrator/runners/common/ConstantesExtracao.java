@@ -1,3 +1,38 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/runners/common/ConstantesExtracao.java
+Classe  : ConstantesExtracao (class)
+Pacote  : br.com.extrator.runners.common
+Modulo  : Componente compartilhado de extracao
+Papel   : Implementa responsabilidade de constantes extracao.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Disponibiliza contratos e utilitarios transversais.
+2) Padroniza resultado, log e comportamento comum.
+3) Reduz duplicacao entre GraphQL e DataExport.
+
+Estrutura interna:
+Metodos principais:
+- ConstantesExtracao(): realiza operacao relacionada a "constantes extracao".
+Atributos-chave:
+- EMOJI_COLETAS: campo de estado para "emoji coletas".
+- EMOJI_FRETES: campo de estado para "emoji fretes".
+- EMOJI_FATURAS: campo de estado para "emoji faturas".
+- EMOJI_COTACOES: campo de estado para "emoji cotacoes".
+- EMOJI_LOCALIZACAO: campo de estado para "emoji localizacao".
+- EMOJI_CONTAS_PAGAR: campo de estado para "emoji contas pagar".
+- EMOJI_FATURAS_CLIENTE: campo de estado para "emoji faturas cliente".
+- EMOJI_USUARIOS: campo de estado para "emoji usuarios".
+- MSG_ERRO_EXTRACAO: campo de estado para "msg erro extracao".
+- MSG_ERRO_DELAY_INTERROMPIDO: campo de estado para "msg erro delay interrompido".
+- MSG_LOG_EXTRAINDO: campo de estado para "msg log extraindo".
+- MSG_LOG_EXTRAINDO_COM_MOTIVO: campo de estado para "msg log extraindo com motivo".
+- MSG_LOG_EXTRAIDOS: campo de estado para "msg log extraidos".
+- MSG_LOG_PROCESSADOS: campo de estado para "msg log processados".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.runners.common;
 
 /**

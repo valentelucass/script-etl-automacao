@@ -1,5 +1,29 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
+REM ==[DOC-FILE]===============================================================
+REM Arquivo : mvn.bat
+REM Tipo    : Script operacional Windows (.bat)
+REM Papel   : Automatiza a rotina "mvn" para uso operacional.
+REM
+REM Conecta com:
+REM - mvn (build/test/execucao Java)
+REM - call: :run_maven
+REM - call: mvn.cmd
+REM - call: mvn
+REM - call: %MVN_CMD%
+REM
+REM Fluxo geral:
+REM 1) Inicializa variaveis de controle do script.
+REM 2) Executa rotina principal com validacoes basicas.
+REM 3) Finaliza com codigo de retorno apropriado.
+REM
+REM Variaveis-chave:
+REM - __JAVA_BIN: controle de estado do script.
+REM - MVN_CMD: controle de estado do script.
+REM - __ARGS: controle de estado do script.
+REM - __REMOVED_CLEAN: controle de estado do script.
+REM [DOC-FILE-END]===========================================================
+
 chcp 1252 >nul
 
 if not defined JAVA_HOME (

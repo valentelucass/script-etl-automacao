@@ -1,3 +1,51 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/modelo/dataexport/cotacao/CotacaoDTO.java
+Classe  : CotacaoDTO (class)
+Pacote  : br.com.extrator.modelo.dataexport.cotacao
+Modulo  : DTO/Mapper DataExport
+Papel   : Implementa responsabilidade de cotacao dto.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Modela payloads da API DataExport.
+2) Mapeia resposta para entidades internas.
+3) Apoia carga e deduplicacao no destino.
+
+Estrutura interna:
+Metodos principais:
+- add(...2 args): realiza operacao relacionada a "add".
+- getAllProperties(): expone valor atual do estado interno.
+- getSequenceCode(): expone valor atual do estado interno.
+- setSequenceCode(...1 args): ajusta valor em estado interno.
+- getRequestedAt(): expone valor atual do estado interno.
+- setRequestedAt(...1 args): ajusta valor em estado interno.
+- getTotalValue(): expone valor atual do estado interno.
+- setTotalValue(...1 args): ajusta valor em estado interno.
+- getTaxedWeight(): expone valor atual do estado interno.
+- setTaxedWeight(...1 args): ajusta valor em estado interno.
+- getInvoicesValue(): expone valor atual do estado interno.
+- setInvoicesValue(...1 args): ajusta valor em estado interno.
+- getOriginCity(): expone valor atual do estado interno.
+- setOriginCity(...1 args): ajusta valor em estado interno.
+Atributos-chave:
+- requestedAt: campo de estado para "requested at".
+- sequenceCode: campo de estado para "sequence code".
+- operationType: campo de estado para "operation type".
+- customerDocument: campo de estado para "customer document".
+- customerName: campo de estado para "customer name".
+- originCity: campo de estado para "origin city".
+- originState: campo de estado para "origin state".
+- destinationCity: campo de estado para "destination city".
+- destinationState: campo de estado para "destination state".
+- priceTable: campo de estado para "price table".
+- volumes: campo de estado para "volumes".
+- taxedWeight: campo de estado para "taxed weight".
+- invoicesValue: campo de estado para "invoices value".
+- totalValue: campo de estado para "total value".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.modelo.dataexport.cotacao;
 
 import java.util.HashMap;

@@ -1,3 +1,46 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/comandos/extracao/reconciliacao/LoopReconciliationService.java
+Classe  : LoopReconciliationService (class)
+Pacote  : br.com.extrator.comandos.extracao.reconciliacao
+Modulo  : Comando CLI (extracao)
+Papel   : Implementa responsabilidade de loop reconciliation service.
+
+Conecta com:
+- ExecutarExtracaoPorIntervaloComando (comandos.extracao)
+- CarregadorConfig (util.configuracao)
+
+Fluxo geral:
+1) Interpreta parametros e escopo de extracao.
+2) Dispara runners/extratores conforme alvo.
+3) Consolida status final e tratamento de falhas.
+
+Estrutura interna:
+Metodos principais:
+- LoopReconciliationService(...6 args): realiza operacao relacionada a "loop reconciliation service".
+- criarPadrao(...1 args): instancia ou monta estrutura de dados.
+- processarPosCiclo(...4 args): realiza operacao relacionada a "processar pos ciclo".
+- agendarPendenciasPorFalha(...3 args): realiza operacao relacionada a "agendar pendencias por falha".
+- carregarEstado(): realiza operacao relacionada a "carregar estado".
+- salvarEstado(...2 args): persiste dados em armazenamento.
+- parseData(...1 args): realiza operacao relacionada a "parse data".
+- toStringDate(...1 args): realiza operacao relacionada a "to string date".
+- maiorData(...2 args): realiza operacao relacionada a "maior data".
+- resumirMensagem(...1 args): realiza operacao relacionada a "resumir mensagem".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- KEY_LAST_DAILY_SCHEDULED_DATE: campo de estado para "key last daily scheduled date".
+- KEY_LAST_SUCCESSFUL_RECONCILIATION_DATE: campo de estado para "key last successful reconciliation date".
+- KEY_PENDING_DATES: campo de estado para "key pending dates".
+- KEY_LAST_ERROR: campo de estado para "key last error".
+- KEY_UPDATED_AT: campo de estado para "key updated at".
+- stateFile: campo de estado para "state file".
+- clock: campo de estado para "clock".
+- ativo: campo de estado para "ativo".
+- maxTentativasPorCiclo: campo de estado para "max tentativas por ciclo".
+- diasRetroativosFalha: campo de estado para "dias retroativos falha".
+- executor: campo de estado para "executor".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.comandos.extracao.reconciliacao;
 
 import java.io.IOException;

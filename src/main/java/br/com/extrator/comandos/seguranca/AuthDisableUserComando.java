@@ -1,3 +1,28 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/comandos/seguranca/AuthDisableUserComando.java
+Classe  : AuthDisableUserComando (class)
+Pacote  : br.com.extrator.comandos.seguranca
+Modulo  : Comando CLI (seguranca)
+Papel   : Implementa responsabilidade de auth disable user comando.
+
+Conecta com:
+- Comando (comandos.base)
+- AcaoSeguranca (seguranca)
+- SegurancaConsolePrompt (seguranca)
+- SegurancaService (seguranca)
+
+Fluxo geral:
+1) Orquestra operacoes de autenticacao/autorizacao.
+2) Aplica regras de perfil e ciclo de senha.
+3) Registra resultado operacional das acoes de seguranca.
+
+Estrutura interna:
+Metodos principais:
+- Metodos nao mapeados automaticamente; consulte a implementacao abaixo.
+Atributos-chave:
+- Atributos nao mapeados automaticamente; consulte a implementacao abaixo.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.comandos.seguranca;
 
 import java.util.Arrays;

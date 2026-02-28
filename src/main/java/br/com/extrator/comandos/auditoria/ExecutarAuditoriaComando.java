@@ -1,3 +1,28 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/comandos/auditoria/ExecutarAuditoriaComando.java
+Classe  : ExecutarAuditoriaComando (class)
+Pacote  : br.com.extrator.comandos.auditoria
+Modulo  : Comando CLI (auditoria)
+Papel   : Implementa responsabilidade de executar auditoria comando.
+
+Conecta com:
+- ResultadoAuditoria (auditoria.modelos)
+- AuditoriaService (auditoria.servicos)
+- Comando (comandos.base)
+- LoggerConsole (util.console)
+
+Fluxo geral:
+1) Aciona auditorias de estrutura e integridade.
+2) Executa validadores e consolida evidencias.
+3) Produz saida para analise tecnica.
+
+Estrutura interna:
+Metodos principais:
+- Metodos nao mapeados automaticamente; consulte a implementacao abaixo.
+Atributos-chave:
+- log: campo de estado para "log".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.comandos.auditoria;
 
 import java.time.Instant;

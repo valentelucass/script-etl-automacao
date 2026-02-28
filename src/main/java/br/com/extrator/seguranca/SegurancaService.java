@@ -1,3 +1,41 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/seguranca/SegurancaService.java
+Classe  : SegurancaService (class)
+Pacote  : br.com.extrator.seguranca
+Modulo  : Modulo de seguranca
+Papel   : Implementa responsabilidade de seguranca service.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Modela usuarios, perfis e acoes autorizadas.
+2) Implementa regras de autenticacao e senha.
+3) Gerencia repositorio de seguranca local.
+
+Estrutura interna:
+Metodos principais:
+- SegurancaService(): realiza operacao relacionada a "seguranca service".
+- autenticarEAutorizar(...4 args): realiza operacao relacionada a "autenticar eautorizar".
+- bootstrapAdmin(...3 args): realiza operacao relacionada a "bootstrap admin".
+- criarUsuario(...5 args): instancia ou monta estrutura de dados.
+- redefinirSenha(...3 args): realiza operacao relacionada a "redefinir senha".
+- desativarUsuario(...2 args): realiza operacao relacionada a "desativar usuario".
+- obterResumo(): recupera dados configurados ou calculados.
+- tratarFalhaSenha(...2 args): realiza operacao relacionada a "tratar falha senha".
+- registrarAuditoria(...4 args): grava informacoes de auditoria/log.
+- validarPoliticaSenha(...1 args): aplica regras de validacao e consistencia.
+- lerIntEnv(...2 args): realiza operacao relacionada a "ler int env".
+- normalizarUsername(...1 args): realiza operacao relacionada a "normalizar username".
+- resolverHostname(): realiza operacao relacionada a "resolver hostname".
+- ResumoSeguranca(...3 args): realiza operacao relacionada a "resumo seguranca".
+Atributos-chave:
+- repository: dependencia de acesso a banco.
+- pepper: campo de estado para "pepper".
+- maxTentativasFalhas: campo de estado para "max tentativas falhas".
+- minutosBloqueio: campo de estado para "minutos bloqueio".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.seguranca;
 
 import java.net.InetAddress;

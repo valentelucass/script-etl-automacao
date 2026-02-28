@@ -1,3 +1,51 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/modelo/graphql/fretes/FreteNodeDTO.java
+Classe  : FreteNodeDTO (class)
+Pacote  : br.com.extrator.modelo.graphql.fretes
+Modulo  : DTO/Mapper GraphQL
+Papel   : Implementa responsabilidade de frete node dto.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Modela payloads da API GraphQL.
+2) Mapeia estrutura remota para modelo interno.
+3) Apoia persistencia e validacao do extrator.
+
+Estrutura interna:
+Metodos principais:
+- add(...2 args): realiza operacao relacionada a "add".
+- getId(): expone valor atual do estado interno.
+- setId(...1 args): ajusta valor em estado interno.
+- getServiceAt(): expone valor atual do estado interno.
+- setServiceAt(...1 args): ajusta valor em estado interno.
+- getCreatedAt(): expone valor atual do estado interno.
+- setCreatedAt(...1 args): ajusta valor em estado interno.
+- getStatus(): expone valor atual do estado interno.
+- setStatus(...1 args): ajusta valor em estado interno.
+- getModal(): expone valor atual do estado interno.
+- setModal(...1 args): ajusta valor em estado interno.
+- getType(): expone valor atual do estado interno.
+- setType(...1 args): ajusta valor em estado interno.
+- getAccountingCreditId(): expone valor atual do estado interno.
+Atributos-chave:
+- id: campo de estado para "id".
+- serviceAt: campo de estado para "service at".
+- createdAt: campo de estado para "created at".
+- status: campo de estado para "status".
+- modal: campo de estado para "modal".
+- type: campo de estado para "type".
+- accountingCreditId: campo de estado para "accounting credit id".
+- accountingCreditInstallmentId: campo de estado para "accounting credit installment id".
+- totalValue: campo de estado para "total value".
+- invoicesValue: campo de estado para "invoices value".
+- invoicesWeight: campo de estado para "invoices weight".
+- corporationId: campo de estado para "corporation id".
+- destinationCityId: campo de estado para "destination city id".
+- deliveryPredictionDate: campo de estado para "delivery prediction date".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.modelo.graphql.fretes;
 
 import java.math.BigDecimal;

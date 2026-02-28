@@ -1,3 +1,34 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/servicos/ValidadorLimiteExtracao.java
+Classe  : ValidadorLimiteExtracao (class)
+Pacote  : br.com.extrator.servicos
+Modulo  : Servico de negocio
+Papel   : Implementa responsabilidade de validador limite extracao.
+
+Conecta com:
+- LogExtracaoEntity (db.entity)
+- LogExtracaoRepository (db.repository)
+- LoggerConsole (util.console)
+
+Fluxo geral:
+1) Encapsula regras de processo.
+2) Coordena validacoes e limites operacionais.
+3) Expone API interna para comandos/runners.
+
+Estrutura interna:
+Metodos principais:
+- ValidadorLimiteExtracao(): realiza operacao relacionada a "validador limite extracao".
+- validarLimiteExtracao(...3 args): aplica regras de validacao e consistencia.
+- validarLimiteExtracaoPorPeriodoTotal(...4 args): aplica regras de validacao e consistencia.
+- calcularDuracaoPeriodo(...2 args): realiza operacao relacionada a "calcular duracao periodo".
+- obterLimiteHoras(...1 args): recupera dados configurados ou calculados.
+Atributos-chave:
+- log: campo de estado para "log".
+- DIAS_31: campo de estado para "dias 31".
+- DIAS_6_MESES: campo de estado para "dias 6 meses".
+- logRepository: dependencia de acesso a banco.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.servicos;
 
 import java.time.Duration;

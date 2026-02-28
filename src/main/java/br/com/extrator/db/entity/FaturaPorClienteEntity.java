@@ -1,3 +1,51 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/db/entity/FaturaPorClienteEntity.java
+Classe  : FaturaPorClienteEntity (class)
+Pacote  : br.com.extrator.db.entity
+Modulo  : Entidade de persistencia
+Papel   : Implementa responsabilidade de fatura por cliente entity.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Define estrutura de dados persistida no banco.
+2) Representa campos de tabela/view no dominio Java.
+3) Suporta transporte de dados entre camadas.
+
+Estrutura interna:
+Metodos principais:
+- getUniqueId(): expone valor atual do estado interno.
+- setUniqueId(...1 args): ajusta valor em estado interno.
+- getValorFrete(): expone valor atual do estado interno.
+- setValorFrete(...1 args): ajusta valor em estado interno.
+- getValorFatura(): expone valor atual do estado interno.
+- setValorFatura(...1 args): ajusta valor em estado interno.
+- getThirdPartyCtesValue(): expone valor atual do estado interno.
+- setThirdPartyCtesValue(...1 args): ajusta valor em estado interno.
+- getNumeroCte(): expone valor atual do estado interno.
+- setNumeroCte(...1 args): ajusta valor em estado interno.
+- getChaveCte(): expone valor atual do estado interno.
+- setChaveCte(...1 args): ajusta valor em estado interno.
+- getNumeroNfse(): expone valor atual do estado interno.
+- setNumeroNfse(...1 args): ajusta valor em estado interno.
+Atributos-chave:
+- uniqueId: campo de estado para "unique id".
+- valorFrete: campo de estado para "valor frete".
+- valorFatura: campo de estado para "valor fatura".
+- thirdPartyCtesValue: campo de estado para "third party ctes value".
+- numeroCte: campo de estado para "numero cte".
+- chaveCte: campo de estado para "chave cte".
+- numeroNfse: campo de estado para "numero nfse".
+- statusCte: campo de estado para "status cte".
+- statusCteResult: campo de estado para "status cte result".
+- dataEmissaoCte: campo de estado para "data emissao cte".
+- numeroFatura: campo de estado para "numero fatura".
+- dataEmissaoFatura: campo de estado para "data emissao fatura".
+- dataVencimentoFatura: campo de estado para "data vencimento fatura".
+- dataBaixaFatura: campo de estado para "data baixa fatura".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.db.entity;
 
 import java.math.BigDecimal;

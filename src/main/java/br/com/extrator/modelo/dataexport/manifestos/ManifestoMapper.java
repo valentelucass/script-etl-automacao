@@ -1,3 +1,30 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/modelo/dataexport/manifestos/ManifestoMapper.java
+Classe  : ManifestoMapper (class)
+Pacote  : br.com.extrator.modelo.dataexport.manifestos
+Modulo  : DTO/Mapper DataExport
+Papel   : Implementa responsabilidade de manifesto mapper.
+
+Conecta com:
+- ManifestoEntity (db.entity)
+- ValidadorDTO (util.validacao)
+- ResultadoValidacao (util.validacao.ValidadorDTO)
+- MapperUtil (util.mapeamento)
+
+Fluxo geral:
+1) Modela payloads da API DataExport.
+2) Mapeia resposta para entidades internas.
+3) Apoia carga e deduplicacao no destino.
+
+Estrutura interna:
+Metodos principais:
+- ManifestoMapper(): realiza operacao relacionada a "manifesto mapper".
+- toEntity(...1 args): realiza operacao relacionada a "to entity".
+- converterParaBigDecimal(...3 args): transforma dados entre formatos/modelos.
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.modelo.dataexport.manifestos;
 
 import br.com.extrator.db.entity.ManifestoEntity;

@@ -1,3 +1,51 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/db/entity/ManifestoEntity.java
+Classe  : ManifestoEntity (class)
+Pacote  : br.com.extrator.db.entity
+Modulo  : Entidade de persistencia
+Papel   : Implementa responsabilidade de manifesto entity.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Define estrutura de dados persistida no banco.
+2) Representa campos de tabela/view no dominio Java.
+3) Suporta transporte de dados entre camadas.
+
+Estrutura interna:
+Metodos principais:
+- getSequenceCode(): expone valor atual do estado interno.
+- setSequenceCode(...1 args): ajusta valor em estado interno.
+- getStatus(): expone valor atual do estado interno.
+- setStatus(...1 args): ajusta valor em estado interno.
+- getCreatedAt(): expone valor atual do estado interno.
+- setCreatedAt(...1 args): ajusta valor em estado interno.
+- getDeparturedAt(): expone valor atual do estado interno.
+- setDeparturedAt(...1 args): ajusta valor em estado interno.
+- getFinishedAt(): expone valor atual do estado interno.
+- setFinishedAt(...1 args): ajusta valor em estado interno.
+- getTotalCost(): expone valor atual do estado interno.
+- setTotalCost(...1 args): ajusta valor em estado interno.
+- getTraveledKm(): expone valor atual do estado interno.
+- setTraveledKm(...1 args): ajusta valor em estado interno.
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- objectMapper: apoio de mapeamento de dados.
+- sequenceCode: campo de estado para "sequence code".
+- status: campo de estado para "status".
+- createdAt: campo de estado para "created at".
+- departuredAt: campo de estado para "departured at".
+- closedAt: campo de estado para "closed at".
+- finishedAt: campo de estado para "finished at".
+- mdfeNumber: campo de estado para "mdfe number".
+- mdfeKey: campo de estado para "mdfe key".
+- mdfeStatus: campo de estado para "mdfe status".
+- distributionPole: campo de estado para "distribution pole".
+- classification: campo de estado para "classification".
+- vehiclePlate: campo de estado para "vehicle plate".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.db.entity;
 
 import java.math.BigDecimal;

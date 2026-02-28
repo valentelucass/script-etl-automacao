@@ -1,3 +1,26 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/test/java/br/com/extrator/api/graphql/GraphQLIntervaloHelperTest.java
+Classe  : GraphQLIntervaloHelperTest (class)
+Pacote  : br.com.extrator.api.graphql
+Modulo  : Teste automatizado
+Papel   : Valida comportamento da unidade GraphQLIntervaloHelper.
+
+Conecta com:
+- ResultadoExtracao (api)
+
+Fluxo geral:
+1) Prepara cenarios e dados de teste.
+2) Executa casos para validar comportamento de GraphQLIntervaloHelper.
+3) Assegura regressao controlada nas regras principais.
+
+Estrutura interna:
+Metodos principais:
+- devePropagarErroApiQuandoAlgumDiaFalha(): verifica comportamento esperado em teste automatizado.
+- devePropagarCircuitBreakerNaExecucaoSilenciosa(): verifica comportamento esperado em teste automatizado.
+Atributos-chave:
+- Atributos nao mapeados automaticamente; consulte a implementacao abaixo.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.api.graphql;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

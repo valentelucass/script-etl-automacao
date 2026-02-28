@@ -1,3 +1,35 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/util/console/LoggerConsole.java
+Classe  : LoggerConsole (class)
+Pacote  : br.com.extrator.util.console
+Modulo  : Utilitario compartilhado
+Papel   : Implementa responsabilidade de logger console.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Centraliza funcoes auxiliares reutilizaveis.
+2) Evita repeticao de logica transversal.
+3) Apoia configuracao, formatacao e infraestrutura.
+
+Estrutura interna:
+Metodos principais:
+- LoggerConsole(...1 args): realiza operacao relacionada a "logger console".
+- getLogger(...1 args): expone valor atual do estado interno.
+- info(...2 args): realiza operacao relacionada a "info".
+- warn(...2 args): realiza operacao relacionada a "warn".
+- error(...2 args): realiza operacao relacionada a "error".
+- debug(...2 args): realiza operacao relacionada a "debug".
+- trace(...2 args): realiza operacao relacionada a "trace".
+- console(...1 args): realiza operacao relacionada a "console".
+- console(...2 args): realiza operacao relacionada a "console".
+- getUnderlyingLogger(): expone valor atual do estado interno.
+- formatMessage(...2 args): realiza operacao relacionada a "format message".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.util.console;
 
 import org.slf4j.Logger;

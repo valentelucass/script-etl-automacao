@@ -1,3 +1,51 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/auditoria/modelos/ResultadoValidacaoEntidade.java
+Classe  : ResultadoValidacaoEntidade (class)
+Pacote  : br.com.extrator.auditoria.modelos
+Modulo  : Modulo de auditoria
+Papel   : Implementa responsabilidade de resultado validacao entidade.
+
+Conecta com:
+- StatusValidacao (auditoria.enums)
+
+Fluxo geral:
+1) Modela resultados e estado de auditoria.
+2) Apoia consolidacao de evidencias operacionais.
+3) Suporta emissao de relatorios de conformidade.
+
+Estrutura interna:
+Metodos principais:
+- ResultadoValidacaoEntidade(): realiza operacao relacionada a "resultado validacao entidade".
+- erro(...3 args): realiza operacao relacionada a "erro".
+- alerta(...3 args): realiza operacao relacionada a "alerta".
+- ok(...2 args): realiza operacao relacionada a "ok".
+- completo(...3 args): realiza operacao relacionada a "completo".
+- incompleto(...3 args): realiza operacao relacionada a "incompleto".
+- duplicados(...3 args): realiza operacao relacionada a "duplicados".
+- getNomeEntidade(): expone valor atual do estado interno.
+- setNomeEntidade(...1 args): ajusta valor em estado interno.
+- getDataInicio(): expone valor atual do estado interno.
+- setDataInicio(...1 args): ajusta valor em estado interno.
+- getDataFim(): expone valor atual do estado interno.
+- setDataFim(...1 args): ajusta valor em estado interno.
+- getTotalRegistros(): expone valor atual do estado interno.
+Atributos-chave:
+- nomeEntidade: campo de estado para "nome entidade".
+- dataInicio: campo de estado para "data inicio".
+- dataFim: campo de estado para "data fim".
+- totalRegistros: campo de estado para "total registros".
+- registrosUltimas24h: campo de estado para "registros ultimas24h".
+- registrosComNulos: campo de estado para "registros com nulos".
+- ultimaExtracao: campo de estado para "ultima extracao".
+- status: campo de estado para "status".
+- erro: campo de estado para "erro".
+- observacoes: campo de estado para "observacoes".
+- colunaUtilizada: campo de estado para "coluna utilizada".
+- queryExecutada: campo de estado para "query executada".
+- registrosEsperadosApi: campo de estado para "registros esperados api".
+- diferencaRegistros: campo de estado para "diferenca registros".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.auditoria.modelos;
 
 import java.time.Instant;

@@ -1,5 +1,29 @@
 @echo off
 setlocal EnableExtensions DisableDelayedExpansion
+REM ==[DOC-FILE]===============================================================
+REM Arquivo : 01-executar_extracao_completa.bat
+REM Tipo    : Script operacional Windows (.bat)
+REM Papel   : Automatiza a rotina "01-executar extracao completa" para uso operacional.
+REM
+REM Conecta com:
+REM - call: %~dp0mvn.bat
+REM - mvn (build/test/execucao Java)
+REM - call: :AUTH_CHECK
+REM - call: :CONFIGURAR_FATURAS_GRAPHQL
+REM - java -jar: target\extrator.jar
+REM
+REM Fluxo geral:
+REM 1) Prepara parametros de periodo e escopo de extracao.
+REM 2) Executa o jar com comando alvo.
+REM 3) Consolida log e retorno da rodada.
+REM
+REM Variaveis-chave:
+REM - FLAG_FATURAS_GRAPHQL: controle de estado do script.
+REM - JAVA_HOME: controle de estado do script.
+REM - JAVA_EXIT_CODE: controle de estado do script.
+REM - RET_CODE: controle de estado do script.
+REM [DOC-FILE-END]===========================================================
+
 set "FLAG_FATURAS_GRAPHQL="
 
 REM ================================================================
@@ -222,4 +246,3 @@ if %FATURAS_TENTATIVAS% GEQ 10 (
     exit /b 1
 )
 goto :PERGUNTAR_FATURAS
-

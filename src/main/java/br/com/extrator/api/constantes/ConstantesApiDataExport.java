@@ -1,3 +1,37 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/api/constantes/ConstantesApiDataExport.java
+Classe  : ConstantesApiDataExport (class)
+Pacote  : br.com.extrator.api.constantes
+Modulo  : Cliente de integracao API
+Papel   : Implementa responsabilidade de constantes api data export.
+
+Conecta com:
+- ConstantesEntidades (util.validacao)
+
+Fluxo geral:
+1) Monta requisicoes para endpoints externos.
+2) Trata autenticacao, timeout e parse de resposta.
+3) Entrega dados normalizados para os extractors.
+
+Estrutura interna:
+Metodos principais:
+- ConstantesApiDataExport(): realiza operacao relacionada a "constantes api data export".
+- ConfiguracaoEntidade(...7 args): realiza operacao relacionada a "configuracao entidade".
+- obterConfiguracao(...1 args): recupera dados configurados ou calculados.
+- possuiConfiguracao(...1 args): realiza operacao relacionada a "possui configuracao".
+- obterTemplateId(...1 args): recupera dados configurados ou calculados.
+- obterCampoData(...1 args): recupera dados configurados ou calculados.
+- obterTabelaApi(...1 args): recupera dados configurados ou calculados.
+- obterValorPer(...1 args): recupera dados configurados ou calculados.
+- obterTimeout(...1 args): recupera dados configurados ou calculados.
+- obterOrderBy(...1 args): recupera dados configurados ou calculados.
+- usaSearchNested(...1 args): realiza operacao relacionada a "usa search nested".
+- formatarEndpoint(...1 args): realiza operacao relacionada a "formatar endpoint".
+- obterCampoIdPrimario(...1 args): recupera dados configurados ou calculados.
+Atributos-chave:
+- ENDPOINT_DATA_EXPORT: campo de estado para "endpoint data export".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.api.constantes;
 
 import java.time.Duration;

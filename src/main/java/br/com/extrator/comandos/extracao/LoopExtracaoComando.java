@@ -1,3 +1,42 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/comandos/extracao/LoopExtracaoComando.java
+Classe  : LoopExtracaoComando (class)
+Pacote  : br.com.extrator.comandos.extracao
+Modulo  : Comando CLI (extracao)
+Papel   : Implementa responsabilidade de loop extracao comando.
+
+Conecta com:
+- Comando (comandos.base)
+- LoggerConsole (util.console)
+
+Fluxo geral:
+1) Interpreta parametros e escopo de extracao.
+2) Dispara runners/extratores conforme alvo.
+3) Consolida status final e tratamento de falhas.
+
+Estrutura interna:
+Metodos principais:
+- iniciar(): inicia recursos e prepara o processamento.
+- pausar(): realiza operacao relacionada a "pausar".
+- retomar(): realiza operacao relacionada a "retomar".
+- parar(): encerra recursos e finaliza operacao com seguranca.
+- alternarFaturasGraphQL(): realiza operacao relacionada a "alternar faturas graph ql".
+- imprimirStatus(): realiza operacao relacionada a "imprimir status".
+- executarCiclo(): executa o fluxo principal desta responsabilidade.
+- possuiFlag(...2 args): realiza operacao relacionada a "possui flag".
+Atributos-chave:
+- log: campo de estado para "log".
+- FLAG_SEM_FATURAS_GRAPHQL: campo de estado para "flag sem faturas graphql".
+- running: campo de estado para "running".
+- paused: campo de estado para "paused".
+- executing: campo de estado para "executing".
+- incluirFaturasGraphQL: campo de estado para "incluir faturas graph ql".
+- scheduler: campo de estado para "scheduler".
+- future: campo de estado para "future".
+- nextRunAt: campo de estado para "next run at".
+- intervalMinutes: campo de estado para "interval minutes".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.comandos.extracao;
 
 import java.time.Duration;

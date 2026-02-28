@@ -1,3 +1,51 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/modelo/dataexport/manifestos/ManifestoDTO.java
+Classe  : ManifestoDTO (class)
+Pacote  : br.com.extrator.modelo.dataexport.manifestos
+Modulo  : DTO/Mapper DataExport
+Papel   : Implementa responsabilidade de manifesto dto.
+
+Conecta com:
+- Sem dependencia interna explicita (classe isolada ou foco em libs externas).
+
+Fluxo geral:
+1) Modela payloads da API DataExport.
+2) Mapeia resposta para entidades internas.
+3) Apoia carga e deduplicacao no destino.
+
+Estrutura interna:
+Metodos principais:
+- add(...2 args): realiza operacao relacionada a "add".
+- getAllProperties(): expone valor atual do estado interno.
+- getSequenceCode(): expone valor atual do estado interno.
+- setSequenceCode(...1 args): ajusta valor em estado interno.
+- getStatus(): expone valor atual do estado interno.
+- setStatus(...1 args): ajusta valor em estado interno.
+- getCreatedAt(): expone valor atual do estado interno.
+- setCreatedAt(...1 args): ajusta valor em estado interno.
+- getDeparturedAt(): expone valor atual do estado interno.
+- setDeparturedAt(...1 args): ajusta valor em estado interno.
+- getFinishedAt(): expone valor atual do estado interno.
+- setFinishedAt(...1 args): ajusta valor em estado interno.
+- getTotalCost(): expone valor atual do estado interno.
+- setTotalCost(...1 args): ajusta valor em estado interno.
+Atributos-chave:
+- sequenceCode: campo de estado para "sequence code".
+- branchNickname: campo de estado para "branch nickname".
+- createdAt: campo de estado para "created at".
+- departuredAt: campo de estado para "departured at".
+- closedAt: campo de estado para "closed at".
+- finishedAt: campo de estado para "finished at".
+- status: campo de estado para "status".
+- mdfeNumber: campo de estado para "mdfe number".
+- mdfeKey: campo de estado para "mdfe key".
+- mdfeStatus: campo de estado para "mdfe status".
+- distributionPole: campo de estado para "distribution pole".
+- classification: campo de estado para "classification".
+- vehiclePlate: campo de estado para "vehicle plate".
+- vehicleType: campo de estado para "vehicle type".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.modelo.dataexport.manifestos;
 
 import java.util.HashMap;

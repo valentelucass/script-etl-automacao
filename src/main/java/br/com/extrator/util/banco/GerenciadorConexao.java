@@ -1,3 +1,37 @@
+/* ==[DOC-FILE]===============================================================
+Arquivo : src/main/java/br/com/extrator/util/banco/GerenciadorConexao.java
+Classe  : GerenciadorConexao (class)
+Pacote  : br.com.extrator.util.banco
+Modulo  : Utilitario compartilhado
+Papel   : Implementa responsabilidade de gerenciador conexao.
+
+Conecta com:
+- CarregadorConfig (util.configuracao)
+
+Fluxo geral:
+1) Centraliza funcoes auxiliares reutilizaveis.
+2) Evita repeticao de logica transversal.
+3) Apoia configuracao, formatacao e infraestrutura.
+
+Estrutura interna:
+Metodos principais:
+- GerenciadorConexao(): realiza operacao relacionada a "gerenciador conexao".
+- criarDataSource(): instancia ou monta estrutura de dados.
+- obterEstatisticasPool(): recupera dados configurados ou calculados.
+- isPoolSaudavel(): retorna estado booleano de controle.
+- obterUrlComDatabaseName(): recupera dados configurados ou calculados.
+- obterConfigInt(...3 args): recupera dados configurados ou calculados.
+- obterConfigLong(...3 args): recupera dados configurados ou calculados.
+- extrairMensagemMaisInterna(...1 args): realiza operacao relacionada a "extrair mensagem mais interna".
+Atributos-chave:
+- logger: logger da classe para diagnostico.
+- POOL_MAX_SIZE_DEFAULT: campo de estado para "pool max size default".
+- POOL_MIN_IDLE_DEFAULT: campo de estado para "pool min idle default".
+- POOL_IDLE_TIMEOUT_DEFAULT: campo de estado para "pool idle timeout default".
+- POOL_CONNECTION_TIMEOUT_DEFAULT: campo de estado para "pool connection timeout default".
+- POOL_MAX_LIFETIME_DEFAULT: campo de estado para "pool max lifetime default".
+[DOC-FILE-END]============================================================== */
+
 package br.com.extrator.util.banco;
 
 import java.sql.Connection;
