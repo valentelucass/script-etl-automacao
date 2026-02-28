@@ -23,7 +23,6 @@ Atributos-chave:
 - RECONCILIACAO_HISTORY_DIR_DEFAULT: campo de estado para "reconciliacao history dir default".
 - RECONCILIACAO_HISTORY_DIR_OVERRIDE_KEY: campo de estado para "reconciliacao history dir override key".
 - RUNTIME_DIR: campo de estado para "runtime dir".
-- RUNTIME_JAR: campo de estado para "runtime jar".
 - PID_FILE: campo de estado para "pid file".
 - STATE_FILE: campo de estado para "state file".
 - RECONCILIACAO_STATE_FILE: campo de estado para "reconciliacao state file".
@@ -47,7 +46,6 @@ public final class DaemonPaths {
     public static final Path RECONCILIACAO_HISTORY_DIR_DEFAULT = DAEMON_DIR.resolve("reconciliacao");
     public static final String RECONCILIACAO_HISTORY_DIR_OVERRIDE_KEY = "extrator.loop.reconciliacao.history.dir";
     public static final Path RUNTIME_DIR = DAEMON_DIR.resolve("runtime");
-    public static final Path RUNTIME_JAR = RUNTIME_DIR.resolve("extrator-daemon-runtime.jar");
     public static final Path PID_FILE = DAEMON_DIR.resolve("loop_daemon.pid");
     public static final Path STATE_FILE = DAEMON_DIR.resolve("loop_daemon.state");
     public static final Path RECONCILIACAO_STATE_FILE = DAEMON_DIR.resolve("loop_reconciliation.state");

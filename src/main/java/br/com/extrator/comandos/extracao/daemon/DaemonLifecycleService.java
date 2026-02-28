@@ -16,7 +16,7 @@ Fluxo geral:
 Estrutura interna:
 Metodos principais:
 - criarPadrao(...1 args): instancia ou monta estrutura de dados.
-- DaemonLifecycleService(...4 args): realiza operacao relacionada a "daemon lifecycle service".
+- DaemonLifecycleService(...3 args): realiza operacao relacionada a "daemon lifecycle service".
 - localizarPidDaemonAtivo(): realiza operacao relacionada a "localizar pid daemon ativo".
 - localizarProcessosAlvoParada(): realiza operacao relacionada a "localizar processos alvo parada".
 - processoEhLoopDaemonAtivo(...1 args): realiza operacao relacionada a "processo eh loop daemon ativo".
@@ -34,7 +34,6 @@ Atributos-chave:
 - stateStore: campo de estado para "state store".
 - daemonStdoutFile: campo de estado para "daemon stdout file".
 - runtimeDir: campo de estado para "runtime dir".
-- runtimeJar: campo de estado para "runtime jar".
 [DOC-FILE-END]============================================================== */
 
 package br.com.extrator.comandos.extracao.daemon;
@@ -62,29 +61,28 @@ import br.com.extrator.Main;
 public final class DaemonLifecycleService {
     private static final String FLAG_SEM_FATURAS_GRAPHQL = "--sem-faturas-graphql";
     private static final String FLAG_LOOP_DAEMON_RUN = "--loop-daemon-run";
+    private static final String RUNTIME_JAR_PREFIX = "extrator-daemon-runtime";
+    private static final String RUNTIME_JAR_SUFFIX = ".jar";
+    private static final int MAX_RUNTIME_JARS = 3;
 
     private final DaemonStateStore stateStore;
     private final Path daemonStdoutFile;
     private final Path runtimeDir;
-    private final Path runtimeJar;
 
     public static DaemonLifecycleService criarPadrao(final DaemonStateStore stateStore) {
         return new DaemonLifecycleService(
             stateStore,
             DaemonPaths.DAEMON_STDOUT_FILE,
-            DaemonPaths.RUNTIME_DIR,
-            DaemonPaths.RUNTIME_JAR
+            DaemonPaths.RUNTIME_DIR
         );
     }
 
     public DaemonLifecycleService(final DaemonStateStore stateStore,
                                   final Path daemonStdoutFile,
-                                  final Path runtimeDir,
-                                  final Path runtimeJar) {
+                                  final Path runtimeDir) {
         this.stateStore = stateStore;
         this.daemonStdoutFile = daemonStdoutFile;
         this.runtimeDir = runtimeDir;
-        this.runtimeJar = runtimeJar;
     }
 
     public Process startChildProcess(final List<String> comando) throws IOException {
@@ -213,24 +211,65 @@ public final class DaemonLifecycleService {
         if (!normalizado.contains(FLAG_LOOP_DAEMON_RUN)) {
             return false;
         }
-        return normalizado.contains("extrator-daemon-runtime.jar")
+        return normalizado.contains("extrator-daemon-runtime")
             || normalizado.contains("/target/extrator.jar")
             || normalizado.contains(" br.com.extrator.main ");
     }
 
     private Path prepararJarRuntime(final Path jarAtual) {
+        final Path jarDestino = runtimeDir.resolve(
+            RUNTIME_JAR_PREFIX + "-" + System.currentTimeMillis() + RUNTIME_JAR_SUFFIX
+        );
         try {
             stateStore.ensureDaemonDirectory();
             if (!Files.exists(runtimeDir)) {
                 Files.createDirectories(runtimeDir);
             }
-            Files.copy(jarAtual, runtimeJar, StandardCopyOption.REPLACE_EXISTING);
-            return runtimeJar.toAbsolutePath().normalize();
+            Files.copy(jarAtual, jarDestino, StandardCopyOption.REPLACE_EXISTING);
+            limparRuntimesAntigos(jarDestino);
+            return jarDestino.toAbsolutePath().normalize();
         } catch (final IOException e) {
             throw new IllegalStateException(
-                "Falha ao preparar JAR runtime do daemon em " + runtimeJar.toAbsolutePath() + ": " + e.getMessage(),
+                "Falha ao preparar JAR runtime do daemon em " + jarDestino.toAbsolutePath() + ": " + e.getMessage(),
                 e
             );
+        }
+    }
+
+    private void limparRuntimesAntigos(final Path runtimeAtual) {
+        try (var arquivos = Files.list(runtimeDir)) {
+            final List<Path> runtimes = arquivos
+                .filter(Files::isRegularFile)
+                .filter(this::ehArquivoRuntimeJar)
+                .sorted((a, b) -> Long.compare(obterUltimaModificacaoMillis(b), obterUltimaModificacaoMillis(a)))
+                .toList();
+
+            for (int i = MAX_RUNTIME_JARS; i < runtimes.size(); i++) {
+                final Path candidato = runtimes.get(i);
+                if (candidato.equals(runtimeAtual)) {
+                    continue;
+                }
+                try {
+                    Files.deleteIfExists(candidato);
+                } catch (final IOException ignored) {
+                    // Falha de limpeza nao impede inicializacao do daemon.
+                }
+            }
+        } catch (final IOException ignored) {
+            // Falha de limpeza nao impede inicializacao do daemon.
+        }
+    }
+
+    private boolean ehArquivoRuntimeJar(final Path caminho) {
+        final String nome = caminho.getFileName().toString();
+        return nome.startsWith(RUNTIME_JAR_PREFIX) && nome.endsWith(RUNTIME_JAR_SUFFIX);
+    }
+
+    private long obterUltimaModificacaoMillis(final Path caminho) {
+        try {
+            return Files.getLastModifiedTime(caminho).toMillis();
+        } catch (final IOException ignored) {
+            return Long.MIN_VALUE;
         }
     }
 

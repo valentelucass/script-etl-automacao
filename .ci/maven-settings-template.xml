@@ -1,0 +1,56 @@
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+  <mirrors>
+    <mirror>
+      <id>corporate-mirror</id>
+      <name>Corporate Maven Mirror</name>
+      <url>https://SEU_MIRROR_MAVEN/repository/maven-public/</url>
+      <mirrorOf>*</mirrorOf>
+    </mirror>
+  </mirrors>
+
+  <servers>
+    <server>
+      <id>corporate-mirror</id>
+      <username>SEU_USUARIO</username>
+      <password>SUA_SENHA</password>
+    </server>
+  </servers>
+
+  <profiles>
+    <profile>
+      <id>corporate-repositories</id>
+      <repositories>
+        <repository>
+          <id>central</id>
+          <name>Maven Central via mirror</name>
+          <url>https://repo.maven.apache.org/maven2</url>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+        </repository>
+      </repositories>
+      <pluginRepositories>
+        <pluginRepository>
+          <id>central</id>
+          <name>Maven Plugins via mirror</name>
+          <url>https://repo.maven.apache.org/maven2</url>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+        </pluginRepository>
+      </pluginRepositories>
+    </profile>
+  </profiles>
+
+  <activeProfiles>
+    <activeProfile>corporate-repositories</activeProfile>
+  </activeProfiles>
+</settings>

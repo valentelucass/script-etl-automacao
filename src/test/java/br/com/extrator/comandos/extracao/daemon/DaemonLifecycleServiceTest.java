@@ -69,8 +69,7 @@ class DaemonLifecycleServiceTest {
         return new DaemonLifecycleService(
             store,
             tempDir.resolve("daemon.log"),
-            tempDir.resolve("runtime"),
-            tempDir.resolve("runtime").resolve("runtime.jar")
+            tempDir.resolve("runtime")
         );
     }
 }

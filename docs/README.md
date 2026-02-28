@@ -314,7 +314,7 @@ Configuração do sistema e solução de problemas.
 - **Technical Specification**: Especificação técnica completa
 
 ### 📦 Versões
-- **v2.0/2.1**: Documentação da versão atual
+- **v2.x**: Documentação de versões e histórico de release
 
 ---
 
@@ -331,6 +331,6 @@ Configuração do sistema e solução de problemas.
 
 ---
 
-**Versão:** 2.3.1  
-**Data:** 24/01/2026  
-**Última Atualização:** Reorganização completa da documentação - estrutura consolidada e simplificada
+**Versão:** 2.3.4  
+**Data:** 28/02/2026  
+**Última Atualização:** Governança de versão e guard automatizado de consistência
