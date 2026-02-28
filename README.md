@@ -11,6 +11,8 @@ image: public/foto1.png
 
 Sistema ETL em Java para extrair dados do ESL Cloud (GraphQL e Data Export), persistir em SQL Server e gerar validacoes operacionais.
 
+teste para commit e push
+
 ## Escopo
 
 - Extracao paralela das APIs GraphQL e Data Export
