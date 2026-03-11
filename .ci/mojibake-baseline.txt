@@ -1,3 +1,4 @@
 # Baseline de ocorrencias legadas de mojibake (arquivo|quantidade)
 # Objetivo: falhar CI apenas para regressao (novos arquivos ou aumento de ocorrencias).
-# Baseline atual: zero ocorrencias permitidas.
+# Atualize este baseline apenas apos correcao/normalizacao consciente dos arquivos.
+# Estado atual: sem ocorrencias legadas aprovadas.

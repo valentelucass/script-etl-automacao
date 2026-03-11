@@ -109,11 +109,19 @@ BEGIN
         -- Coluna de Metadados para Resiliência e Completude
         metadata NVARCHAR(MAX),
 
+        -- Coluna computada para deduplicação (alinhada com lógica de MERGE)
+        -- Permite múltiplos MDF-es e coletas para o mesmo sequence_code
+        chave_merge_hash AS (
+            CAST(sequence_code AS VARCHAR(20)) + '|' +
+            ISNULL(CAST(pick_sequence_code AS VARCHAR(20)), '-1') + '|' +
+            ISNULL(CAST(mdfe_number AS VARCHAR(20)), '-1')
+        ) PERSISTED,
+
         -- Coluna de Auditoria
         data_extracao DATETIME2 DEFAULT GETDATE(),
 
-        -- Constraint UNIQUE para chave composta
-        CONSTRAINT UQ_manifestos_sequence_identificador UNIQUE (sequence_code, identificador_unico)
+        -- Constraint UNIQUE alinhada com a chave de MERGE
+        CONSTRAINT UQ_manifestos_chave_composta UNIQUE (chave_merge_hash)
     );
     
     PRINT 'Tabela manifestos criada com sucesso!';

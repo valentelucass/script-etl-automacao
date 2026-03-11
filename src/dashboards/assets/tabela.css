@@ -1,7 +1,0 @@
-.bloco-tabela { background: #ffffff; border: 1px solid #eeeeee; }
-.tabela-rodo { max-height: 520px; overflow: auto; }
-.tabela-rodo .dash-table-container { border: 1px solid #eeeeee; }
-.tabela-rodo .dash-spreadsheet-container .dash-spreadsheet { width: 100%; }
-.tabela-rodo .dash-spreadsheet .dash-header { background: #fafafa; font-weight: 600; border-bottom: 1px solid #eeeeee; }
-.tabela-rodo .dash-spreadsheet .dash-cell { background: #ffffff; color: #111111; border-bottom: 1px solid #eeeeee; min-width: 120px; }
-.tabela-rodo .dash-spreadsheet .dash-cell.focused { background: #f6f8fb; border: 1px solid #e6edf3; }

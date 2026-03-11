@@ -4,8 +4,15 @@
 !.env.example
 last_run.properties
 last_successful_run.properties
+runtime/
 docs/08-arquivos-secretos/
 database/config.bat
+
+# Ferramentas locais de desenvolvimento (machine-specific)
+.claude/settings.local.json
+
+# Relatorios gerados automaticamente
+docs/relatorio-validacao-etl-*.md
 
 # Build e artefatos
 target/
@@ -33,7 +40,7 @@ temp/
 
 # Saidas geradas pelo projeto
 exports/
-relatorios/
+/relatorios/
 backups/
 
 # Bancos/arquivos locais

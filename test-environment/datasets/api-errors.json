@@ -1,0 +1,8 @@
+{
+  "description": "Dataset para simular falhas de API",
+  "scenarios": [
+    { "endpoint": "/graphql", "status": 429, "message": "rate_limited" },
+    { "endpoint": "/graphql-timeout", "status": 504, "message": "timeout" },
+    { "endpoint": "/dataexport/manifestos", "status": 503, "message": "service_unavailable" }
+  ]
+}

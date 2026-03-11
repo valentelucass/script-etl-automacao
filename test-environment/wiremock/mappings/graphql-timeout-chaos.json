@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/graphql-timeout"
+  },
+  "response": {
+    "status": 504,
+    "fixedDelayMilliseconds": 12000,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "error": "gateway timeout"
+    }
+  }
+}

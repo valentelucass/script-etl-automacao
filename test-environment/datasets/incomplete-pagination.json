@@ -1,0 +1,8 @@
+{
+  "description": "Dataset com paginação incompleta simulada",
+  "pages": [
+    { "page": 1, "records": 200, "has_next": true },
+    { "page": 2, "records": 45, "has_next": true },
+    { "page": 3, "records": 0, "has_next": true, "anomaly": "empty_page_before_end" }
+  ]
+}

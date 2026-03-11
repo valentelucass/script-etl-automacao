@@ -1,0 +1,17 @@
+{
+  "items": [
+    {
+      "manifesto_id": "MAN-001",
+      "numero": "9001",
+      "data": "2026-01-01"
+    },
+    {
+      "manifesto_id": "MAN-002",
+      "numero": "9002",
+      "data": "2026-01-01"
+    }
+  ],
+  "total": 2,
+  "page": 1,
+  "page_size": 200
+}

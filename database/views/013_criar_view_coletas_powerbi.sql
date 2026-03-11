@@ -8,8 +8,8 @@ SELECT
     c.sequence_code AS [Coleta],
     c.request_date AS [Solicitacao],
 
-    -- ADICIONANDO A COLUNA OBRIGATÓRIA
-    CAST(CAST(c.request_date AS DATETIME) AS TIME(0)) AS [Hora (Solicitacao)],
+    -- Hora da solicitacao vinda do campo requestHour da API GraphQL (HH:MM:SS)
+    CAST(ISNULL(c.request_hour, '00:00:00') AS TIME(0)) AS [Hora (Solicitacao)],
 
     c.service_date AS [Agendamento],
     c.finish_date AS [Finalizacao],

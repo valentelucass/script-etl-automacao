@@ -5,7 +5,7 @@
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.sys_execution_history') AND type in (N'U'))
 BEGIN
     CREATE TABLE dbo.sys_execution_history (
-        id INT IDENTITY(1,1) PRIMARY KEY,
+        id BIGINT IDENTITY(1,1) PRIMARY KEY,
         start_time DATETIME NOT NULL,
         end_time DATETIME NOT NULL,
         duration_seconds INT NOT NULL,

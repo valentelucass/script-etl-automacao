@@ -1,8 +1,8 @@
-﻿# Scripts de MigraÃ§Ã£o do Banco de Dados
+# Scripts de Migração do Banco de Dados
 
-Esta pasta contÃ©m todos os scripts SQL necessÃ¡rios para criar as tabelas e views do banco de dados em **produÃ§Ã£o**.
+Esta pasta contém todos os scripts SQL necessários para criar as tabelas e views do banco de dados em **produção**.
 
-## ðŸ“‹ Estrutura
+## Estrutura
 
 ### Tabelas (001-013)
 - `001_criar_tabela_coletas.sql`
@@ -29,7 +29,7 @@ Esta pasta contÃ©m todos os scripts SQL necessÃ¡rios para criar as tabelas e
 - `017_criar_view_localizacao_cargas_powerbi.sql`
 - `018_criar_view_manifestos_powerbi.sql`
 
-### Views de DimensÃµes (019-024)
+### Views de Dimensões (019-024)
 - `019_criar_view_dim_filiais.sql`
 - `020_criar_view_dim_clientes.sql`
 - `021_criar_view_dim_veiculos.sql`
@@ -37,25 +37,25 @@ Esta pasta contÃ©m todos os scripts SQL necessÃ¡rios para criar as tabelas e
 - `023_criar_view_dim_planocontas.sql`
 - `024_criar_view_dim_usuarios.sql`
 
-**Nota sobre numeraÃ§Ã£o:** Os prefixos numÃ©ricos podem se repetir entre pastas diferentes (ex.: `024` existe em `seguranca/` e em `views-dimensao/`). A ordem correta de execuÃ§Ã£o Ã© definida em `executar_database.bat`.
+**Nota sobre numeração:** Os prefixos numéricos podem se repetir entre pastas diferentes (ex.: `024` existe em `seguranca/` e em `views-dimensao/`). A ordem correta de execução é definida em `executar_database.bat`.
 
-### ConfiguraÃ§Ã£o de SeguranÃ§a (024)
-- `024_configurar_permissoes_usuario.sql` - Configura permissÃµes do usuÃ¡rio da aplicaÃ§Ã£o (PRINCÃPIO DO MENOR PRIVILÃ‰GIO)
+### Configuração de Segurança (024)
+- `024_configurar_permissoes_usuario.sql` - Configura permissões do usuário da aplicação (PRINCÍPIO DO MENOR PRIVILÉGIO)
 
-### ValidaÃ§Ã£o (025-029)
-- `025_validar_views_dimensao.sql` - Valida unicidade das chaves primÃ¡rias nas views de dimensÃ£o (CRÃTICO para Power BI)
+### Validação (025-029)
+- `025_validar_views_dimensao.sql` - Valida unicidade das chaves primárias nas views de dimensão (CRÍTICO para Power BI)
 - `026_validar_tipo_destroy_user_id.sql` - Valida tipo de destroyUserId e cancellationUserId
 - `027_diagnosticar_campos_null_coletas.sql` - Diagnostica campos NULL em coletas
-- `028_validacao_rapida_extracao.sql` - ValidaÃ§Ã£o rÃ¡pida de extraÃ§Ã£o
-- `029_verificar_duplicacao_faturas.sql` - Verifica duplicaÃ§Ã£o de faturas
+- `028_validacao_rapida_extracao.sql` - Validação rápida de extração
+- `029_verificar_duplicacao_faturas.sql` - Verifica duplicação de faturas
 
-## ðŸš€ Como Executar
+## Como Executar
 
-### OpÃ§Ã£o 1: Script AutomÃ¡tico (Recomendado)
+### Opção 1: Script Automático (Recomendado)
 
 1. **Configure o `config.bat`** (copie `config_exemplo.bat` para `config.bat` e preencha):
    
-   **Para autenticaÃ§Ã£o SQL Server:**
+   **Para autenticação SQL Server:**
    ```cmd
    set DB_SERVER=servidor
    set DB_NAME=banco_de_dados
@@ -63,23 +63,23 @@ Esta pasta contÃ©m todos os scripts SQL necessÃ¡rios para criar as tabelas e
    set DB_PASSWORD=senha
    ```
    
-   **Para autenticaÃ§Ã£o integrada do Windows:** deixe `DB_USER` e `DB_PASSWORD` vazios no `config.bat`.
+   **Para autenticação integrada do Windows:** deixe `DB_USER` e `DB_PASSWORD` vazios no `config.bat`.
 
 2. Execute na pasta `database`:
    ```cmd
    executar_database.bat
    ```
 
-   O `executar_database.bat` usa **sqlcmd** e o `config.bat`; nÃ£o Ã© preciso ter o SSMS aberto. Ele roda na ordem: tabelas, views, views-dimensÃ£o, seguranÃ§a (024) e **todas as validaÃ§Ãµes (025-029)**.
+   O `executar_database.bat` usa **sqlcmd** e o `config.bat`; não é preciso ter o SSMS aberto. Ele roda na ordem: tabelas, views, views-dimensão, segurança (024) e **todas as validações (025-029)**.
 
-### OpÃ§Ã£o 2: SQL Server Management Studio (SSMS)
+### Opção 2: SQL Server Management Studio (SSMS)
 
 1. Abra o SQL Server Management Studio
-2. Conecte-se ao banco de dados de produÃ§Ã£o
+2. Conecte-se ao banco de dados de produção
 3. Execute os scripts na ordem definida em `executar_database.bat`
-4. **IMPORTANTE**: Execute primeiro as tabelas (001-013), depois as views principais (011-018), views de dimensÃµes (019-024), seguranÃ§a (024) e validaÃ§Ãµes (025-029)
+4. **IMPORTANTE**: Execute primeiro as tabelas (001-013), depois as views principais (011-018), views de dimensões (019-024), segurança (024) e validações (025-029)
 
-### OpÃ§Ã£o 3: sqlcmd (Linha de Comando)
+### Opção 3: sqlcmd (Linha de Comando)
 
 ```cmd
 sqlcmd -S servidor -d banco -U usuario -P senha -i 001_criar_tabela_coletas.sql
@@ -87,34 +87,34 @@ sqlcmd -S servidor -d banco -U usuario -P senha -i 002_criar_tabela_fretes.sql
 ... (continue para todos os scripts)
 ```
 
-## âš ï¸ Importante
+## Importante
 
-1. **Execute apenas UMA VEZ** no ambiente de produÃ§Ã£o
-2. **Ordem de execuÃ§Ã£o Ã© crÃ­tica**: 
+1. **Execute apenas UMA VEZ** no ambiente de produção
+2. **Ordem de execução é crítica**: 
    - Primeiro as tabelas (001-013)
    - Depois as views principais (011-018)
-   - Por Ãºltimo as views de dimensÃµes (019-024)
-   - **SeguranÃ§a**: Configure permissÃµes (024 em `seguranca/`) - PRINCÃPIO DO MENOR PRIVILÃ‰GIO
-   - **ValidaÃ§Ãµes**: Execute scripts de validaÃ§Ã£o (025-029) - Garante integridade e unicidade
-3. **Backup**: FaÃ§a backup do banco antes de executar
+   - Por último as views de dimensões (019-024)
+   - **Segurança**: Configure permissões (024 em `seguranca/`) - PRINCÍPIO DO MENOR PRIVILÉGIO
+   - **Validações**: Execute scripts de validação (025-029) - Garante integridade e unicidade
+3. **Backup**: Faça backup do banco antes de executar
 4. **Teste**: Teste primeiro em ambiente de desenvolvimento/staging
-5. **NumeraÃ§Ã£o**: A ordem correta estÃ¡ definida em `executar_database.bat` (prefixos podem se repetir entre pastas)
+5. **Numeração**: A ordem correta está definida em `executar_database.bat` (prefixos podem se repetir entre pastas)
 
-## ðŸ”’ SeguranÃ§a: PermissÃµes do UsuÃ¡rio da AplicaÃ§Ã£o
+## Segurança: Permissões do Usuário da Aplicação
 
-**IMPORTANTE**: ApÃ³s criar as tabelas e views, configure as permissÃµes do usuÃ¡rio da aplicaÃ§Ã£o seguindo o **PrincÃ­pio do Menor PrivilÃ©gio**.
+**IMPORTANTE**: Após criar as tabelas e views, configure as permissões do usuário da aplicação seguindo o **Princípio do Menor Privilégio**.
 
-### Por que isso Ã© importante?
+### Por que isso é importante?
 
-Como a aplicaÃ§Ã£o **nÃ£o cria mais tabelas automaticamente**, o usuÃ¡rio do banco de dados configurado no `config.properties` (DB_USER) **nÃ£o precisa e nÃ£o deve ter permissÃµes DDL** (CREATE, ALTER, DROP).
+Como a aplicação **não cria mais tabelas automaticamente**, o usuário do banco de dados configurado no `config.properties` (DB_USER) **não precisa e não deve ter permissões DDL** (CREATE, ALTER, DROP).
 
-### PermissÃµes NecessÃ¡rias
+### Permissões Necessárias
 
-O usuÃ¡rio da aplicaÃ§Ã£o precisa apenas de:
-- **SELECT** (leitura) - para consultas e validaÃ§Ãµes
-- **INSERT, UPDATE, DELETE** (escrita) - para operaÃ§Ãµes MERGE (UPSERT)
+O usuário da aplicação precisa apenas de:
+- **SELECT** (leitura) - para consultas e validações
+- **INSERT, UPDATE, DELETE** (escrita) - para operações MERGE (UPSERT)
 
-**NÃƒO precisa de:**
+**NÃO precisa de:**
 - CREATE TABLE
 - ALTER TABLE
 - DROP TABLE
@@ -124,45 +124,45 @@ O usuÃ¡rio da aplicaÃ§Ã£o precisa apenas de:
 ### Como Configurar
 
 1. Execute o script `024_configurar_permissoes_usuario.sql`
-2. Substitua `usuario_aplicacao` pelo nome do usuÃ¡rio configurado no `config.properties` (DB_USER)
+2. Substitua `usuario_aplicacao` pelo nome do usuário configurado no `config.properties` (DB_USER)
 3. Substitua `seu_banco_de_dados` pelo nome do banco de dados
-4. Descomente e execute a OPÃ‡ÃƒO 1 (recomendado) que usa roles padrÃ£o do SQL Server
+4. Descomente e execute a OPÇÃO 1 (recomendado) que usa roles padrão do SQL Server
 
-### BenefÃ­cio de SeguranÃ§a
+### Benefício de Segurança
 
-Se houver uma injeÃ§Ã£o de SQL, o atacante **nÃ£o poderÃ¡ destruir sua estrutura de dados**, pois o usuÃ¡rio da aplicaÃ§Ã£o nÃ£o tem permissÃµes para criar, alterar ou excluir tabelas.
+Se houver uma injeção de SQL, o atacante **não poderá destruir sua estrutura de dados**, pois o usuário da aplicação não tem permissões para criar, alterar ou excluir tabelas.
 
-## âš ï¸ VALIDAÃ‡ÃƒO CRÃTICA: Views de DimensÃ£o
+## VALIDAÇÃO CRÍTICA: Views de Dimensão
 
-**IMPORTANTE**: ApÃ³s criar as views de dimensÃ£o (019-023), **SEMPRE** execute o script `025_validar_views_dimensao.sql`.
+**IMPORTANTE**: Após criar as views de dimensão (019-023), **SEMPRE** execute o script `025_validar_views_dimensao.sql`.
 
-### Por que isso Ã© crÃ­tico?
+### Por que isso é crítico?
 
-As views de dimensÃ£o devem ter **chaves primÃ¡rias Ãºnicas** para funcionar corretamente no Power BI com modelo Star Schema:
+As views de dimensão devem ter **chaves primárias únicas** para funcionar corretamente no Power BI com modelo Star Schema:
 
-- **vw_dim_clientes**: Chave = `Nome` normalizado (deve ser Ãºnico)
-- **vw_dim_filiais**: Chave = `NomeFilial` (deve ser Ãºnico)
-- **vw_dim_veiculos**: Chave = `Placa` (deve ser Ãºnico)
-- **vw_dim_motoristas**: Chave = `NomeMotorista` (deve ser Ãºnico)
-- **vw_dim_planocontas**: Chave = `Descricao` (deve ser Ãºnico)
+- **vw_dim_clientes**: Chave = `Nome` normalizado (deve ser único)
+- **vw_dim_filiais**: Chave = `NomeFilial` (deve ser único)
+- **vw_dim_veiculos**: Chave = `Placa` (deve ser único)
+- **vw_dim_motoristas**: Chave = `NomeMotorista` (deve ser único)
+- **vw_dim_planocontas**: Chave = `Descricao` (deve ser único)
 
 ### O que acontece se houver duplicatas?
 
-Se uma view dimensional retornar chaves duplicadas, o Power BI **nÃ£o conseguirÃ¡ criar relacionamentos** corretos (1:N) e gerarÃ¡ relacionamentos Muitos-para-Muitos nÃ£o intencionais, quebrando o modelo Star Schema.
+Se uma view dimensional retornar chaves duplicadas, o Power BI **não conseguirá criar relacionamentos** corretos (1:N) e gerará relacionamentos Muitos-para-Muitos não intencionais, quebrando o modelo Star Schema.
 
-### CorreÃ§Ãµes Aplicadas
+### Correções Aplicadas
 
 As views foram corrigidas para garantir unicidade:
 
-- **vw_dim_clientes**: Usa `DISTINCT` com normalizaÃ§Ã£o `UPPER + LTRIM + RTRIM` para eliminar nomes duplicados
+- **vw_dim_clientes**: Usa `DISTINCT` com normalização `UPPER + LTRIM + RTRIM` para eliminar nomes duplicados
 - **vw_dim_filiais**: Usa `UNION` com `LTRIM(RTRIM)` para normalizar nomes
-- **vw_dim_veiculos**: JÃ¡ usava `GROUP BY Placa` corretamente
-- **vw_dim_motoristas**: Usa `DISTINCT` com normalizaÃ§Ã£o `UPPER + LTRIM + RTRIM`
-- **vw_dim_planocontas**: JÃ¡ usava `GROUP BY Descricao` corretamente
+- **vw_dim_veiculos**: Já usava `GROUP BY Placa` corretamente
+- **vw_dim_motoristas**: Usa `DISTINCT` com normalização `UPPER + LTRIM + RTRIM`
+- **vw_dim_planocontas**: Já usava `GROUP BY Descricao` corretamente
 
-## ðŸ“ Notas
+## Notas
 
-- Todos os scripts usam `IF NOT EXISTS` para evitar erros se executados mÃºltiplas vezes
-- As views usam `CREATE OR ALTER` para permitir atualizaÃ§Ãµes futuras
-- Os scripts foram extraÃ­dos diretamente do cÃ³digo Java do projeto
-- **Views de dimensÃ£o foram corrigidas para garantir unicidade das chaves primÃ¡rias**
+- Todos os scripts usam `IF NOT EXISTS` para evitar erros se executados múltiplas vezes
+- As views usam `CREATE OR ALTER` para permitir atualizações futuras
+- Os scripts foram extraídos diretamente do código Java do projeto
+- **Views de dimensão foram corrigidas para garantir unicidade das chaves primárias**

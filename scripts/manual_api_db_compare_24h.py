@@ -380,6 +380,12 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--start")
     ap.add_argument("--end")
+    ap.add_argument(
+        "--db-window",
+        choices=("data_extracao", "business"),
+        default="business",
+        help="Janela usada para selecionar linhas do banco: business (padrao) ou data_extracao.",
+    )
     args = ap.parse_args()
 
     root = Path(__file__).resolve().parents[1]
@@ -398,14 +404,22 @@ def main() -> int:
     cur = conn.cursor()
 
     def db_meta(table: str, key_col: str, keep: Callable[[dict[str, Any]], bool], key_fn: Callable[[Any, dict[str, Any]], str]) -> tuple[dict[str, dict[str, Any]], int, int]:
-        cur.execute(f"SELECT {key_col}, metadata FROM dbo.{table} WHERE metadata IS NOT NULL")
+        cur.execute(f"SELECT {key_col}, metadata, data_extracao FROM dbo.{table} WHERE metadata IS NOT NULL")
         rows: list[tuple[Any, dict[str, Any]]] = []
-        for k, m in cur.fetchall():
+        for k, m, data_extracao in cur.fetchall():
             try:
                 j = json.loads(m)
             except Exception:
                 continue
-            if isinstance(j, dict) and keep(j):
+            if not isinstance(j, dict):
+                continue
+            if args.db_window == "data_extracao":
+                dd = dparse(data_extracao)
+                if dd is None or not (d0 <= dd <= d1):
+                    continue
+            elif not keep(j):
+                continue
+            if isinstance(j, dict):
                 rows.append((k, j))
         out: dict[str, dict[str, Any]] = {}
         dups = 0

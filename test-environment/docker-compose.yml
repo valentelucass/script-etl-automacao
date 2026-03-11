@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: etl-test-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "YourStrong!Passw0rd"
+      MSSQL_PID: "Developer"
+    ports:
+      - "14333:1433"
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-C", "-S", "localhost", "-U", "sa", "-P", "YourStrong!Passw0rd", "-Q", "SELECT 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+
+  wiremock:
+    image: wiremock/wiremock:3.9.1
+    container_name: etl-test-wiremock
+    ports:
+      - "8089:8080"
+    volumes:
+      - ./wiremock:/home/wiremock
+    command:
+      - --verbose
+

@@ -1,0 +1,14 @@
+{
+  "description": "Dataset com drift de schema para contract tests",
+  "expected_schema_version": "v2",
+  "observed_schema_version": "legacy",
+  "records": [
+    {
+      "entity": "manifestos",
+      "fields": {
+        "id": "MAN-LEGACY-001",
+        "numero_manifesto": "7777"
+      }
+    }
+  ]
+}

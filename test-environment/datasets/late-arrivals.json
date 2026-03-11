@@ -1,0 +1,7 @@
+{
+  "description": "Dataset com dados tardios para teste de freshness/lag",
+  "records": [
+    { "entity": "manifestos", "natural_key": "MAN-100", "created_at": "2025-11-15T00:00:00Z" },
+    { "entity": "manifestos", "natural_key": "MAN-101", "created_at": "2026-01-01T12:00:00Z" }
+  ]
+}

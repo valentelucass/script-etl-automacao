@@ -14,6 +14,8 @@ BASELINE_FILE = ROOT / ".ci" / "mojibake-baseline.txt"
 SCAN_DIRS = [
     ROOT / "src" / "main" / "java",
     ROOT / "src" / "main" / "resources",
+    ROOT / "docs",
+    ROOT / "database",
 ]
 MARKERS = (
     "\u00C3\u0192",

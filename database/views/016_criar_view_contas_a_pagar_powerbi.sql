@@ -5,7 +5,7 @@
 
 CREATE OR ALTER VIEW dbo.vw_contas_a_pagar_powerbi AS
 SELECT
-    CAST(CAST(issue_date AS DATETIME) AS TIME(0)) AS [Hora (Solicitacao)],
+    CAST(ISNULL(data_criacao, '1900-01-01T00:00:00+00:00') AS TIME(0)) AS [Hora (Solicitacao)],
     sequence_code AS [Lançamento a Pagar/N°],
     document_number AS [N° Documento],
     issue_date AS [Emissão],

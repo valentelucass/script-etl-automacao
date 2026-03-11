@@ -11,7 +11,7 @@
     <properties>
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <start-class>br.com.extrator.Main</start-class>
+        <start-class>br.com.extrator.bootstrap.Main</start-class>
 
         <jackson.version>2.17.2</jackson.version>
         <mssql.jdbc.version>12.8.1.jre11</mssql.jdbc.version>
@@ -92,6 +92,16 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.3.1</version>
+                <configuration>
+                    <argLine>-Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8 --enable-native-access=ALL-UNNAMED</argLine>
+                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                    <environmentVariables>
+                        <API_RETRY_MAX_TENTATIVAS>2</API_RETRY_MAX_TENTATIVAS>
+                        <API_GRAPHQL_RETRY_MAX_TENTATIVAS_DIA>2</API_GRAPHQL_RETRY_MAX_TENTATIVAS_DIA>
+                        <API_RETRY_DELAY_BASE_MS>500</API_RETRY_DELAY_BASE_MS>
+                        <API_RETRY_MULTIPLICADOR>1.0</API_RETRY_MULTIPLICADOR>
+                    </environmentVariables>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -113,9 +123,10 @@
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.4.2</version>
                 <configuration>
+                    <forceCreation>true</forceCreation>
                     <archive>
                         <manifest>
-                            <mainClass>br.com.extrator.Main</mainClass>
+                            <mainClass>br.com.extrator.bootstrap.Main</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
@@ -137,16 +148,22 @@
                                 <filter>
                                     <artifact>*:*</artifact>
                                     <excludes>
+                                        <exclude>META-INF/MANIFEST.MF</exclude>
+                                        <exclude>META-INF/LICENSE</exclude>
+                                        <exclude>META-INF/LICENSE.txt</exclude>
+                                        <exclude>META-INF/NOTICE</exclude>
                                         <exclude>META-INF/*.SF</exclude>
                                         <exclude>META-INF/*.DSA</exclude>
                                         <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>module-info.class</exclude>
+                                        <exclude>META-INF/versions/*/module-info.class</exclude>
                                     </excludes>
                                 </filter>
                             </filters>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>br.com.extrator.Main</mainClass>
+                                    <mainClass>br.com.extrator.bootstrap.Main</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>

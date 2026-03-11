@@ -1,0 +1,11 @@
+# Baseline de class size para regra no-growth (arquivo|linhas)
+# Atualize conscientemente apos refatoracoes estruturais.
+src/main/java/br/com/extrator/api/ClienteApiDataExport.java|1234
+src/main/java/br/com/extrator/api/ClienteApiGraphQL.java|1279
+src/main/java/br/com/extrator/comandos/extracao/ExecutarExtracaoPorIntervaloComando.java|841
+src/main/java/br/com/extrator/comandos/validacao/ValidarApiVsBanco24hDetalhadoComando.java|1193
+src/main/java/br/com/extrator/comandos/validacao/ValidarManifestosComando.java|836
+src/main/java/br/com/extrator/db/entity/ManifestoEntity.java|1074
+src/main/java/br/com/extrator/modelo/dataexport/manifestos/ManifestoDTO.java|1265
+src/main/java/br/com/extrator/runners/graphql/extractors/FaturaGraphQLExtractor.java|800
+src/main/java/br/com/extrator/util/configuracao/CarregadorConfig.java|1035

@@ -1,0 +1,17 @@
+{
+  "data": {
+    "shipmentList": {
+      "nodes": [
+        {
+          "id": "FRETE-001",
+          "code": "1001",
+          "createdAt": "2026-01-01T10:00:00Z"
+        }
+      ],
+      "pageInfo": {
+        "hasNextPage": false,
+        "endCursor": null
+      }
+    }
+  }
+}

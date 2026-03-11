@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/dataexport/manifestos"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "dataexport-manifestos-success.json"
+  }
+}

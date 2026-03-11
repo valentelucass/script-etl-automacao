@@ -45,6 +45,8 @@ import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.Optional;
 
+import br.com.extrator.suporte.configuracao.ConfigSeguranca;
+
 /**
  * Regras de autenticacao/autorizacao para operacao do sistema.
  */
@@ -56,9 +58,9 @@ public class SegurancaService {
 
     public SegurancaService() {
         this.repository = new SegurancaRepository();
-        this.pepper = Optional.ofNullable(System.getenv("EXTRATOR_AUTH_PEPPER")).orElse("");
-        this.maxTentativasFalhas = lerIntEnv("EXTRATOR_AUTH_MAX_TENTATIVAS", 3);
-        this.minutosBloqueio = lerIntEnv("EXTRATOR_AUTH_BLOQUEIO_MINUTOS", 5);
+        this.pepper = ConfigSeguranca.obterPepper();
+        this.maxTentativasFalhas = ConfigSeguranca.obterMaxTentativasFalhas();
+        this.minutosBloqueio = ConfigSeguranca.obterMinutosBloqueio();
     }
 
     public void autenticarEAutorizar(
@@ -225,19 +227,6 @@ public class SegurancaService {
             throw new IllegalArgumentException(
                 "Senha invalida. Requisitos: minimo 8 caracteres, com pelo menos 1 letra e 1 numero."
             );
-        }
-    }
-
-    private int lerIntEnv(final String nome, final int valorPadrao) {
-        final String valor = System.getenv(nome);
-        if (valor == null || valor.isBlank()) {
-            return valorPadrao;
-        }
-        try {
-            final int parsed = Integer.parseInt(valor.trim());
-            return parsed > 0 ? parsed : valorPadrao;
-        } catch (final NumberFormatException e) {
-            return valorPadrao;
         }
     }
 

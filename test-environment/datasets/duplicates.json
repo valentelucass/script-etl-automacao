@@ -1,0 +1,8 @@
+{
+  "description": "Dataset sintético com duplicatas de chave natural",
+  "records": [
+    { "entity": "coletas", "natural_key": "COL-001", "created_at": "2026-01-01T10:00:00Z" },
+    { "entity": "coletas", "natural_key": "COL-001", "created_at": "2026-01-01T10:00:00Z" },
+    { "entity": "coletas", "natural_key": "COL-002", "created_at": "2026-01-01T10:05:00Z" }
+  ]
+}

@@ -53,7 +53,7 @@ Referências de leitura de config no código:
   - `.01-executar_extracao_completa.bat` (com fallback automático para `java -cp ... br.com.extrator.Main` caso o JAR não tenha `Main-Class`).
 - Ajuda/diagnósticos úteis:
   - Validação de conexão de banco: `src/main/java/br/com/extrator/util/CarregadorConfig.java:44`
-  - Ferramenta de diagnóstico de banco: `src/main/java/br/com/extrator/util/DiagnosticoBanco.java:15`
+  - Validacao de acesso e conexao: `--validar`
   - Teste rápido de DataExport: `.02-testar_api_especifica.bat dataexport cotacoes` (com fallback de execução caso `java -jar` falhe).
 
 ### Observação sobre banco nesta máquina

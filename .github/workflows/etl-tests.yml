@@ -1,0 +1,46 @@
+name: ETL Tests
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  etl-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Make Scripts Executable
+        run: |
+          chmod +x run-unit-tests.sh run-integration-tests.sh run-pipeline-tests.sh run-chaos-tests.sh
+          chmod +x ai-test-control/execute-full-test-suite.sh ai-test-control/execute-recovery-tests.sh ai-test-control/execute-chaos-tests.sh
+
+      - name: Lint (PMD)
+        run: mvn -B -ntp -DskipTests org.apache.maven.plugins:maven-pmd-plugin:3.28.0:pmd
+
+      - name: Build
+        run: mvn -B -ntp -DskipTests package
+
+      - name: Unit Tests
+        run: ./run-unit-tests.sh
+
+      - name: Integration Tests
+        run: ./run-integration-tests.sh
+
+      - name: Contract Tests
+        run: mvn -B -ntp -Dtest='*ContractTest' -Dsurefire.failIfNoSpecifiedTests=false test
+
+      - name: Pipeline Tests
+        run: ./run-pipeline-tests.sh

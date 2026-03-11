@@ -4,7 +4,6 @@ on:
   push:
     branches: [ "main", "master" ]
   pull_request:
-    branches: [ "main", "master" ]
 
 permissions:
   contents: read
@@ -77,6 +76,9 @@ jobs:
 
       - name: Basic Static Analysis (PMD Report)
         run: mvn -B -ntp -DskipTests=true org.apache.maven.plugins:maven-pmd-plugin:3.28.0:pmd
+
+      - name: PMD Regression Guard
+        run: python3 scripts/ci/check_pmd_regression.py
 
       - name: Dependency Audit (Maven Analyze)
         run: mvn -B -ntp -DskipTests=true org.apache.maven.plugins:maven-dependency-plugin:3.7.1:analyze-only

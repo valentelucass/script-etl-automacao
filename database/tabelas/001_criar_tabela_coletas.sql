@@ -12,6 +12,7 @@ BEGIN
         -- Colunas Essenciais para Indexação e Relatórios
         sequence_code BIGINT,
         request_date DATE,
+        request_hour NVARCHAR(8),
         service_date DATE,
         status NVARCHAR(50),
         total_value DECIMAL(18, 2),
