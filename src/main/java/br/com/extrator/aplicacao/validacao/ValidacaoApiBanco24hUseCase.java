@@ -69,7 +69,8 @@ public class ValidacaoApiBanco24hUseCase {
         int registrosExtraidos,
         Integer apiCount,
         Integer uniqueCount,
-        Integer dbUpserts
+        Integer dbUpserts,
+        Integer dbPersisted
     ) {
     }
 
@@ -83,10 +84,11 @@ public class ValidacaoApiBanco24hUseCase {
         final LocalDate dataFim = dataReferencia;
 
         log.console("\n" + "=".repeat(72));
-        log.info("VALIDACAO RAPIDA 24H | LOG_EXTRACOES x BANCO + TELEMETRIA API ATUAL");
+        log.info("VALIDACAO RAPIDA | JANELA OPERACIONAL RECENTE | LOG_EXTRACOES x BANCO + TELEMETRIA API ATUAL");
         log.info("Data de referencia: {}", dataReferencia);
+        log.info("Janela principal considerada: {} a {} (D-1..D)", dataInicio, dataFim);
         log.warn(
-            "Modo rapido: o criterio de aprovacao usa a ultima janela COMPLETA registrada em log_extracoes; api_bruto_atual entra apenas como telemetria operacional."
+            "Modo rapido: o criterio de aprovacao usa a ultima janela COMPLETA registrada em log_extracoes; api_bruto_atual entra apenas como telemetria operacional e nao representa necessariamente 24h corridas."
         );
         log.info(
             "Faturas GraphQL: {}",
@@ -99,7 +101,7 @@ public class ValidacaoApiBanco24hUseCase {
         log.console("=".repeat(72));
 
         final CompletudeValidator validator = new CompletudeValidator();
-        final Optional<Map<String, Integer>> totaisApiOpt = validator.buscarTotaisEslCloud(
+        final Optional<Map<String, Integer>> totaisApiOpt = validator.buscarTotaisEslCloudJanelaPrincipal(
             dataReferencia,
             request.incluirFaturasGraphQL()
         );
@@ -133,7 +135,7 @@ public class ValidacaoApiBanco24hUseCase {
                 if (janelaOpt.isEmpty()) {
                     totalFalhas++;
                     log.warn(
-                        "API_VS_BANCO_24H | entidade={} | status=INCONCLUSIVO | detalhe=Sem janela COMPLETA compativel para comparacao{}.",
+                        "API_VS_BANCO | entidade={} | status=INCONCLUSIVO | detalhe=Sem janela COMPLETA compativel para comparacao{}.",
                         entidade,
                         request.permitirFallbackJanela()
                             ? " mesmo com fallback"
@@ -143,15 +145,16 @@ public class ValidacaoApiBanco24hUseCase {
                 }
 
                 final JanelaExecucao janela = janelaOpt.get();
-                final int bancoCount = janela.dbUpserts != null
-                    ? janela.dbUpserts
-                    : contarDestinoNaJanela(conexao, entidade, janela);
+                final int bancoCount = contarDestinoNaJanela(conexao, entidade, janela);
                 final int esperadoUnico = janela.uniqueCount != null ? janela.uniqueCount : janela.registrosExtraidos;
+                final int esperadoPersistido = janela.dbPersisted != null
+                    ? janela.dbPersisted
+                    : janela.dbUpserts != null ? janela.dbUpserts : esperadoUnico;
                 final int apiCountLog = janela.apiCount != null ? janela.apiCount : esperadoUnico;
-                final int diff = bancoCount - esperadoUnico;
+                final int diff = bancoCount - esperadoPersistido;
                 final int deltaApiBrutoAtual = apiCount - esperadoUnico;
                 final boolean tolerarBackfillFaturas =
-                    ConstantesEntidades.FATURAS_GRAPHQL.equals(entidade) && bancoCount >= esperadoUnico;
+                    ConstantesEntidades.FATURAS_GRAPHQL.equals(entidade) && bancoCount >= esperadoPersistido;
 
                 if (diff == 0 || tolerarBackfillFaturas) {
                     totalOk++;
@@ -160,6 +163,7 @@ public class ValidacaoApiBanco24hUseCase {
                         apiCount,
                         apiCountLog,
                         esperadoUnico,
+                        esperadoPersistido,
                         bancoCount,
                         diff,
                         deltaApiBrutoAtual,
@@ -171,11 +175,12 @@ public class ValidacaoApiBanco24hUseCase {
 
                 totalFalhas++;
                 log.error(
-                    "API_VS_BANCO_24H | entidade={} | status=FALHA | api_bruto_atual={} | api_bruto_log={} | esperado_unico={} | banco={} | diff={} | janela=[{} .. {}]",
+                    "API_VS_BANCO | entidade={} | status=FALHA | api_bruto_atual={} | api_bruto_log={} | api_unico_log={} | esperado_persistido={} | banco={} | diff={} | janela=[{} .. {}]",
                     entidade,
                     apiCount,
                     apiCountLog,
                     esperadoUnico,
+                    esperadoPersistido,
                     bancoCount,
                     diff,
                     janela.inicio,
@@ -185,12 +190,12 @@ public class ValidacaoApiBanco24hUseCase {
         }
 
         log.console("=".repeat(72));
-        log.info("RESUMO_API_VS_BANCO_24H | ok={} | falhas={}", totalOk, totalFalhas);
+        log.info("RESUMO_API_VS_BANCO | ok={} | falhas={}", totalOk, totalFalhas);
         log.console("=".repeat(72));
 
         if (totalFalhas > 0) {
             throw new RuntimeException(
-                "Comparacao API x Banco 24h reprovada: " + totalFalhas + " entidade(s) com divergencia."
+                "Comparacao API x Banco reprovada: " + totalFalhas + " entidade(s) com divergencia."
             );
         }
     }
@@ -199,6 +204,7 @@ public class ValidacaoApiBanco24hUseCase {
                                   final int apiCount,
                                   final int apiCountLog,
                                   final int esperadoUnico,
+                                  final int esperadoPersistido,
                                   final int bancoCount,
                                   final int diff,
                                   final int deltaApiBrutoAtual,
@@ -206,11 +212,12 @@ public class ValidacaoApiBanco24hUseCase {
                                   final boolean tolerarBackfillFaturas) {
         if (tolerarBackfillFaturas && diff != 0) {
             log.warn(
-                "API_VS_BANCO_24H | entidade={} | status=OK_BACKFILL | api_bruto_atual={} | api_bruto_log={} | esperado_unico={} | banco={} | diff={} | janela=[{} .. {}]",
+                "API_VS_BANCO | entidade={} | status=OK_BACKFILL | api_bruto_atual={} | api_bruto_log={} | api_unico_log={} | esperado_persistido={} | banco={} | diff={} | janela=[{} .. {}]",
                 entidade,
                 apiCount,
                 apiCountLog,
                 esperadoUnico,
+                esperadoPersistido,
                 bancoCount,
                 diff,
                 janela.inicio,
@@ -221,11 +228,12 @@ public class ValidacaoApiBanco24hUseCase {
 
         if (deltaApiBrutoAtual > 0) {
             log.info(
-                "API_VS_BANCO_24H | entidade={} | status=OK_API_DUPLICADOS | api_bruto_atual={} | api_bruto_log={} | esperado_unico={} | banco={} | diff={} | duplicados_brutos={} | janela=[{} .. {}]",
+                "API_VS_BANCO | entidade={} | status=OK_API_DUPLICADOS | api_bruto_atual={} | api_bruto_log={} | api_unico_log={} | esperado_persistido={} | banco={} | diff={} | duplicados_brutos={} | janela=[{} .. {}]",
                 entidade,
                 apiCount,
                 apiCountLog,
                 esperadoUnico,
+                esperadoPersistido,
                 bancoCount,
                 diff,
                 deltaApiBrutoAtual,
@@ -236,11 +244,12 @@ public class ValidacaoApiBanco24hUseCase {
         }
 
         log.info(
-            "API_VS_BANCO_24H | entidade={} | status=OK | api_bruto_atual={} | api_bruto_log={} | esperado_unico={} | banco={} | diff={} | janela=[{} .. {}]",
+            "API_VS_BANCO | entidade={} | status=OK | api_bruto_atual={} | api_bruto_log={} | api_unico_log={} | esperado_persistido={} | banco={} | diff={} | janela=[{} .. {}]",
             entidade,
             apiCount,
             apiCountLog,
             esperadoUnico,
+            esperadoPersistido,
             bancoCount,
             diff,
             janela.inicio,
@@ -256,7 +265,7 @@ public class ValidacaoApiBanco24hUseCase {
         final LocalDate diaAnterior = dataPreferida.minusDays(1);
         if (existeLogCompleto24hNaData(conexao, diaAnterior)) {
             log.warn(
-                "Sem log COMPLETO 24h para {}. Usando dia anterior {} como referencia.",
+                "Sem log COMPLETO da janela operacional recente para {}. Usando dia anterior {} como referencia.",
                 dataPreferida,
                 diaAnterior
             );
@@ -265,7 +274,7 @@ public class ValidacaoApiBanco24hUseCase {
 
         if (existeLogCompletoNaData(conexao, dataPreferida)) {
             log.warn(
-                "Sem log COMPLETO 24h para {}. Usando logs COMPLETO do proprio dia (sem filtro de periodo).",
+                "Sem log COMPLETO da janela operacional recente para {}. Usando logs COMPLETO do proprio dia (sem filtro de periodo).",
                 dataPreferida
             );
             return dataPreferida;
@@ -273,7 +282,7 @@ public class ValidacaoApiBanco24hUseCase {
 
         if (existeLogCompletoNaData(conexao, diaAnterior)) {
             log.warn(
-                "Sem log COMPLETO 24h para {}. Usando logs COMPLETO do dia anterior {} (sem filtro de periodo).",
+                "Sem log COMPLETO da janela operacional recente para {}. Usando logs COMPLETO do dia anterior {} (sem filtro de periodo).",
                 dataPreferida,
                 diaAnterior
             );
@@ -408,7 +417,8 @@ public class ValidacaoApiBanco24hUseCase {
         final Integer apiCount = extrairNumeroCampoMensagem(mensagem, "api_count");
         final Integer uniqueCount = extrairNumeroCampoMensagem(mensagem, "unique_count");
         final Integer dbUpserts = extrairNumeroCampoMensagem(mensagem, "db_upserts");
-        return new JanelaExecucao(inicio, fim, registrosExtraidos, apiCount, uniqueCount, dbUpserts);
+        final Integer dbPersisted = extrairNumeroCampoMensagem(mensagem, "db_persisted");
+        return new JanelaExecucao(inicio, fim, registrosExtraidos, apiCount, uniqueCount, dbUpserts, dbPersisted);
     }
 
     private Integer extrairNumeroCampoMensagem(final String mensagem, final String campo) {

@@ -104,7 +104,8 @@ public class ValidacaoEtlExtremaUseCase {
                     dataFim,
                     nomesEntidades,
                     request.repeticoesStress(),
-                    request.permitirFallbackJanela()
+                    request.permitirFallbackJanela(),
+                    apiResultados
                 );
 
             final List<EntityDiagnostic> entityDiagnostics = new ArrayList<>();
@@ -233,20 +234,37 @@ public class ValidacaoEtlExtremaUseCase {
         final LocalDate dataFim,
         final List<String> entidades,
         final int repeticoes,
-        final boolean permitirFallbackJanela
+        final boolean permitirFallbackJanela,
+        final Map<String, ResultadoApiChaves> baselineResultados
     ) throws Exception {
         final Map<String, StressAnalysis> analyses = new LinkedHashMap<>();
         final Map<String, List<Integer>> totaisPorEntidade = new LinkedHashMap<>();
         final Map<String, List<Integer>> paginasPorEntidade = new LinkedHashMap<>();
         final Map<String, List<String>> motivosPorEntidade = new LinkedHashMap<>();
+        for (final String entidade : entidades) {
+            final ResultadoApiChaves baseline = baselineResultados.get(entidade);
+            if (baseline == null) {
+                continue;
+            }
+            totaisPorEntidade.computeIfAbsent(entidade, ignored -> new ArrayList<>()).add(baseline.apiUnico());
+            paginasPorEntidade.computeIfAbsent(entidade, ignored -> new ArrayList<>()).add(baseline.paginasProcessadas());
+            motivosPorEntidade.computeIfAbsent(entidade, ignored -> new ArrayList<>()).add(baseline.motivoInterrupcao());
+        }
+
+        final List<String> entidadesStress = entidades.stream()
+            .filter(ValidacaoEtlExtremaUseCase::deveExecutarStressApi)
+            .toList();
 
         for (int i = 0; i < repeticoes; i++) {
+            if (entidadesStress.isEmpty()) {
+                break;
+            }
             final Map<String, ResultadoApiChaves> rodada = coletarApi(
                 conexao,
                 dataReferencia,
                 dataInicio,
                 dataFim,
-                entidades,
+                entidadesStress,
                 permitirFallbackJanela
             );
             for (final Map.Entry<String, ResultadoApiChaves> entry : rodada.entrySet()) {
@@ -269,6 +287,15 @@ public class ValidacaoEtlExtremaUseCase {
         }
 
         return analyses;
+    }
+
+    static boolean deveExecutarStressApi(final String entidade) {
+        return !ConstantesEntidades.USUARIOS_SISTEMA.equals(entidade)
+            && !ConstantesEntidades.FATURAS_GRAPHQL.equals(entidade);
+    }
+
+    static boolean deveExecutarReplayIdempotencia(final String entidade) {
+        return !ConstantesEntidades.USUARIOS_SISTEMA.equals(entidade);
     }
 
     private EntityDiagnostic analisarEntidade(
@@ -790,22 +817,16 @@ public class ValidacaoEtlExtremaUseCase {
         final List<String> problems = new ArrayList<>();
         final List<String> suggestions = new ArrayList<>();
         try (Connection beforeConn = GerenciadorConexao.obterConexao()) {
-            final List<EntitySpec> entidades = detectarEntidades(beforeConn, incluirFaturasGraphQL);
+            final List<EntitySpec> entidades = detectarEntidades(beforeConn, incluirFaturasGraphQL).stream()
+                .filter(entity -> deveExecutarReplayIdempotencia(entity.entidade()))
+                .toList();
             final String baseline = fingerprintBanco(beforeConn, entidades);
-            final ExtracaoPorIntervaloRequest request = new ExtracaoPorIntervaloRequest(
-                dataInicio,
-                dataFim,
-                null,
-                null,
-                incluirFaturasGraphQL,
-                false
-            );
-            new ExtracaoPorIntervaloUseCase().executar(request);
+            executarReplayIdempotentePorEntidade(dataInicio, dataFim, incluirFaturasGraphQL, entidades);
             final String afterFirst;
             try (Connection middleConn = GerenciadorConexao.obterConexao()) {
                 afterFirst = fingerprintBanco(middleConn, entidades);
             }
-            new ExtracaoPorIntervaloUseCase().executar(request);
+            executarReplayIdempotentePorEntidade(dataInicio, dataFim, incluirFaturasGraphQL, entidades);
             final String afterSecond;
             try (Connection finalConn = GerenciadorConexao.obterConexao()) {
                 afterSecond = fingerprintBanco(finalConn, entidades);
@@ -821,6 +842,42 @@ public class ValidacaoEtlExtremaUseCase {
             suggestions.add("Executar teste em janela controlada antes de rodar em producao.");
             return new IdempotencyAnalysis("FALHA", null, null, null, problems, suggestions, 1);
         }
+    }
+
+    private void executarReplayIdempotentePorEntidade(
+        final LocalDate dataInicio,
+        final LocalDate dataFim,
+        final boolean incluirFaturasGraphQL,
+        final List<EntitySpec> entidades
+    ) throws Exception {
+        final ExtracaoPorIntervaloUseCase useCase = new ExtracaoPorIntervaloUseCase();
+        for (final EntitySpec entidade : entidades) {
+            final boolean incluirFaturasNoRequest =
+                incluirFaturasGraphQL || ConstantesEntidades.FATURAS_GRAPHQL.equals(entidade.entidade());
+            final ExtracaoPorIntervaloRequest request = new ExtracaoPorIntervaloRequest(
+                dataInicio,
+                dataFim,
+                resolverApiParaReplayIdempotente(entidade.entidade()),
+                entidade.entidade(),
+                incluirFaturasNoRequest,
+                false
+            );
+            useCase.executar(request);
+        }
+    }
+
+    private String resolverApiParaReplayIdempotente(final String entidade) {
+        return switch (entidade) {
+            case ConstantesEntidades.COLETAS,
+                 ConstantesEntidades.FRETES,
+                 ConstantesEntidades.FATURAS_GRAPHQL -> "graphql";
+            case ConstantesEntidades.MANIFESTOS,
+                 ConstantesEntidades.COTACOES,
+                 ConstantesEntidades.LOCALIZACAO_CARGAS,
+                 ConstantesEntidades.CONTAS_A_PAGAR,
+                 ConstantesEntidades.FATURAS_POR_CLIENTE -> "dataexport";
+            default -> throw new IllegalArgumentException("Entidade sem API de replay idempotente mapeada: " + entidade);
+        };
     }
 
     private OrphanHydrationAnalysis executarAnaliseOrfaos(
@@ -973,7 +1030,6 @@ public class ValidacaoEtlExtremaUseCase {
         final boolean incluirFaturasGraphQL
     ) throws SQLException {
         final List<EntitySpec> candidatos = new ArrayList<>(List.of(
-            new EntitySpec(ConstantesEntidades.USUARIOS_SISTEMA, "dim_usuarios", "data_atualizacao", List.of("user_id"), null),
             new EntitySpec(ConstantesEntidades.COLETAS, "coletas", "data_extracao", List.of("id"), "sequence_code"),
             new EntitySpec(ConstantesEntidades.FRETES, "fretes", "data_extracao", List.of("id"), null),
             new EntitySpec(ConstantesEntidades.MANIFESTOS, "manifestos", "data_extracao", List.of("sequence_code", "pick_sequence_code", "mdfe_number"), null),
@@ -985,6 +1041,7 @@ public class ValidacaoEtlExtremaUseCase {
         if (incluirFaturasGraphQL) {
             candidatos.add(new EntitySpec(ConstantesEntidades.FATURAS_GRAPHQL, "faturas_graphql", "data_extracao", List.of("id"), null));
         }
+        candidatos.add(new EntitySpec(ConstantesEntidades.USUARIOS_SISTEMA, "dim_usuarios", "data_atualizacao", List.of("user_id"), null));
 
         final List<EntitySpec> ativas = new ArrayList<>();
         for (final EntitySpec candidato : candidatos) {

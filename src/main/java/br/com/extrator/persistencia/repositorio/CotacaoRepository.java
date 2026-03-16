@@ -52,6 +52,11 @@ public class CotacaoRepository extends AbstractRepository<CotacaoEntity> {
         return NOME_TABELA;
     }
 
+    @Override
+    protected boolean aceitarMergeSemAlteracoesComoSucesso(final CotacaoEntity cotacao) {
+        return true;
+    }
+
     /**
      * Executa a operação MERGE (UPSERT) para inserir ou atualizar uma cotação no
      * banco.
@@ -64,6 +69,10 @@ public class CotacaoRepository extends AbstractRepository<CotacaoEntity> {
             throw new SQLException("Não é possível executar o MERGE para Cotação sem um 'sequence_code'.");
         }
 
+        final String freshnessGuard = buildMonotonicUpdateGuard(
+                "COALESCE(CAST(target.nfse_issued_at AS datetime2), CAST(target.cte_issued_at AS datetime2), CAST(target.requested_at AS datetime2))",
+                "COALESCE(CAST(source.nfse_issued_at AS datetime2), CAST(source.cte_issued_at AS datetime2), CAST(source.requested_at AS datetime2))"
+        );
         final String sql = String.format(
                 """
                         MERGE %s AS target
@@ -79,7 +88,7 @@ public class CotacaoRepository extends AbstractRepository<CotacaoEntity> {
                                 metadata, data_extracao
                             )
                         ON target.sequence_code = source.sequence_code
-                        WHEN MATCHED THEN
+                        WHEN MATCHED AND %s THEN
                             UPDATE SET
                                 requested_at = source.requested_at,
                                 operation_type = source.operation_type,
@@ -140,7 +149,8 @@ public class CotacaoRepository extends AbstractRepository<CotacaoEntity> {
                                 source.metadata, source.data_extracao
                             );
                         """,
-                NOME_TABELA);
+                NOME_TABELA,
+                freshnessGuard);
 
         try (PreparedStatement statement = conexao.prepareStatement(sql)) {
             // Define os parâmetros de forma segura e na ordem correta conforme MERGE SQL

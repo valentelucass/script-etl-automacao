@@ -149,11 +149,22 @@ final class GraphQLColetaSupport {
             if (coleta == null) {
                 continue;
             }
-            final String chave = coleta.getId() != null && !coleta.getId().isBlank()
-                ? coleta.getId()
-                : String.valueOf(coleta.getSequenceCode());
+            final String chave = resolverChaveDeduplicacao(coleta);
             unicos.put(chave, coleta);
         }
         return new ArrayList<>(unicos.values());
+    }
+
+    static String resolverChaveDeduplicacao(final ColetaNodeDTO coleta) {
+        if (coleta == null) {
+            throw new IllegalArgumentException("Coleta nula nao pode ser deduplicada.");
+        }
+        if (coleta.getId() != null && !coleta.getId().isBlank()) {
+            return coleta.getId();
+        }
+        if (coleta.getSequenceCode() != null) {
+            return "SEQ:" + coleta.getSequenceCode();
+        }
+        throw new IllegalStateException("Coleta sem id e sem sequenceCode nao pode ser deduplicada.");
     }
 }

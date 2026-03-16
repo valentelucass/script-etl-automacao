@@ -43,6 +43,7 @@ final class DataExportPaginator {
     private final int maxTentativasTimeoutPaginaUm;
     private final int intervaloLogProgresso;
     private final DataExportPaginationSupport paginationSupport;
+    private final DataExportTimeWindowSupport timeWindowSupport;
     private final DataExportTimeout422Probe timeout422Probe;
 
     DataExportPaginator(final Logger logger,
@@ -53,7 +54,8 @@ final class DataExportPaginator {
                         final int maxTentativasTimeoutPorPagina,
                         final int maxTentativasTimeoutPaginaUm,
                         final int intervaloLogProgresso,
-                        final DataExportPaginationSupport paginationSupport) {
+                        final DataExportPaginationSupport paginationSupport,
+                        final DataExportTimeWindowSupport timeWindowSupport) {
         this.logger = logger;
         this.urlBase = urlBase;
         this.requestBodyFactory = requestBodyFactory;
@@ -63,6 +65,7 @@ final class DataExportPaginator {
         this.maxTentativasTimeoutPaginaUm = maxTentativasTimeoutPaginaUm;
         this.intervaloLogProgresso = intervaloLogProgresso;
         this.paginationSupport = paginationSupport;
+        this.timeWindowSupport = timeWindowSupport;
         this.timeout422Probe = new DataExportTimeout422Probe(logger, requestBodyFactory, httpExecutor);
     }
 
@@ -131,8 +134,8 @@ final class DataExportPaginator {
             );
         }
 
-        final LocalDate janelaInicio = dataInicio.atZone(java.time.ZoneOffset.UTC).toLocalDate();
-        final LocalDate janelaFim = dataFim.atZone(java.time.ZoneOffset.UTC).toLocalDate();
+        final LocalDate janelaInicio = timeWindowSupport.toLocalDate(dataInicio);
+        final LocalDate janelaFim = timeWindowSupport.toLocalDate(dataFim);
 
         if (permitirParticionamento && ConfigApi.isParticionamentoJanelaDataExportAtivo() && janelaInicio.isBefore(janelaFim)) {
             logger.info(
@@ -150,8 +153,8 @@ final class DataExportPaginator {
 
             LocalDate dia = janelaInicio;
             while (!dia.isAfter(janelaFim)) {
-                final Instant inicioDia = dia.atStartOfDay().atZone(java.time.ZoneOffset.UTC).toInstant();
-                final Instant fimDia = dia.atTime(23, 59, 59).atZone(java.time.ZoneOffset.UTC).toInstant();
+                final Instant inicioDia = timeWindowSupport.inicioDoDia(dia);
+                final Instant fimDia = timeWindowSupport.fimDoDia(dia);
 
                 final ResultadoExtracao<T> resultadoDia = buscarDadosGenericos(
                     executionId,

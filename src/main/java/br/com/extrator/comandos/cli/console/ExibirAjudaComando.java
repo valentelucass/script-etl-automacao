@@ -45,14 +45,14 @@ public class ExibirAjudaComando implements Comando {
         System.out.println("                        Uso: --recovery YYYY-MM-DD YYYY-MM-DD [--api graphql|dataexport] [--entidade nome]");
         System.out.println("  --validar             Valida configuracoes e conectividade");
         System.out.println("  --introspeccao        Realiza introspeccao do schema GraphQL");
-        System.out.println("  --auditoria           Executa auditoria dos dados (ultimas 24h)");
+        System.out.println("  --auditoria           Executa auditoria dos dados (janela operacional recente D-1..D)");
         System.out.println("  --auditoria --periodo YYYY-MM-DD YYYY-MM-DD");
         System.out.println("                        Executa auditoria para periodo especifico");
         System.out.println("  --auditar-api         Audita estrutura das APIs e gera CSV");
         System.out.println("  --testar-api [tipo]   Testa API especifica (graphql|dataexport)");
         System.out.println("                        Uso: --testar-api [tipo] [entidade] [--sem-faturas-graphql]");
         System.out.println("  --validar-api-banco-24h");
-        System.out.println("                        Compara API ao vivo x banco (janela da ultima extracao COMPLETA)");
+        System.out.println("                        Compara API ao vivo x banco (janela da ultima extracao COMPLETA; nao necessariamente 24h corridas)");
         System.out.println("                        Opcional: --sem-faturas-graphql | --permitir-fallback-janela");
         System.out.println("  --validar-api-banco-24h-detalhado");
         System.out.println("                        Compara chave a chave por entidade (API x banco na janela da ultima extracao)");

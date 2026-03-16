@@ -96,7 +96,7 @@ class FaturaPorClienteMapperTest {
     void deveAlterarHashQuandoCampoCanonicoMuda() {
         final FaturaPorClienteDTO dtoA = criarDtoSemChaveNatural();
         final FaturaPorClienteDTO dtoB = criarDtoSemChaveNatural();
-        dtoB.setValorFrete("1020.75");
+        dtoB.setPagadorDocumento("99887766000155");
 
         final String uniqueIdA = mapper.calcularIdentificadorUnico(dtoA);
         final String uniqueIdB = mapper.calcularIdentificadorUnico(dtoB);
@@ -125,6 +125,55 @@ class FaturaPorClienteMapperTest {
         final String uniqueIdComCteKey = mapper.calcularIdentificadorUnico(comCteKey);
 
         assertEquals(uniqueIdSemCteKey, uniqueIdComCteKey);
+    }
+
+    @Test
+    void deveManterMesmoUniqueIdQuandoStatusOuBaixaMudam() {
+        final FaturaPorClienteDTO original = criarDtoSemChaveNatural();
+        original.setCteNumber(12345L);
+        original.setCteIssuedAt("2026-03-09T10:15:30-03:00");
+        original.setFaturaDocument("DOC-7788");
+        original.setFaturaIssueDate("2026-03-09");
+        original.setFaturaDueDate("2026-03-15");
+        original.setCteStatus("authorized");
+        original.setCteStatusResult("Autorizado o uso do CT-e");
+        original.setFaturaBaixaDate("2026-03-10");
+
+        final FaturaPorClienteDTO atualizado = criarDtoSemChaveNatural();
+        atualizado.setCteNumber(12345L);
+        atualizado.setCteIssuedAt("2026-03-09T10:15:30-03:00");
+        atualizado.setFaturaDocument("DOC-7788");
+        atualizado.setFaturaIssueDate("2026-03-09");
+        atualizado.setFaturaDueDate("2026-03-15");
+        atualizado.setCteStatus("cancelled");
+        atualizado.setCteStatusResult("Cancelado");
+        atualizado.setFaturaBaixaDate("2026-03-12");
+
+        final String uniqueIdOriginal = mapper.calcularIdentificadorUnico(original);
+        final String uniqueIdAtualizado = mapper.calcularIdentificadorUnico(atualizado);
+
+        assertEquals(uniqueIdOriginal, uniqueIdAtualizado);
+    }
+
+    @Test
+    void deveManterMesmoUniqueIdQuandoCamposComplementaresMudamMasCtePermanece() {
+        final FaturaPorClienteDTO original = criarDtoSemChaveNatural();
+        original.setCteNumber(12345L);
+        original.setNotasFiscais(List.of("NF-1"));
+        original.setPedidosCliente(List.of("PED-1"));
+
+        final FaturaPorClienteDTO atualizado = criarDtoSemChaveNatural();
+        atualizado.setCteNumber(12345L);
+        atualizado.setNotasFiscais(List.of("NF-1", "NF-2", "NF-3"));
+        atualizado.setPedidosCliente(List.of("PED-9"));
+        atualizado.setFaturaDocument("DOC-ADICIONAL");
+        atualizado.setFaturaIssueDate("2026-03-10");
+        atualizado.setBillingId("BILL-7788");
+
+        final String uniqueIdOriginal = mapper.calcularIdentificadorUnico(original);
+        final String uniqueIdAtualizado = mapper.calcularIdentificadorUnico(atualizado);
+
+        assertEquals(uniqueIdOriginal, uniqueIdAtualizado);
     }
 
     @Test

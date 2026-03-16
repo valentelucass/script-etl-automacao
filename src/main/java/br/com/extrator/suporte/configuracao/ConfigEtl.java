@@ -198,4 +198,20 @@ public final class ConfigEtl {
             null
         );
     }
+
+    public static int obterTimeoutLockExecucaoMs() {
+        return ConfigValueParser.parseInt(
+            System.getProperty("etl.execution.lock.timeout.ms") != null
+                ? System.getProperty("etl.execution.lock.timeout.ms")
+                : ConfigSource.obterConfiguracao(
+                    "ETL_EXECUTION_LOCK_TIMEOUT_MS",
+                    "etl.execution.lock.timeout.ms"
+                ),
+            5_000,
+            value -> value >= 0,
+            null,
+            null,
+            null
+        );
+    }
 }

@@ -60,6 +60,11 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
         return NOME_TABELA;
     }
 
+    @Override
+    protected boolean aceitarMergeSemAlteracoesComoSucesso(final FreteEntity frete) {
+        return true;
+    }
+
     /**
      * Lista IDs de accounting_credit_id presentes em fretes e ausentes em faturas_graphql.
      * A busca e limitada ao periodo operacional de service_date/servico_em.
@@ -122,6 +127,10 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
             throw new SQLException("NÃƒÂ£o ÃƒÂ© possÃƒÂ­vel executar o MERGE para Frete sem um ID.");
         }
 
+        final String freshnessGuard = buildMonotonicUpdateGuard(
+            "COALESCE(CAST(target.cte_created_at AS datetime2), CAST(target.cte_issued_at AS datetime2), CAST(target.criado_em AS datetime2), CAST(target.servico_em AS datetime2))",
+            "COALESCE(CAST(source.cte_created_at AS datetime2), CAST(source.cte_issued_at AS datetime2), CAST(source.criado_em AS datetime2), CAST(source.servico_em AS datetime2))"
+        );
         final String sql = String.format("""
             MERGE %s AS target
             USING (VALUES (
@@ -151,7 +160,7 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                            fiscal_calculation_basis, fiscal_tax_rate, fiscal_pis_rate, fiscal_cofins_rate, fiscal_has_difal, fiscal_difal_origin, fiscal_difal_destination,
                            metadata, data_extracao)
             ON target.id = source.id
-            WHEN MATCHED THEN
+            WHEN MATCHED AND %s THEN
                 UPDATE SET
                     servico_em = source.servico_em,
                     criado_em = source.criado_em,
@@ -268,7 +277,7 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                         source.filial_apelido, source.cte_id, source.cte_emission_type, source.cte_created_at,
                         source.fiscal_calculation_basis, source.fiscal_tax_rate, source.fiscal_pis_rate, source.fiscal_cofins_rate, source.fiscal_has_difal, source.fiscal_difal_origin, source.fiscal_difal_destination,
                         source.metadata, source.data_extracao);
-            """, NOME_TABELA);
+            """, NOME_TABELA, freshnessGuard);
 
         try (PreparedStatement statement = conexao.prepareStatement(sql)) {
             // Define os parÃƒÂ¢metros de forma segura e na ordem correta.

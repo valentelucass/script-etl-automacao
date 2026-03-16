@@ -49,28 +49,45 @@ import br.com.extrator.aplicacao.pipeline.PipelineStep;
 import br.com.extrator.aplicacao.pipeline.runtime.StepExecutionResult;
 import br.com.extrator.aplicacao.pipeline.runtime.StepStatus;
 import br.com.extrator.suporte.configuracao.ConfigEtl;
+import br.com.extrator.suporte.banco.SqlServerExecutionLockManager;
 import br.com.extrator.suporte.console.BannerUtil;
 import br.com.extrator.suporte.console.LoggerConsole;
 import br.com.extrator.suporte.formatacao.FormatadorData;
 public class ExtracaoPorIntervaloUseCase {
+    private static final String EXECUTION_LOCK_RESOURCE = "etl-global-execution";
     private static final LoggerConsole log = LoggerConsole.getLogger(ExtracaoPorIntervaloUseCase.class);
     private static final int TAMANHO_BLOCO_DIAS = 30;
     private final PreBackfillReferencialColetasUseCase preBackfillReferencialColetasUseCase;
     private final PlanejadorEscopoExtracaoIntervalo planejadorEscopo;
+    private final ExecutionLockManager executionLockManager;
 
     public ExtracaoPorIntervaloUseCase() {
-        this(new PreBackfillReferencialColetasUseCase(), new PlanejadorEscopoExtracaoIntervalo());
+        this(
+            new PreBackfillReferencialColetasUseCase(),
+            new PlanejadorEscopoExtracaoIntervalo(),
+            new SqlServerExecutionLockManager()
+        );
     }
 
     ExtracaoPorIntervaloUseCase(
         final PreBackfillReferencialColetasUseCase preBackfillReferencialColetasUseCase,
         final PlanejadorEscopoExtracaoIntervalo planejadorEscopo
     ) {
+        this(preBackfillReferencialColetasUseCase, planejadorEscopo, new SqlServerExecutionLockManager());
+    }
+
+    ExtracaoPorIntervaloUseCase(
+        final PreBackfillReferencialColetasUseCase preBackfillReferencialColetasUseCase,
+        final PlanejadorEscopoExtracaoIntervalo planejadorEscopo,
+        final ExecutionLockManager executionLockManager
+    ) {
         this.preBackfillReferencialColetasUseCase = preBackfillReferencialColetasUseCase;
         this.planejadorEscopo = planejadorEscopo;
+        this.executionLockManager = executionLockManager;
     }
 
     public void executar(final ExtracaoPorIntervaloRequest request) throws Exception {
+        try (AutoCloseable ignored = executionLockManager.acquire(EXECUTION_LOCK_RESOURCE)) {
         final LocalDate dataInicio = request.dataInicio();
         final LocalDate dataFim = request.dataFim();
         final String apiEspecifica = request.apiEspecifica();
@@ -260,6 +277,7 @@ public class ExtracaoPorIntervaloUseCase {
                 + " - "
                 + String.join(", ", blocosFalhadosLista)
         );
+        }
     }
 
     private List<BlocoPeriodo> dividirEmBlocos(final LocalDate dataInicio, final LocalDate dataFim) {

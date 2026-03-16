@@ -52,8 +52,19 @@ public final class ConfigBanco {
     }
 
     public static boolean isContinuarAposErro() {
-        final String valor = ConfigSource.obterConfiguracao("DB_CONTINUE_ON_ERROR", "db.continue.on.error");
+        final String valorSystemProperty = System.getProperty("db.continue.on.error");
+        final String valor = valorSystemProperty != null
+            ? valorSystemProperty
+            : ConfigSource.obterConfiguracao("DB_CONTINUE_ON_ERROR", "db.continue.on.error");
         return valor == null || valor.isEmpty() || Boolean.parseBoolean(valor);
+    }
+
+    public static boolean isModoCommitAtomico() {
+        final String valorSystemProperty = System.getProperty("db.atomic.commit");
+        final String valor = valorSystemProperty != null
+            ? valorSystemProperty
+            : ConfigSource.obterConfiguracao("DB_ATOMIC_COMMIT", "db.atomic.commit");
+        return valor == null || valor.isBlank() || Boolean.parseBoolean(valor.trim());
     }
 
     public static int obterTimeoutValidacaoConexao() {

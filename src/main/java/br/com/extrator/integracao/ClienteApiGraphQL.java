@@ -17,12 +17,13 @@ Atributos: [PENDENTE]
 
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,9 +46,11 @@ public class ClienteApiGraphQL {
     private static final Logger logger = LoggerFactory.getLogger(ClienteApiGraphQL.class);
     private static final int INTERVALO_LOG_PROGRESSO = 50;
     private static final int MAX_FALHAS_CONSECUTIVAS = 5;
+    private static final Duration JANELA_REABERTURA_CIRCUITO = Duration.ofMinutes(10);
 
-    private final Map<String, Integer> contadorFalhasConsecutivas = new HashMap<>();
-    private final Set<String> entidadesComCircuitAberto = new HashSet<>();
+    private final Map<String, Integer> contadorFalhasConsecutivas = new ConcurrentHashMap<>();
+    private final Set<String> entidadesComCircuitAberto = ConcurrentHashMap.newKeySet();
+    private final Map<String, Instant> circuitosAbertosDesde = new ConcurrentHashMap<>();
     private final String urlBase;
     private final String endpointGraphQL;
     private final String token;
@@ -96,10 +99,12 @@ public class ClienteApiGraphQL {
             logger,
             INTERVALO_LOG_PROGRESSO,
             MAX_FALHAS_CONSECUTIVAS,
+            JANELA_REABERTURA_CIRCUITO,
             this.contadorFalhasConsecutivas,
             this.entidadesComCircuitAberto,
+            this.circuitosAbertosDesde,
             pageAuditLogger,
-            httpExecutor
+            httpExecutor::executarQueryGraphQLTipado
         );
         final GraphQLSchemaInspector schemaInspector = new GraphQLSchemaInspector(
             logger,
@@ -149,11 +154,45 @@ public class ClienteApiGraphQL {
         );
     }
 
+    /**
+     * Busca usuários do sistema com extração incremental via filtro updatedAt.
+     * Retorna apenas usuários modificados no intervalo especificado.
+     *
+     * @param dataInicio Data de início do intervalo
+     * @param dataFim Data de fim do intervalo
+     * @return Resultado da extração com usuários atualizados no período
+     */
+    public ResultadoExtracao<br.com.extrator.dominio.graphql.usuarios.IndividualNodeDTO> buscarUsuariosSistema(
+            final LocalDate dataInicio, final LocalDate dataFim) {
+        try {
+            final String intervaloUpdatedAt = FormatadorData.formatarIntervaloEslCloud(dataInicio, dataFim);
+            final Map<String, Object> variaveis = new HashMap<>();
+            variaveis.put("params", Map.of("enabled", true, "updatedAt", intervaloUpdatedAt));
+            logger.info("Buscando Usuários do Sistema via GraphQL (enabled: true, updatedAt: {})", intervaloUpdatedAt);
+            return paginator.executarQueryPaginada(
+                this.executionUuid,
+                GraphQLQueries.QUERY_USUARIOS_SISTEMA,
+                ConstantesApiGraphQL.obterNomeEntidadeApi(ConstantesEntidades.USUARIOS_SISTEMA),
+                variaveis,
+                br.com.extrator.dominio.graphql.usuarios.IndividualNodeDTO.class
+            );
+        } catch (final RuntimeException e) {
+            logger.warn("Falha ao buscar Usuários do Sistema (incremental): {}", e.getMessage());
+            return ResultadoExtracao.incompleto(new ArrayList<>(), ResultadoExtracao.MotivoInterrupcao.ERRO_API, 0, 0);
+        }
+    }
+
+    /**
+     * Busca TODOS os usuários do sistema (full load).
+     * Usado apenas na carga inicial quando a tabela dim_usuarios está vazia.
+     *
+     * @return Resultado da extração com todos os usuários habilitados
+     */
     public ResultadoExtracao<br.com.extrator.dominio.graphql.usuarios.IndividualNodeDTO> buscarUsuariosSistema() {
         try {
             final Map<String, Object> variaveis = new HashMap<>();
             variaveis.put("params", Map.of("enabled", true));
-            logger.info("Buscando Usuários do Sistema via GraphQL (enabled: true)");
+            logger.info("Buscando Usuários do Sistema via GraphQL - FULL LOAD (enabled: true)");
             return paginator.executarQueryPaginada(
                 this.executionUuid,
                 GraphQLQueries.QUERY_USUARIOS_SISTEMA,

@@ -49,6 +49,7 @@ final class DataExportCsvCountSupport {
     private final String urlBase;
     private final Duration timeoutRequisicao;
     private final DataExportRequestBodyFactory requestBodyFactory;
+    private final DataExportTimeWindowSupport timeWindowSupport;
     private final CsvExecutor csvExecutor;
     private final CircuitBreakerVerifier circuitBreakerVerifier;
     private final CircuitBreakerReset circuitBreakerReset;
@@ -58,6 +59,7 @@ final class DataExportCsvCountSupport {
                               final String urlBase,
                               final Duration timeoutRequisicao,
                               final DataExportRequestBodyFactory requestBodyFactory,
+                              final DataExportTimeWindowSupport timeWindowSupport,
                               final CsvExecutor csvExecutor,
                               final CircuitBreakerVerifier circuitBreakerVerifier,
                               final CircuitBreakerReset circuitBreakerReset,
@@ -66,6 +68,7 @@ final class DataExportCsvCountSupport {
         this.urlBase = urlBase;
         this.timeoutRequisicao = timeoutRequisicao;
         this.requestBodyFactory = requestBodyFactory;
+        this.timeWindowSupport = timeWindowSupport;
         this.csvExecutor = csvExecutor;
         this.circuitBreakerVerifier = circuitBreakerVerifier;
         this.circuitBreakerReset = circuitBreakerReset;
@@ -77,6 +80,22 @@ final class DataExportCsvCountSupport {
                                  final String campoData,
                                  final LocalDate dataReferencia,
                                  final String tipoAmigavel) {
+        return obterContagemGenericaCsv(
+            templateId,
+            nomeTabela,
+            campoData,
+            dataReferencia,
+            dataReferencia,
+            tipoAmigavel
+        );
+    }
+
+    int obterContagemGenericaCsv(final int templateId,
+                                 final String nomeTabela,
+                                 final String campoData,
+                                 final LocalDate dataInicio,
+                                 final LocalDate dataFim,
+                                 final String tipoAmigavel) {
         final String chaveTemplate = "Template-" + templateId;
         if (circuitBreakerVerifier.isAtivo(chaveTemplate)) {
             logger.warn("CIRCUIT BREAKER ATIVO - Template {} ({}) temporariamente desabilitado para contagem",
@@ -85,20 +104,21 @@ final class DataExportCsvCountSupport {
             return 0;
         }
 
-        logger.info("Obtendo contagem de {} via CSV - Template: {}, Data: {}",
+        logger.info("Obtendo contagem de {} via CSV - Template: {}, Periodo: {} a {}",
             tipoAmigavel,
             templateId,
-            dataReferencia);
+            dataInicio,
+            dataFim);
 
         try {
-            final Instant dataInicio = dataReferencia.atStartOfDay().atZone(java.time.ZoneOffset.UTC).toInstant();
-            final Instant dataFim = dataReferencia.plusDays(1).atStartOfDay().atZone(java.time.ZoneOffset.UTC).toInstant();
+            final Instant instanteInicio = timeWindowSupport.inicioDoDia(dataInicio);
+            final Instant instanteFim = timeWindowSupport.fimDoDia(dataFim);
             final String url = urlBase + ConstantesApiDataExport.formatarEndpoint(templateId);
             final String corpoJson = requestBodyFactory.construirCorpoRequisicaoCsv(
                 nomeTabela,
                 campoData,
-                dataInicio,
-                dataFim
+                instanteInicio,
+                instanteFim
             );
 
             logger.debug("Baixando CSV para contagem via URL: {} com corpo: {}", url, corpoJson);

@@ -22,14 +22,15 @@ import org.slf4j.Logger;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import br.com.extrator.integracao.constantes.ConstantesApiDataExport.ConfiguracaoEntidade;
-import br.com.extrator.suporte.formatacao.FormatadorData;
 import br.com.extrator.suporte.mapeamento.MapperUtil;
 
 final class DataExportRequestBodyFactory {
     private final Logger logger;
+    private final DataExportTimeWindowSupport timeWindowSupport;
 
-    DataExportRequestBodyFactory(final Logger logger) {
+    DataExportRequestBodyFactory(final Logger logger, final DataExportTimeWindowSupport timeWindowSupport) {
         this.logger = logger;
+        this.timeWindowSupport = timeWindowSupport;
     }
 
     String construirCorpoRequisicao(final String nomeTabela,
@@ -104,8 +105,6 @@ final class DataExportRequestBodyFactory {
     }
 
     private String formatarRange(final Instant dataInicio, final Instant dataFim) {
-        final String dataInicioStr = dataInicio.atZone(java.time.ZoneOffset.UTC).toLocalDate().format(FormatadorData.ISO_DATE);
-        final String dataFimStr = dataFim.atZone(java.time.ZoneOffset.UTC).toLocalDate().format(FormatadorData.ISO_DATE);
-        return dataInicioStr + " - " + dataFimStr;
+        return timeWindowSupport.formatarRange(dataInicio, dataFim);
     }
 }

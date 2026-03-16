@@ -88,6 +88,8 @@ public class Main {
         final AtomicReference<String> errorCategoryRef = new AtomicReference<>(null);
         final AtomicBoolean historicoRegistrado = new AtomicBoolean(false);
         final AtomicBoolean finalizadoNormalmente = new AtomicBoolean(false);
+        final ExecutionHistoryRepository executionHistoryRepository =
+            registrarHistorico ? new ExecutionHistoryRepository() : null;
 
         final Runnable persistirHistoricoExecucao = () -> {
             if (!registrarHistorico || !historicoRegistrado.compareAndSet(false, true)) {
@@ -101,9 +103,9 @@ public class Main {
             int totalRecords = 0;
 
             try {
-                final ExecutionHistoryRepository repo = new ExecutionHistoryRepository();
-                totalRecords = repo.calcularTotalRegistros(inicioExecucao, fimExecucao);
-            } catch (final RuntimeException t) {
+                totalRecords = executionHistoryRepository.calcularTotalRegistros(inicioExecucao, fimExecucao);
+            } catch (final Throwable t) {
+                rethrowIfFatal(t);
                 logger.warn("Falha ao calcular total de registros: {}", sanitizeMessage(t.getMessage()));
             }
 
@@ -116,12 +118,11 @@ public class Main {
                 errorMessageRef.get()
             );
 
-            RuntimeException ultimoErroPersistencia = null;
+            Throwable ultimoErroPersistencia = null;
             boolean historicoPersistidoNoBanco = false;
 
             try {
-                final ExecutionHistoryRepository repo = new ExecutionHistoryRepository();
-                repo.inserirHistorico(
+                executionHistoryRepository.inserirHistorico(
                     inicioExecucao,
                     fimExecucao,
                     duracaoSegundosInt,
@@ -139,7 +140,8 @@ public class Main {
                     totalRecords
                 );
                 historicoPersistidoNoBanco = true;
-            } catch (final RuntimeException t) {
+            } catch (final Throwable t) {
+                rethrowIfFatal(t);
                 ultimoErroPersistencia = t;
                 if (t instanceof HistoryPersistenceInterruptedException) {
                     Thread.currentThread().interrupt();
@@ -250,6 +252,15 @@ public class Main {
         LoggingService.organizarLogsTxtNaPastaLogs();
     }
 
+    private static void rethrowIfFatal(final Throwable throwable) {
+        if (throwable instanceof VirtualMachineError virtualMachineError) {
+            throw virtualMachineError;
+        }
+        if (throwable instanceof ThreadDeath threadDeath) {
+            throw threadDeath;
+        }
+    }
+
     private static boolean isComandoLongaDuracao(final String nomeComando) {
         return "--loop".equals(nomeComando) || "--loop-daemon-run".equals(nomeComando);
     }
@@ -304,7 +315,7 @@ public class Main {
                                                    final String tipoExecucao,
                                                    final String categoriaErro,
                                                    final String mensagemErro,
-                                                   final RuntimeException erroPersistencia) {
+                                                   final Throwable erroPersistencia) {
         final String linhaJson = "{"
             + "\"event_code\":\"EVT_EXEC_HISTORY_DB_FALLBACK\","
             + "\"timestamp\":\"" + escapeJson(RelogioSistema.agora().toString()) + "\","

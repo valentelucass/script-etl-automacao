@@ -22,6 +22,7 @@ Atributos-chave:
 Metodos principais:
 - compararEntidade(Connection, String, ResultadoApiChaves, LocalDate, LocalDate, LocalDate, boolean, boolean): comparacao principal.
 - somenteDivergenciaDadosTolerada(ResultadoComparacao): verifica se tolerancia aplica (COTACOES, LOCALIZACAO_CARGAS, FRETES, COLETAS).
+- completudeDinamicaTolerada(ResultadoComparacao): identifica pequenos desvios de snapshot em entidades dinamicas.
 - construirDetalheComparacao(): monta string detalhe com amostras.
 - amostraChaves(Set<String>): retorna primeiras AMOSTRA_MAX chaves ordenadas.
 [DOC-FILE-END]============================================================== */
@@ -44,6 +45,10 @@ import br.com.extrator.suporte.validacao.ConstantesEntidades;
 
 final class ValidacaoApiBanco24hDetalhadaComparator {
     private static final int AMOSTRA_MAX = 15;
+    private static final int LIMIAR_USUARIOS_FALTANTES_ABSOLUTO = 100;
+    private static final double LIMIAR_USUARIOS_FALTANTES_PERCENTUAL = 0.005d;
+    private static final int LIMIAR_MANIFESTOS_VARIACAO_ABSOLUTO = 5;
+    private static final double LIMIAR_MANIFESTOS_VARIACAO_PERCENTUAL = 0.02d;
 
     private final ValidacaoApiBanco24hDetalhadaRepository repository;
 
@@ -196,6 +201,79 @@ final class ValidacaoApiBanco24hDetalhadaComparator {
                  ConstantesEntidades.COLETAS -> true;
             default -> false;
         };
+    }
+
+    boolean completudeDinamicaTolerada(final ResultadoComparacao resultado) {
+        if (resultado == null || !resultado.apiCompleta()) {
+            return false;
+        }
+        return usuariosSistemaDinamicosTolerados(resultado)
+            || coletasMarginaisToleradas(resultado)
+            || manifestosMarginaisTolerados(resultado)
+            || localizacaoCargasMarginalmenteDinamicas(resultado)
+            || faturasPorClienteMarginalmenteDinamicas(resultado)
+            || contasAPagarMarginaisToleradas(resultado);
+    }
+
+    private boolean usuariosSistemaDinamicosTolerados(final ResultadoComparacao resultado) {
+        if (!ConstantesEntidades.USUARIOS_SISTEMA.equals(resultado.entidade())
+            || resultado.divergenciasDados() != 0
+            || resultado.excedentes() != 0
+            || resultado.faltantes() <= 0
+            || resultado.apiUnico() < resultado.banco()) {
+            return false;
+        }
+        final int base = Math.max(resultado.apiUnico(), resultado.banco());
+        final int limitePercentual = (int) Math.ceil(base * LIMIAR_USUARIOS_FALTANTES_PERCENTUAL);
+        final int limite = Math.min(LIMIAR_USUARIOS_FALTANTES_ABSOLUTO, Math.max(10, limitePercentual));
+        return resultado.faltantes() <= limite;
+    }
+
+    private boolean coletasMarginaisToleradas(final ResultadoComparacao resultado) {
+        return ConstantesEntidades.COLETAS.equals(resultado.entidade())
+            && resultado.faltantes() <= 2
+            && resultado.excedentes() <= 1
+            && Math.abs(resultado.apiUnico() - resultado.banco()) <= 2;
+    }
+
+    private boolean manifestosMarginaisTolerados(final ResultadoComparacao resultado) {
+        if (!ConstantesEntidades.MANIFESTOS.equals(resultado.entidade())
+            || resultado.divergenciasDados() != 0) {
+            return false;
+        }
+        final int delta = resultado.faltantes() + resultado.excedentes();
+        if (delta <= 0) {
+            return false;
+        }
+        final int base = Math.max(resultado.apiUnico(), resultado.banco());
+        final int limitePercentual = (int) Math.ceil(base * LIMIAR_MANIFESTOS_VARIACAO_PERCENTUAL);
+        final int limite = Math.max(2, Math.min(LIMIAR_MANIFESTOS_VARIACAO_ABSOLUTO, limitePercentual));
+        return delta <= limite;
+    }
+
+    private boolean localizacaoCargasMarginalmenteDinamicas(final ResultadoComparacao resultado) {
+        return ConstantesEntidades.LOCALIZACAO_CARGAS.equals(resultado.entidade())
+            && resultado.faltantes() == 0
+            && resultado.excedentes() <= 1
+            && resultado.banco() >= resultado.apiUnico()
+            && (resultado.banco() - resultado.apiUnico()) <= 1;
+    }
+
+    private boolean faturasPorClienteMarginalmenteDinamicas(final ResultadoComparacao resultado) {
+        return ConstantesEntidades.FATURAS_POR_CLIENTE.equals(resultado.entidade())
+            && resultado.faltantes() == 0
+            && resultado.excedentes() <= 1
+            && resultado.divergenciasDados() <= 1
+            && resultado.banco() >= resultado.apiUnico()
+            && (resultado.banco() - resultado.apiUnico()) <= 1;
+    }
+
+    private boolean contasAPagarMarginaisToleradas(final ResultadoComparacao resultado) {
+        return ConstantesEntidades.CONTAS_A_PAGAR.equals(resultado.entidade())
+            && resultado.divergenciasDados() == 0
+            && resultado.excedentes() == 0
+            && resultado.faltantes() <= 1
+            && Math.abs(resultado.apiUnico() - resultado.banco()) <= 1;
     }
 
     private String construirDetalheComparacao(

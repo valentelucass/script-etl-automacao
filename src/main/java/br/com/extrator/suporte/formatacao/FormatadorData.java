@@ -84,6 +84,9 @@ public final class FormatadorData {
     /** Formato para nomes de arquivo: yyyy-MM-dd_HH-mm-ss */
     public static final DateTimeFormatter FILE_NAME = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
 
+    /** Formato para filtro de intervalo da API ESL Cloud GraphQL: yyyy-MM-dd HH:mm */
+    public static final DateTimeFormatter ESL_CLOUD_INTERVAL = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
     /** Fallback para datas sem timezone explícito (padrão operacional da integração). */
     private static final ZoneOffset OFFSET_PADRAO_SEM_TIMEZONE = ZoneOffset.of("-03:00");
 
@@ -276,6 +279,33 @@ public final class FormatadorData {
         return LocalDateTime.now().format(FILE_NAME);
     }
     
+    /**
+     * Formata um intervalo de datas no padrão aceito pela API ESL Cloud GraphQL.
+     * Aplica uma sobreposição (overlap) de segurança para evitar perda de registros
+     * entre ciclos de extração, dado que o MERGE no banco garante idempotência.
+     *
+     * @param dataInicio Data de início do intervalo
+     * @param dataFim Data de fim do intervalo
+     * @param overlapMinutos Minutos de sobreposição retroativa (safety margin)
+     * @return String no formato "yyyy-MM-dd HH:mm - yyyy-MM-dd HH:mm"
+     */
+    public static String formatarIntervaloEslCloud(final LocalDate dataInicio, final LocalDate dataFim, final int overlapMinutos) {
+        final LocalDateTime inicio = dataInicio.atStartOfDay().minusMinutes(overlapMinutos);
+        final LocalDateTime fim = (dataFim != null ? dataFim : dataInicio).atTime(23, 59);
+        return inicio.format(ESL_CLOUD_INTERVAL) + " - " + fim.format(ESL_CLOUD_INTERVAL);
+    }
+
+    /**
+     * Formata um intervalo de datas no padrão ESL Cloud com overlap padrão de 10 minutos.
+     *
+     * @param dataInicio Data de início do intervalo
+     * @param dataFim Data de fim do intervalo
+     * @return String no formato "yyyy-MM-dd HH:mm - yyyy-MM-dd HH:mm"
+     */
+    public static String formatarIntervaloEslCloud(final LocalDate dataInicio, final LocalDate dataFim) {
+        return formatarIntervaloEslCloud(dataInicio, dataFim, 10);
+    }
+
     private FormatadorData() {
         // Impede instanciação
     }

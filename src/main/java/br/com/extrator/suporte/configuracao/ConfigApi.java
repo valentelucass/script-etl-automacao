@@ -16,6 +16,7 @@ Atributos: [PENDENTE]
 
 
 import java.time.Duration;
+import java.time.ZoneId;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -142,6 +143,17 @@ public final class ConfigApi {
         );
     }
 
+    public static int obterLimitePaginasUsuariosGraphQL() {
+        return ConfigValueParser.parseInt(
+            ConfigSource.obterConfiguracao("API_GRAPHQL_USUARIOS_MAX_PAGINAS", "api.graphql.usuarios.max_paginas"),
+            5000,
+            value -> value > 0,
+            logger,
+            "api.graphql.usuarios.max_paginas",
+            "5000"
+        );
+    }
+
     public static int obterDiasJanelaFaturasGraphQL() {
         return ConfigValueParser.parseInt(
             ConfigSource.obterConfiguracao("API_GRAPHQL_FATURAS_DIAS_JANELA", "api.graphql.faturas.dias_janela"),
@@ -176,6 +188,17 @@ public final class ConfigApi {
         return ConfigValueParser.parseInt(
             ConfigSource.obterConfiguracao("API_GRAPHQL_MAX_REGISTROS", "api.graphql.max.registros.execucao"),
             50000,
+            value -> value > 0,
+            null,
+            null,
+            null
+        );
+    }
+
+    public static int obterMaxRegistrosUsuariosGraphQL() {
+        return ConfigValueParser.parseInt(
+            ConfigSource.obterConfiguracao("API_GRAPHQL_USUARIOS_MAX_REGISTROS", "api.graphql.usuarios.max.registros.execucao"),
+            100000,
             value -> value > 0,
             null,
             null,
@@ -291,5 +314,21 @@ public final class ConfigApi {
             null,
             null
         );
+    }
+
+    public static ZoneId obterZoneIdDataExport() {
+        final String valorSystemProperty = System.getProperty("api.dataexport.timezone");
+        final String valorConfigurado = valorSystemProperty != null && !valorSystemProperty.isBlank()
+            ? valorSystemProperty
+            : ConfigSource.obterConfiguracao("API_DATAEXPORT_TIMEZONE", "api.dataexport.timezone");
+        if (valorConfigurado == null || valorConfigurado.isBlank()) {
+            return ZoneId.systemDefault();
+        }
+        try {
+            return ZoneId.of(valorConfigurado.trim());
+        } catch (final RuntimeException ex) {
+            logger.warn("Timezone DataExport invalido '{}'. Usando timezone do sistema '{}'.", valorConfigurado, ZoneId.systemDefault());
+            return ZoneId.systemDefault();
+        }
     }
 }

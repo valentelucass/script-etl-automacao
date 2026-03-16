@@ -129,6 +129,8 @@ public class ExtractionLogger {
             }
             
             int registrosSalvos = 0;
+            int registrosPersistidos = 0;
+            int registrosNoOpIdempotente = 0;
             int totalUnicos = dtos.size(); // Padrão para GraphQL
             int registrosInvalidos = 0;
             final LocalDateTime inicioSalvamento = RelogioSistema.agora();
@@ -137,6 +139,8 @@ public class ExtractionLogger {
                 try {
                     final EntityExtractor.SaveMetrics saveMetrics = extractor.saveWithMetrics(dtos);
                     registrosSalvos = saveMetrics.getRegistrosSalvos();
+                    registrosPersistidos = saveMetrics.getRegistrosPersistidos();
+                    registrosNoOpIdempotente = saveMetrics.getRegistrosNoOpIdempotente();
                     totalUnicos = saveMetrics.getTotalUnicos();
                     registrosInvalidos = saveMetrics.getRegistrosInvalidos();
 
@@ -155,10 +159,16 @@ public class ExtractionLogger {
                     if (isDataExportExtractor) {
                         log.info("RESULTADO DO SALVAMENTO (DataExport):");
                         log.info("   Registros unicos apos deduplicacao: {}", formatarNumero(totalUnicos));
-                        log.info("   Operacoes no banco (INSERTs + UPDATEs): {}", formatarNumero(registrosSalvos));
+                        log.info("   Operacoes no banco (INSERTs + UPDATEs + no-op idempotente): {}", formatarNumero(registrosSalvos));
                     } else {
                         log.info("RESULTADO DO SALVAMENTO (GraphQL):");
-                        log.info("   Registros salvos: {}", formatarNumero(registrosSalvos));
+                        log.info("   Operacoes no banco (INSERTs + UPDATEs + no-op idempotente): {}", formatarNumero(registrosSalvos));
+                    }
+                    if (registrosPersistidos != registrosSalvos || registrosNoOpIdempotente > 0) {
+                        log.info("   Linhas efetivamente persistidas/atualizadas na janela: {}", formatarNumero(registrosPersistidos));
+                    }
+                    if (registrosNoOpIdempotente > 0) {
+                        log.info("   No-op idempotente aceito: {}", formatarNumero(registrosNoOpIdempotente));
                     }
                     final double segundosSalvamento = duracaoSalvamento.toMillis() / 1000.0;
                     log.info("   Tempo de salvamento: {} ms ({} s)",
@@ -199,6 +209,8 @@ public class ExtractionLogger {
                 dataFim,
                 totalRecebido,
                 registrosSalvos,
+                registrosPersistidos,
+                registrosNoOpIdempotente,
                 totalUnicos,
                 deltaIgnorados,
                 registrosInvalidos,
@@ -220,12 +232,14 @@ public class ExtractionLogger {
                     formatarNumero(registrosInvalidos),
                     String.format("%.2f", percentualInvalidos));
             }
-            log.info("   - ETL_DIAG status_code={} | reason_code={} | api_count={} | unique_count={} | db_upserts={} | invalid_count={} | pages={}",
+            log.info("   - ETL_DIAG status_code={} | reason_code={} | api_count={} | unique_count={} | db_upserts={} | db_persisted={} | noop_count={} | invalid_count={} | pages={}",
                 statusFinal,
                 motivoStatus,
                 formatarNumero(totalRecebido),
                 formatarNumero(totalUnicos),
                 formatarNumero(registrosSalvos),
+                formatarNumero(registrosPersistidos),
+                formatarNumero(registrosNoOpIdempotente),
                 formatarNumero(registrosInvalidos),
                 formatarNumero(totalPaginas));
             
@@ -234,7 +248,13 @@ public class ExtractionLogger {
             log.info("{}RESUMO FINAL: {}", prefixoEntidade, entityName.toUpperCase());
             log.info("{}", "=".repeat(80));
             log.info("Estatisticas:");
-            log.info("   • API -> DB: {} -> {} registros", formatarNumero(totalRecebido), formatarNumero(registrosSalvos));
+            log.info("   • API -> DB: {} -> {} operacoes bem-sucedidas", formatarNumero(totalRecebido), formatarNumero(registrosSalvos));
+            if (registrosPersistidos != registrosSalvos || registrosNoOpIdempotente > 0) {
+                log.info("   • Persistidos/atualizados na janela: {}", formatarNumero(registrosPersistidos));
+            }
+            if (registrosNoOpIdempotente > 0) {
+                log.info("   • No-op idempotente: {}", formatarNumero(registrosNoOpIdempotente));
+            }
             if (totalRecebido != totalUnicos) {
                 log.info("   • Únicos após deduplicação: {}", formatarNumero(totalUnicos));
             }
@@ -311,6 +331,8 @@ public class ExtractionLogger {
                                  final LocalDate dataFim,
                                  final int totalRecebido,
                                  final int registrosSalvos,
+                                 final int registrosPersistidos,
+                                 final int registrosNoOpIdempotente,
                                  final int totalUnicos,
                                  final int deltaIgnorados,
                                  final int registrosInvalidos,
@@ -322,7 +344,13 @@ public class ExtractionLogger {
         if (totalRecebido != totalUnicos) {
             sb.append(" (únicos: ").append(formatarNumero(totalUnicos)).append(")");
         }
-        sb.append(" | DB: ").append(formatarNumero(registrosSalvos)).append(" processados");
+        sb.append(" | DB: ").append(formatarNumero(registrosSalvos)).append(" operacoes");
+        if (registrosPersistidos != registrosSalvos || registrosNoOpIdempotente > 0) {
+            sb.append(" | Persistidos: ").append(formatarNumero(registrosPersistidos));
+        }
+        if (registrosNoOpIdempotente > 0) {
+            sb.append(" | No-op: ").append(formatarNumero(registrosNoOpIdempotente));
+        }
         if (deltaIgnorados > 0) {
             sb.append(" | Delta: ").append(formatarNumero(deltaIgnorados)).append(" (duplicados/ignorados)");
         }
@@ -341,6 +369,8 @@ public class ExtractionLogger {
         sb.append(" | api_count=").append(totalRecebido);
         sb.append(" | unique_count=").append(totalUnicos);
         sb.append(" | db_upserts=").append(registrosSalvos);
+        sb.append(" | db_persisted=").append(registrosPersistidos);
+        sb.append(" | noop_count=").append(registrosNoOpIdempotente);
         sb.append(" | invalid_count=").append(registrosInvalidos);
         
         return sb.toString();

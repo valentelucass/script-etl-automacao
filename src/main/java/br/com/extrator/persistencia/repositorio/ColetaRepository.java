@@ -51,6 +51,11 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
         return NOME_TABELA;
     }
 
+    @Override
+    protected boolean aceitarMergeSemAlteracoesComoSucesso(final ColetaEntity coleta) {
+        return true;
+    }
+
     /**
      * Executa a operação MERGE (UPSERT) para inserir ou atualizar uma coleta no banco.
      * A lógica é segura e baseada na nova arquitetura de Entidade.
@@ -62,6 +67,10 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
             throw new SQLException("Não é possível executar o MERGE para Coleta sem um ID.");
         }
 
+        final String freshnessGuard = buildMonotonicUpdateGuard(
+            "COALESCE(TRY_CONVERT(datetime2, target.status_updated_at), CAST(target.finish_date AS datetime2), CAST(target.service_date AS datetime2), CAST(target.request_date AS datetime2))",
+            "COALESCE(TRY_CONVERT(datetime2, source.status_updated_at), CAST(source.finish_date AS datetime2), CAST(source.service_date AS datetime2), CAST(source.request_date AS datetime2))"
+        );
         final String sql = String.format("""
             MERGE dbo.%s AS target
             USING (
@@ -75,7 +84,7 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
                     ? AS metadata, ? AS data_extracao
             ) AS source
             ON target.id = source.id
-            WHEN MATCHED THEN
+            WHEN MATCHED AND %s THEN
                 UPDATE SET
                     sequence_code = source.sequence_code,
                     request_date = source.request_date,
@@ -131,7 +140,7 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
                     source.taxed_weight, source.pick_region, source.last_occurrence, source.acao_ocorrencia, source.numero_tentativas,
                     source.metadata, source.data_extracao
                 );
-            """, NOME_TABELA);
+            """, NOME_TABELA, freshnessGuard);
 
         logger.debug("Preparando MERGE de Coleta ID {}", coleta.getId());
         PreparedStatement statement;

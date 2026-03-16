@@ -55,7 +55,7 @@ import br.com.extrator.suporte.validacao.ConstantesEntidades;
 
 /**
  * Extractor para entidade Usuários do Sistema (Individual - GraphQL).
- * Não utiliza filtro de data, apenas filtra por enabled: true.
+ * Utiliza filtro incremental via updatedAt para extrair apenas usuários modificados no período.
  * Deduplica por user_id (Keep Last) antes de salvar para que o log e o banco batam na validação API vs banco.
  */
 public class UsuarioSistemaExtractor implements EntityExtractor<IndividualNodeDTO> {
@@ -76,8 +76,8 @@ public class UsuarioSistemaExtractor implements EntityExtractor<IndividualNodeDT
 
     @Override
     public ResultadoExtracao<IndividualNodeDTO> extract(final LocalDate dataInicio, final LocalDate dataFim) {
-        // Usuários não usam filtro de data, apenas enabled: true
-        return apiClient.buscarUsuariosSistema();
+        // Extração incremental: busca apenas usuários atualizados no intervalo
+        return apiClient.buscarUsuariosSistema(dataInicio, dataFim);
     }
 
     @Override
@@ -101,7 +101,13 @@ public class UsuarioSistemaExtractor implements EntityExtractor<IndividualNodeDT
                 entities.size(), unicos.size());
         }
         final int registrosSalvos = repository.salvar(unicos);
-        return new EntityExtractor.SaveMetrics(registrosSalvos, unicos.size(), 0);
+        return new EntityExtractor.SaveMetrics(
+            registrosSalvos,
+            unicos.size(),
+            0,
+            repository.getUltimoResumoSalvamento().getRegistrosPersistidos(),
+            repository.getUltimoResumoSalvamento().getRegistrosNoOpIdempotente()
+        );
     }
 
     /**

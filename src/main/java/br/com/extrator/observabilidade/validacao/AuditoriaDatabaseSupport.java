@@ -97,7 +97,7 @@ final class AuditoriaDatabaseSupport {
 
             logger.debug("Query executada (CONTAS_A_PAGAR usando issue_date): {}", sql);
             if (resultado != null) {
-                resultado.setColunaUtilizada("issue_date (contagem banco - ultimas 24h)");
+                resultado.setColunaUtilizada("issue_date (contagem banco - janela operacional recente)");
                 resultado.setQueryExecutada(sql);
             }
 

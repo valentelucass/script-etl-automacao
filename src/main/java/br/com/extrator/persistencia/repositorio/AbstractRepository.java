@@ -59,6 +59,51 @@ import br.com.extrator.suporte.banco.GerenciadorConexao;
  */
 public abstract class AbstractRepository<T> extends RepositoryParameterBindingSupport {
     private static final Logger logger = LoggerFactory.getLogger(AbstractRepository.class);
+    private volatile SaveSummary ultimoResumoSalvamento = SaveSummary.vazio();
+
+    public static final class SaveSummary {
+        private final int operacoesBemSucedidas;
+        private final int registrosPersistidos;
+        private final int registrosNoOpIdempotente;
+        private final int falhas;
+        private final int registrosNaoProcessados;
+
+        public SaveSummary(final int operacoesBemSucedidas,
+                           final int registrosPersistidos,
+                           final int registrosNoOpIdempotente,
+                           final int falhas,
+                           final int registrosNaoProcessados) {
+            this.operacoesBemSucedidas = operacoesBemSucedidas;
+            this.registrosPersistidos = registrosPersistidos;
+            this.registrosNoOpIdempotente = registrosNoOpIdempotente;
+            this.falhas = falhas;
+            this.registrosNaoProcessados = registrosNaoProcessados;
+        }
+
+        public static SaveSummary vazio() {
+            return new SaveSummary(0, 0, 0, 0, 0);
+        }
+
+        public int getOperacoesBemSucedidas() {
+            return operacoesBemSucedidas;
+        }
+
+        public int getRegistrosPersistidos() {
+            return registrosPersistidos;
+        }
+
+        public int getRegistrosNoOpIdempotente() {
+            return registrosNoOpIdempotente;
+        }
+
+        public int getFalhas() {
+            return falhas;
+        }
+
+        public int getRegistrosNaoProcessados() {
+            return registrosNaoProcessados;
+        }
+    }
     
     /**
      * Obtém o tamanho do batch para commits (configurável via config.properties).
@@ -74,6 +119,10 @@ public abstract class AbstractRepository<T> extends RepositoryParameterBindingSu
      */
     protected static boolean isContinuarAposErro() {
         return ConfigBanco.isContinuarAposErro();
+    }
+
+    protected static boolean isModoCommitAtomico() {
+        return ConfigBanco.isModoCommitAtomico();
     }
 
     /**
@@ -100,6 +149,24 @@ public abstract class AbstractRepository<T> extends RepositoryParameterBindingSu
         return GerenciadorConexao.obterConexao();
     }
 
+    protected String buildMonotonicUpdateGuard(final String targetFreshnessExpr, final String sourceFreshnessExpr) {
+        return """
+            (
+                %1$s IS NULL
+                OR (%2$s IS NOT NULL AND %2$s >= %1$s)
+                OR (%2$s IS NULL AND %1$s IS NULL AND source.data_extracao >= target.data_extracao)
+            )
+            """.formatted(targetFreshnessExpr, sourceFreshnessExpr);
+    }
+
+    protected boolean aceitarMergeSemAlteracoesComoSucesso(final T entidade) {
+        return false;
+    }
+
+    public SaveSummary getUltimoResumoSalvamento() {
+        return ultimoResumoSalvamento;
+    }
+
     /**
      * Salva uma lista de entidades no banco de dados usando operação MERGE (UPSERT)
      * 
@@ -116,15 +183,20 @@ public abstract class AbstractRepository<T> extends RepositoryParameterBindingSu
     public int salvar(final List<T> entidades) throws SQLException {
         if (entidades == null || entidades.isEmpty()) {
             logger.warn("Lista de entidades vazia para {}", getClass().getSimpleName());
+            ultimoResumoSalvamento = SaveSummary.vazio();
             return 0;
         }
 
         int totalSucesso = 0;
+        int totalPersistidos = 0;
         int totalFalhas = 0;
+        int totalNoOpIdempotente = 0;
         int registroAtual = 0;
         final int totalRegistros = entidades.size();
 
         final int batchSize = getBatchSize();
+        final boolean atomicCommitMode = isModoCommitAtomico();
+        ultimoResumoSalvamento = SaveSummary.vazio();
         logger.info("🔄 Iniciando salvamento de {} registros de {} (batch size: {})", 
             totalRegistros, getClass().getSimpleName(), batchSize);
 
@@ -156,22 +228,27 @@ public abstract class AbstractRepository<T> extends RepositoryParameterBindingSu
                         // Tenta executar o MERGE para este registro
                         final int rowsAffected = executarMerge(conexao, entidade);
                         
-                        // Contar como sucesso apenas se rowsAffected > 0
-                        // MERGE normalmente retorna 1 para INSERT ou UPDATE bem-sucedido
-                        // Se retornar 0, significa que não inseriu nem atualizou (não conta como salvo)
                         if (rowsAffected > 0) {
-                            // Contar como 1 registro salvo (não somar rowsAffected, que pode ser > 1 em casos raros)
                             totalSucesso++;
+                            totalPersistidos += rowsAffected;
+                        } else if (aceitarMergeSemAlteracoesComoSucesso(entidade)) {
+                            totalSucesso++;
+                            totalNoOpIdempotente++;
+                            logger.debug(
+                                "MERGE retornou 0 para registro {}/{} de {}: {} (no-op idempotente aceito)",
+                                registroAtual,
+                                totalRegistros,
+                                getClass().getSimpleName(),
+                                obterIdentificadorEntidade(entidade)
+                            );
                         } else {
-                            // Se rowsAffected == 0, não conta como sucesso
-                            // O executarMerge() já deve ter logado o erro
                             logger.warn("⚠️ MERGE retornou 0 para registro {}/{} de {}: {} (não foi salvo)", 
                                 registroAtual, totalRegistros, getClass().getSimpleName(),
                                 obterIdentificadorEntidade(entidade));
                         }
                         
                         // Commit em batches para evitar transações muito grandes
-                        if (registroAtual % batchSize == 0) {
+                        if (!atomicCommitMode && registroAtual % batchSize == 0) {
                             conexao.commit();
                             logger.debug("✅ Batch commit: {}/{} registros processados", registroAtual, totalRegistros);
                         }
@@ -190,7 +267,7 @@ public abstract class AbstractRepository<T> extends RepositoryParameterBindingSu
                         // Log da stack trace completa em nível DEBUG
                         logger.debug("Stack trace completo do erro:", e);
                         
-                        if (!isContinuarAposErro()) {
+                        if (atomicCommitMode || !isContinuarAposErro()) {
                             // Se configurado para parar na primeira falha
                             logger.error("🚨 Abortando salvamento devido a erro crítico");
                             conexao.rollback();
@@ -211,27 +288,43 @@ public abstract class AbstractRepository<T> extends RepositoryParameterBindingSu
                 // UPDATEs não adicionam novas linhas, apenas atualizam existentes
                 // Por isso, o número de registros no banco pode ser menor que "totalSucesso"
                 // quando há UPDATEs (comportamento esperado em execuções periódicas)
+                final int registrosNaoSalvos = Math.max(0, totalRegistros - totalSucesso - totalFalhas);
+                ultimoResumoSalvamento = new SaveSummary(
+                    totalSucesso,
+                    totalPersistidos,
+                    totalNoOpIdempotente,
+                    totalFalhas,
+                    registrosNaoSalvos
+                );
                 if (totalFalhas > 0 || totalSucesso < totalRegistros) {
-                    final int registrosNaoSalvos = totalRegistros - totalSucesso - totalFalhas;
-                    logger.warn("⚠️ Salvamento concluído: {} operações bem-sucedidas (INSERTs + UPDATEs), {} falhas, {} não processados (rowsAffected=0) de {} total ({}%)", 
+                    logger.warn("⚠️ Salvamento concluído: {} operações bem-sucedidas (INSERTs + UPDATEs + no-op idempotente), {} falhas, {} não processados (rowsAffected=0) de {} total ({}%). No-op idempotente aceito: {}", 
                         totalSucesso, 
                         totalFalhas,
                         registrosNaoSalvos,
                         totalRegistros,
-                        String.format("%.1f", (totalSucesso * 100.0 / totalRegistros)));
+                        String.format("%.1f", (totalSucesso * 100.0 / totalRegistros)),
+                        totalNoOpIdempotente);
                     logger.info("💡 Nota: 'Operações bem-sucedidas' inclui INSERTs (novos registros) e UPDATEs (registros atualizados). " +
-                               "UPDATEs não adicionam novas linhas ao banco, apenas atualizam existentes.");
+                               "UPDATEs não adicionam novas linhas ao banco, apenas atualizam existentes. " +
+                               "No-op idempotente indica payload reconhecido como não mais novo pelo MERGE.");
                 } else {
-                    logger.info("✅ Salvamento 100% concluído: {} operações bem-sucedidas (INSERTs + UPDATEs) de {} processados", 
+                    logger.info("✅ Salvamento 100% concluído: {} operações bem-sucedidas (INSERTs + UPDATEs + no-op idempotente) de {} processados", 
                         totalSucesso, totalRegistros);
                     logger.info("""
-                        💡 Nota: 'Operações bem-sucedidas' inclui INSERTs (novos registros) e UPDATEs (registros atualizados). \
+                        💡 Nota: 'Operações bem-sucedidas' inclui INSERTs (novos registros), UPDATEs (registros atualizados) e no-op idempotente. \
                         Se houver UPDATEs, o número de registros no banco pode ser menor que o número de operações. \
-                        Isso é esperado quando o script roda periodicamente (execuções a cada 1h buscando últimas 24h).""");
+                        Isso é esperado quando o script roda periodicamente (execuções a cada 1h buscando a janela operacional recente).""");
                 }
 
             } catch (final SQLException e) {
                 // Erro crítico na conexão/transação
+                ultimoResumoSalvamento = new SaveSummary(
+                    totalSucesso,
+                    totalPersistidos,
+                    totalNoOpIdempotente,
+                    totalFalhas,
+                    Math.max(0, totalRegistros - totalSucesso - totalFalhas)
+                );
                 try {
                     conexao.rollback();
                     logger.warn("⚠️ Rollback executado devido a erro: {}", e.getMessage());

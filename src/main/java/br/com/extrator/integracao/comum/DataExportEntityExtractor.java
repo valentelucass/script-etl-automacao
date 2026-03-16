@@ -48,15 +48,27 @@ public interface DataExportEntityExtractor<T> extends EntityExtractor<T> {
         private final int registrosSalvos;
         private final int totalUnicos;
         private final int registrosInvalidos;
+        private final int registrosPersistidos;
+        private final int registrosNoOpIdempotente;
         
         public SaveResult(final int registrosSalvos, final int totalUnicos) {
             this(registrosSalvos, totalUnicos, 0);
         }
 
         public SaveResult(final int registrosSalvos, final int totalUnicos, final int registrosInvalidos) {
+            this(registrosSalvos, totalUnicos, registrosInvalidos, registrosSalvos, 0);
+        }
+
+        public SaveResult(final int registrosSalvos,
+                          final int totalUnicos,
+                          final int registrosInvalidos,
+                          final int registrosPersistidos,
+                          final int registrosNoOpIdempotente) {
             this.registrosSalvos = registrosSalvos;
             this.totalUnicos = totalUnicos;
             this.registrosInvalidos = registrosInvalidos;
+            this.registrosPersistidos = registrosPersistidos;
+            this.registrosNoOpIdempotente = registrosNoOpIdempotente;
         }
         
         public int getRegistrosSalvos() {
@@ -69,6 +81,14 @@ public interface DataExportEntityExtractor<T> extends EntityExtractor<T> {
 
         public int getRegistrosInvalidos() {
             return registrosInvalidos;
+        }
+
+        public int getRegistrosPersistidos() {
+            return registrosPersistidos;
+        }
+
+        public int getRegistrosNoOpIdempotente() {
+            return registrosNoOpIdempotente;
         }
     }
     
@@ -88,7 +108,9 @@ public interface DataExportEntityExtractor<T> extends EntityExtractor<T> {
         return new SaveMetrics(
             result.getRegistrosSalvos(),
             result.getTotalUnicos(),
-            result.getRegistrosInvalidos()
+            result.getRegistrosInvalidos(),
+            result.getRegistrosPersistidos(),
+            result.getRegistrosNoOpIdempotente()
         );
     }
 }

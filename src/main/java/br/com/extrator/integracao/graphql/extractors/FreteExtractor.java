@@ -102,7 +102,13 @@ public class FreteExtractor implements EntityExtractor<FreteNodeDTO> {
         }
         
         final int registrosSalvos = repository.salvar(entitiesUnicos);
-        return new EntityExtractor.SaveMetrics(registrosSalvos, entitiesUnicos.size(), 0);
+        return new EntityExtractor.SaveMetrics(
+            registrosSalvos,
+            entitiesUnicos.size(),
+            0,
+            repository.getUltimoResumoSalvamento().getRegistrosPersistidos(),
+            repository.getUltimoResumoSalvamento().getRegistrosNoOpIdempotente()
+        );
     }
     
     /**
@@ -116,6 +122,7 @@ public class FreteExtractor implements EntityExtractor<FreteNodeDTO> {
      */
     private List<FreteEntity> deduplicarPorId(final List<FreteEntity> entities) {
         return entities.stream()
+            .peek(this::validarChavePrimaria)
             .collect(Collectors.toMap(
                 FreteEntity::getId,
                 e -> e,
@@ -128,6 +135,12 @@ public class FreteExtractor implements EntityExtractor<FreteNodeDTO> {
             .values()
             .stream()
             .collect(Collectors.toList());
+    }
+
+    private void validarChavePrimaria(final FreteEntity entity) {
+        if (entity == null || entity.getId() == null) {
+            throw new IllegalStateException("Frete sem ID estavel nao pode ser persistido.");
+        }
     }
     
     @Override

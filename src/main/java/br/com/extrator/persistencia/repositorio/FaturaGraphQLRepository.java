@@ -48,6 +48,11 @@ public class FaturaGraphQLRepository extends AbstractRepository<FaturaGraphQLEnt
         return NOME_TABELA;
     }
 
+    @Override
+    protected boolean aceitarMergeSemAlteracoesComoSucesso(final FaturaGraphQLEntity entity) {
+        return true;
+    }
+
     /**
      * Executa a operação MERGE (UPSERT) para inserir ou atualizar uma fatura GraphQL no banco.
      * Usa id como chave primária.
@@ -63,12 +68,16 @@ public class FaturaGraphQLRepository extends AbstractRepository<FaturaGraphQLEnt
             logger.error("❌ Fatura GraphQL com id NULL");
             throw new SQLException("Não é possível executar o MERGE para Fatura GraphQL sem um 'id'.");
         }
+        final String freshnessGuard = buildMonotonicUpdateGuard(
+            "COALESCE(CAST(target.updated_at AS datetime2), CAST(target.created_at AS datetime2))",
+            "COALESCE(CAST(source.updated_at AS datetime2), CAST(source.created_at AS datetime2))"
+        );
         final String sql = """
             MERGE dbo.faturas_graphql AS target
             USING (VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)) AS source
                   (id, document, issue_date, due_date, original_due_date, value, paid_value, value_to_pay, discount_value, interest_value, paid, status, type, comments, sequence_code, competence_month, competence_year, created_at, updated_at, corporation_id, corporation_name, corporation_cnpj, nfse_numero, carteira_banco, instrucao_boleto, banco_nome, metodo_pagamento, metadata, data_extracao)
             ON target.id = source.id
-            WHEN MATCHED THEN
+            WHEN MATCHED AND %s THEN
                 UPDATE SET
                     document = source.document,
                     issue_date = source.issue_date,
@@ -101,7 +110,7 @@ public class FaturaGraphQLRepository extends AbstractRepository<FaturaGraphQLEnt
             WHEN NOT MATCHED THEN
                 INSERT (id, document, issue_date, due_date, original_due_date, value, paid_value, value_to_pay, discount_value, interest_value, paid, status, type, comments, sequence_code, competence_month, competence_year, created_at, updated_at, corporation_id, corporation_name, corporation_cnpj, nfse_numero, carteira_banco, instrucao_boleto, banco_nome, metodo_pagamento, metadata, data_extracao)
                 VALUES (source.id, source.document, source.issue_date, source.due_date, source.original_due_date, source.value, source.paid_value, source.value_to_pay, source.discount_value, source.interest_value, source.paid, source.status, source.type, source.comments, source.sequence_code, source.competence_month, source.competence_year, source.created_at, source.updated_at, source.corporation_id, source.corporation_name, source.corporation_cnpj, source.nfse_numero, source.carteira_banco, source.instrucao_boleto, source.banco_nome, source.metodo_pagamento, source.metadata, source.data_extracao);
-        """;
+        """.formatted(freshnessGuard);
         try (PreparedStatement ps = conexao.prepareStatement(sql)) {
             int idx = 1;
             setLongParameter(ps, idx++, e.getId());

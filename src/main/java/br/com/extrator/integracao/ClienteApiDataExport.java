@@ -51,6 +51,7 @@ public class ClienteApiDataExport {
     private final DataExportCsvCountSupport csvCountSupport;
     private final DataExportPaginationSupport paginationSupport;
     private final DataExportPaginator paginator;
+    private final DataExportTimeWindowSupport timeWindowSupport;
     private String executionUuid;
 
     public ClienteApiDataExport() {
@@ -80,7 +81,8 @@ public class ClienteApiDataExport {
 
         final GerenciadorRequisicaoHttp gerenciadorRequisicao = GerenciadorRequisicaoHttp.getInstance();
         final DataExportRequestFactory requestFactory = new DataExportRequestFactory(token);
-        final DataExportRequestBodyFactory requestBodyFactory = new DataExportRequestBodyFactory(logger);
+        this.timeWindowSupport = DataExportTimeWindowSupport.createConfigured();
+        final DataExportRequestBodyFactory requestBodyFactory = new DataExportRequestBodyFactory(logger, timeWindowSupport);
         final DataExportPageAuditLogger pageAuditLogger = new DataExportPageAuditLogger(new PageAuditRepository());
         final DataExportHttpExecutor httpExecutor = new DataExportHttpExecutor(
             logger,
@@ -110,13 +112,15 @@ public class ClienteApiDataExport {
             maxTentativasTimeoutPorPagina,
             maxTentativasTimeoutPaginaUm,
             INTERVALO_LOG_PROGRESSO,
-            this.paginationSupport
+            this.paginationSupport,
+            this.timeWindowSupport
         );
         this.csvCountSupport = new DataExportCsvCountSupport(
             logger,
             this.urlBase,
             this.timeoutRequisicao,
             requestBodyFactory,
+            this.timeWindowSupport,
             httpExecutor::executarRequisicaoDataExportCsv,
             paginationSupport::isCircuitBreakerAtivo,
             paginationSupport::resetarEstadoFalhasTemplate,
@@ -161,8 +165,8 @@ public class ClienteApiDataExport {
         final ConfiguracaoEntidade config = ConstantesApiDataExport.obterConfiguracao(ConstantesEntidades.MANIFESTOS);
         final String chaveTemplate = "Template-" + config.templateId();
         paginationSupport.resetarEstadoFalhasTemplate(chaveTemplate);
-        final Instant inicio = dataInicio.atStartOfDay().atZone(java.time.ZoneOffset.UTC).toInstant();
-        final Instant fim = dataFim.atTime(23, 59, 59).atZone(java.time.ZoneOffset.UTC).toInstant();
+        final Instant inicio = timeWindowSupport.inicioDoDia(dataInicio);
+        final Instant fim = timeWindowSupport.fimDoDia(dataFim);
         final List<ConfiguracaoEntidade> tentativas = retryConfigFactory.criarTentativasManifestos(config);
 
         return adaptiveRetrySupport.executar(
@@ -213,8 +217,8 @@ public class ClienteApiDataExport {
     public ResultadoExtracao<ContasAPagarDTO> buscarContasAPagar(final LocalDate dataInicio, final LocalDate dataFim) {
         logger.info("Buscando Faturas a Pagar da API DataExport - Período: {} a {}", dataInicio, dataFim);
         final ConfiguracaoEntidade config = ConstantesApiDataExport.obterConfiguracao(ConstantesEntidades.CONTAS_A_PAGAR);
-        final Instant inicio = dataInicio.atStartOfDay().atZone(java.time.ZoneOffset.UTC).toInstant();
-        final Instant fim = dataFim.atTime(23, 59, 59).atZone(java.time.ZoneOffset.UTC).toInstant();
+        final Instant inicio = timeWindowSupport.inicioDoDia(dataInicio);
+        final Instant fim = timeWindowSupport.fimDoDia(dataFim);
         final List<ConfiguracaoEntidade> tentativas = retryConfigFactory.criarTentativasContasAPagar(config);
 
         return adaptiveRetrySupport.executar(
@@ -291,8 +295,8 @@ public class ClienteApiDataExport {
                                                         final LocalDate dataFim,
                                                         final ConfiguracaoEntidade config,
                                                         final TypeReference<List<T>> typeReference) {
-        final Instant inicio = dataInicio.atStartOfDay().atZone(java.time.ZoneOffset.UTC).toInstant();
-        final Instant fim = dataFim.atTime(23, 59, 59).atZone(java.time.ZoneOffset.UTC).toInstant();
+        final Instant inicio = timeWindowSupport.inicioDoDia(dataInicio);
+        final Instant fim = timeWindowSupport.fimDoDia(dataFim);
         return paginator.buscarDadosGenericos(
             this.executionUuid,
             config.templateId(),

@@ -96,7 +96,7 @@ public class FaturaPorClienteRepository extends AbstractRepository<FaturaPorClie
                 ? AS data_extracao
         ) AS source
         ON target.unique_id = source.unique_id
-        WHEN MATCHED THEN
+        WHEN MATCHED AND %s THEN
             UPDATE SET
                 valor_frete = source.valor_frete,
                 valor_fatura = source.valor_fatura,
@@ -141,11 +141,20 @@ public class FaturaPorClienteRepository extends AbstractRepository<FaturaPorClie
     }
 
     @Override
+    protected boolean aceitarMergeSemAlteracoesComoSucesso(final FaturaPorClienteEntity entidade) {
+        return true;
+    }
+
+    @Override
     protected int executarMerge(final Connection conexao, final FaturaPorClienteEntity entity) throws SQLException {
         validarEntidade(entity);
         reconciliarAliasLegado(conexao, entity);
 
-        try (PreparedStatement pstmt = conexao.prepareStatement(SQL_MERGE)) {
+        final String freshnessGuard = buildMonotonicUpdateGuard(
+            "COALESCE(CAST(target.data_baixa_fatura AS datetime2), CAST(target.data_vencimento_fatura AS datetime2), CAST(target.data_emissao_fatura AS datetime2), CAST(target.data_emissao_cte AS datetime2), CAST(target.fit_ant_issue_date AS datetime2), CAST(target.fit_ant_ils_original_due_date AS datetime2))",
+            "COALESCE(CAST(source.data_baixa_fatura AS datetime2), CAST(source.data_vencimento_fatura AS datetime2), CAST(source.data_emissao_fatura AS datetime2), CAST(source.data_emissao_cte AS datetime2), CAST(source.fit_ant_issue_date AS datetime2), CAST(source.fit_ant_ils_original_due_date AS datetime2))"
+        );
+        try (PreparedStatement pstmt = conexao.prepareStatement(SQL_MERGE.formatted(freshnessGuard))) {
             int idx = 1;
 
             pstmt.setString(idx++, entity.getUniqueId());

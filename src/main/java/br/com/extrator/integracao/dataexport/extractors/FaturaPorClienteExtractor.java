@@ -159,7 +159,13 @@ public class FaturaPorClienteExtractor implements DataExportEntityExtractor<Fatu
 
         // PASSO 4: Salvar no banco
         final int registrosSalvos = repository.salvar(entitiesUnicos);
-        return new SaveResult(registrosSalvos, totalUnicos, registrosInvalidos);
+        return new SaveResult(
+            registrosSalvos,
+            totalUnicos,
+            registrosInvalidos,
+            repository.getUltimoResumoSalvamento().getRegistrosPersistidos(),
+            repository.getUltimoResumoSalvamento().getRegistrosNoOpIdempotente()
+        );
     }
 
     /**

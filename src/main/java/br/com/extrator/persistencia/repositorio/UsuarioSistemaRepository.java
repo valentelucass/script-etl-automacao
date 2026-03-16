@@ -45,6 +45,11 @@ public class UsuarioSistemaRepository extends AbstractRepository<UsuarioSistemaE
         return NOME_TABELA;
     }
 
+    @Override
+    protected boolean aceitarMergeSemAlteracoesComoSucesso(final UsuarioSistemaEntity usuario) {
+        return true;
+    }
+
     /**
      * Executa a operação MERGE (UPSERT) para inserir ou atualizar um usuário no banco.
      */
@@ -54,16 +59,18 @@ public class UsuarioSistemaRepository extends AbstractRepository<UsuarioSistemaE
             throw new SQLException("Não é possível executar o MERGE para Usuário do Sistema sem um 'user_id'.");
         }
 
+        final String freshnessGuard =
+            "(T.data_atualizacao IS NULL OR S.data_atualizacao >= T.data_atualizacao)";
         final String sql = String.format("""
             MERGE dbo.%s AS T
             USING (VALUES (?, ?, ?)) AS S (id, nome, data_atualizacao)
             ON T.user_id = S.id
-            WHEN MATCHED THEN
+            WHEN MATCHED AND %s THEN
                 UPDATE SET T.nome = S.nome, T.data_atualizacao = S.data_atualizacao
             WHEN NOT MATCHED THEN
                 INSERT (user_id, nome, data_atualizacao)
                 VALUES (S.id, S.nome, S.data_atualizacao);
-            """, NOME_TABELA);
+            """, NOME_TABELA, freshnessGuard);
 
         try (PreparedStatement statement = conexao.prepareStatement(sql)) {
             int paramIndex = 1;

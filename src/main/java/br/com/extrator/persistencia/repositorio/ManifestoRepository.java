@@ -60,6 +60,11 @@ public class ManifestoRepository extends AbstractRepository<ManifestoEntity> {
     protected String getNomeTabela() {
         return NOME_TABELA;
     }
+
+    @Override
+    protected boolean aceitarMergeSemAlteracoesComoSucesso(final ManifestoEntity manifesto) {
+        return true;
+    }
     
     /**
      * Executa a operação MERGE (UPSERT) para inserir ou atualizar um manifesto no banco.
@@ -130,6 +135,10 @@ public class ManifestoRepository extends AbstractRepository<ManifestoEntity> {
                     manifesto.getSequenceCode(), identificadorUnico);
 
         // ✅ Nome da tabela já foi validado acima (apenas caracteres alfanuméricos e underscore)
+        final String freshnessGuard = buildMonotonicUpdateGuard(
+            "COALESCE(CAST(target.finished_at AS datetime2), CAST(target.closed_at AS datetime2), CAST(target.departured_at AS datetime2), CAST(target.created_at AS datetime2))",
+            "COALESCE(CAST(source.finished_at AS datetime2), CAST(source.closed_at AS datetime2), CAST(source.departured_at AS datetime2), CAST(source.created_at AS datetime2))"
+        );
         final String sql = String.format("""
             MERGE %s AS target
             USING (VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?))
@@ -137,7 +146,7 @@ public class ManifestoRepository extends AbstractRepository<ManifestoEntity> {
             ON target.sequence_code = source.sequence_code
                AND COALESCE(target.pick_sequence_code, -1) = COALESCE(source.pick_sequence_code, -1)
                AND COALESCE(target.mdfe_number, -1) = COALESCE(source.mdfe_number, -1)
-            WHEN MATCHED THEN
+            WHEN MATCHED AND %s THEN
                 UPDATE SET
                     status = source.status,
                     created_at = source.created_at,
@@ -192,7 +201,7 @@ public class ManifestoRepository extends AbstractRepository<ManifestoEntity> {
             WHEN NOT MATCHED THEN
                 INSERT (sequence_code, identificador_unico, status, created_at, departured_at, closed_at, finished_at, mdfe_number, mdfe_key, mdfe_status, distribution_pole, classification, vehicle_plate, vehicle_type, vehicle_owner, driver_name, branch_nickname, vehicle_departure_km, closing_km, traveled_km, invoices_count, invoices_volumes, invoices_weight, total_taxed_weight, total_cubic_volume, invoices_value, manifest_freights_total, pick_sequence_code, contract_number, contract_type, calculation_type, cargo_type, daily_subtotal, total_cost, freight_subtotal, fuel_subtotal, toll_subtotal, driver_services_total, operational_expenses_total, inss_value, sest_senat_value, ir_value, paying_total, manual_km, generate_mdfe, monitoring_request, uniq_destinations_count, creation_user_name, adjustment_user_name, metadata, data_extracao)
                 VALUES (source.sequence_code, source.identificador_unico, source.status, source.created_at, source.departured_at, source.closed_at, source.finished_at, source.mdfe_number, source.mdfe_key, source.mdfe_status, source.distribution_pole, source.classification, source.vehicle_plate, source.vehicle_type, source.vehicle_owner, source.driver_name, source.branch_nickname, source.vehicle_departure_km, source.closing_km, source.traveled_km, source.invoices_count, source.invoices_volumes, source.invoices_weight, source.total_taxed_weight, source.total_cubic_volume, source.invoices_value, source.manifest_freights_total, source.pick_sequence_code, source.contract_number, source.contract_type, source.calculation_type, source.cargo_type, source.daily_subtotal, source.total_cost, source.freight_subtotal, source.fuel_subtotal, source.toll_subtotal, source.driver_services_total, source.operational_expenses_total, source.inss_value, source.sest_senat_value, source.ir_value, source.paying_total, source.manual_km, source.generate_mdfe, source.monitoring_request, source.uniq_destinations_count, source.creation_user_name, source.adjustment_user_name, source.metadata, source.data_extracao);
-            """, NOME_TABELA);
+            """, NOME_TABELA, freshnessGuard);
 
         try (PreparedStatement statement = conexao.prepareStatement(sql)) {
             // Define os parâmetros de forma segura e na ordem correta conforme MERGE SQL

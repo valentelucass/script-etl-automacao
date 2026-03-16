@@ -172,6 +172,10 @@ public class FaturaPorClienteMapper {
     /**
      * Calcula identificador unico sempre como hash canonico dos campos
      * de negocio estaveis, independentemente de aliases opcionais.
+     *
+     * Campos operacionais sujeitos a drift durante o ciclo de cobranca
+     * (status, baixa, classificacoes, nomes e totais derivados) ficam
+     * fora da identidade para evitar reidentificacao do mesmo registro.
      */
     public String calcularIdentificadorUnico(final FaturaPorClienteDTO dto) {
         if (dto == null) {
@@ -239,32 +243,55 @@ public class FaturaPorClienteMapper {
 
     private String montarRepresentacaoCanonica(final FaturaPorClienteDTO dto) {
         final StringBuilder sb = new StringBuilder(512);
-        appendCampo(sb, "cteNumber", dto.getCteNumber() != null ? String.valueOf(dto.getCteNumber()) : null);
-        appendCampo(sb, "cteIssuedAt", dto.getCteIssuedAt());
-        appendCampo(sb, "cteStatus", dto.getCteStatus());
-        appendCampo(sb, "cteStatusResult", dto.getCteStatusResult());
-        appendCampo(sb, "document", dto.getFaturaDocument());
-        appendCampo(sb, "issueDate", dto.getFaturaIssueDate());
-        appendCampo(sb, "dueDate", dto.getFaturaDueDate());
-        appendCampo(sb, "baixaDate", dto.getFaturaBaixaDate());
-        appendCampo(sb, "originalDueDate", dto.getFaturaOriginalDueDate());
-        appendCampo(sb, "faturaValue", dto.getFaturaValue());
-        appendCampo(sb, "valorFrete", dto.getValorFrete());
-        appendCampo(sb, "thirdParty", dto.getThirdPartyCtesValue());
-        appendCampo(sb, "tipoFrete", dto.getTipoFrete());
-        appendCampo(sb, "filial", dto.getFilial());
-        appendCampo(sb, "estado", dto.getEstado());
-        appendCampo(sb, "classificacao", dto.getClassificacao());
-        appendCampo(sb, "pagadorNome", dto.getPagadorNome());
+        final Long nfseNumber = dto.getNfseNumberEfetivo();
+        if (nfseNumber != null) {
+            appendCampo(sb, "identitySource", "nfse");
+            appendCampo(sb, "nfseNumber", String.valueOf(nfseNumber));
+            appendCampo(sb, "pagadorDocumento", dto.getPagadorDocumento());
+            appendCampo(sb, "remetenteDocumento", dto.getRemetenteDocumento());
+            appendCampo(sb, "destinatarioDocumento", dto.getDestinatarioDocumento());
+            return sb.toString();
+        }
+
+        if (dto.getCteNumber() != null) {
+            appendCampo(sb, "identitySource", "cte");
+            appendCampo(sb, "cteNumber", String.valueOf(dto.getCteNumber()));
+            appendCampo(sb, "pagadorDocumento", dto.getPagadorDocumento());
+            appendCampo(sb, "remetenteDocumento", dto.getRemetenteDocumento());
+            appendCampo(sb, "destinatarioDocumento", dto.getDestinatarioDocumento());
+            return sb.toString();
+        }
+
+        if (possuiTexto(dto.getFaturaDocument())) {
+            appendCampo(sb, "identitySource", "fatura");
+            appendCampo(sb, "document", dto.getFaturaDocument());
+            appendCampo(sb, "issueDate", dto.getFaturaIssueDate());
+            appendCampo(sb, "pagadorDocumento", dto.getPagadorDocumento());
+            appendCampo(sb, "destinatarioDocumento", dto.getDestinatarioDocumento());
+            return sb.toString();
+        }
+
+        if (possuiTexto(dto.getBillingId())) {
+            appendCampo(sb, "identitySource", "billing");
+            appendCampo(sb, "billingId", dto.getBillingId());
+            appendCampo(sb, "pagadorDocumento", dto.getPagadorDocumento());
+            appendCampo(sb, "destinatarioDocumento", dto.getDestinatarioDocumento());
+            return sb.toString();
+        }
+
+        appendCampo(sb, "identitySource", "fallback");
         appendCampo(sb, "pagadorDocumento", dto.getPagadorDocumento());
-        appendCampo(sb, "remetenteNome", dto.getRemetenteNome());
         appendCampo(sb, "remetenteDocumento", dto.getRemetenteDocumento());
-        appendCampo(sb, "destinatarioNome", dto.getDestinatarioNome());
         appendCampo(sb, "destinatarioDocumento", dto.getDestinatarioDocumento());
-        appendCampo(sb, "vendedorNome", dto.getVendedorNome());
         appendCampo(sb, "notasFiscais", normalizarLista(dto.getNotasFiscais()));
         appendCampo(sb, "pedidosCliente", normalizarLista(dto.getPedidosCliente()));
+        appendCampo(sb, "valorFrete", dto.getValorFrete());
+        appendCampo(sb, "valorFatura", dto.getFaturaValue());
         return sb.toString();
+    }
+
+    private boolean possuiTexto(final String valor) {
+        return valor != null && !valor.trim().isEmpty();
     }
 
     private void appendCampo(final StringBuilder sb, final String nome, final String valor) {

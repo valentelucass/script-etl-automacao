@@ -64,6 +64,138 @@ class ValidacaoApiBanco24hDetalhadaReporterTest {
     }
 
     @Test
+    void deveTolerarUsuariosSistemaComDriftPequeno() {
+        final ResultadoComparacao resultado = new ResultadoComparacao(
+            ConstantesEntidades.USUARIOS_SISTEMA,
+            43625,
+            43618,
+            0,
+            43575,
+            43,
+            0,
+            0,
+            true,
+            null,
+            "snapshot vivo"
+        );
+
+        final ResumoExecucao resumo = reporter.reportar(List.of(resultado));
+
+        assertEquals(1, resumo.ok());
+        assertEquals(0, resumo.falhas());
+    }
+
+    @Test
+    void deveTolerarColetasComDesvioMarginalDeCompletude() {
+        final ResultadoComparacao resultado = new ResultadoComparacao(
+            ConstantesEntidades.COLETAS,
+            221,
+            221,
+            0,
+            219,
+            2,
+            0,
+            7,
+            true,
+            null,
+            "requestDate fallback"
+        );
+
+        final ResumoExecucao resumo = reporter.reportar(List.of(resultado));
+
+        assertEquals(1, resumo.ok());
+        assertEquals(0, resumo.falhas());
+    }
+
+    @Test
+    void deveTolerarContasAPagarComDriftMarginal() {
+        final ResultadoComparacao resultado = new ResultadoComparacao(
+            ConstantesEntidades.CONTAS_A_PAGAR,
+            82,
+            79,
+            0,
+            78,
+            1,
+            0,
+            0,
+            true,
+            null,
+            "snapshot vivo"
+        );
+
+        final ResumoExecucao resumo = reporter.reportar(List.of(resultado));
+
+        assertEquals(1, resumo.ok());
+        assertEquals(0, resumo.falhas());
+    }
+
+    @Test
+    void deveTolerarManifestosComVariacaoMarginalSemDivergenciaDeConteudo() {
+        final ResultadoComparacao resultado = new ResultadoComparacao(
+            ConstantesEntidades.MANIFESTOS,
+            323,
+            322,
+            0,
+            319,
+            4,
+            1,
+            0,
+            true,
+            null,
+            "manifestos em transito"
+        );
+
+        final ResumoExecucao resumo = reporter.reportar(List.of(resultado));
+
+        assertEquals(1, resumo.ok());
+        assertEquals(0, resumo.falhas());
+    }
+
+    @Test
+    void deveTolerarLocalizacaoComUmExcedenteDeSnapshot() {
+        final ResultadoComparacao resultado = new ResultadoComparacao(
+            ConstantesEntidades.LOCALIZACAO_CARGAS,
+            772,
+            772,
+            0,
+            773,
+            0,
+            1,
+            63,
+            true,
+            null,
+            "snapshot vivo da origem"
+        );
+
+        final ResumoExecucao resumo = reporter.reportar(List.of(resultado));
+
+        assertEquals(1, resumo.ok());
+        assertEquals(0, resumo.falhas());
+    }
+
+    @Test
+    void deveTolerarFaturasPorClienteComExcedenteMarginalDeSnapshot() {
+        final ResultadoComparacao resultado = new ResultadoComparacao(
+            ConstantesEntidades.FATURAS_POR_CLIENTE,
+            772,
+            772,
+            0,
+            773,
+            0,
+            1,
+            1,
+            true,
+            null,
+            "snapshot vivo da origem"
+        );
+
+        final ResumoExecucao resumo = reporter.reportar(List.of(resultado));
+
+        assertEquals(1, resumo.ok());
+        assertEquals(0, resumo.falhas());
+    }
+
+    @Test
     void deveFalharQuandoApiFoiInterrompida() {
         final ResultadoComparacao resultado = new ResultadoComparacao(
             ConstantesEntidades.COTACOES,

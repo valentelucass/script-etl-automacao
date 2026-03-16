@@ -4,7 +4,7 @@ Classe  : ValidacaoApiBanco24hDetalhadaUseCase (class)
 Pacote  : br.com.extrator.aplicacao.validacao
 Modulo  : Use Case - Validacao
 
-Papel   : Valida dados 24h: compara API vs Banco chave-a-chave (POSTMAN-like).
+Papel   : Valida dados da janela operacional recente: compara API vs Banco chave-a-chave (POSTMAN-like).
 
 Conecta com:
 - ValidacaoApiBanco24hDetalhadaRepository, Comparator, ApiCollector, Reporter (delegacao)
@@ -106,7 +106,7 @@ public class ValidacaoApiBanco24hDetalhadaUseCase {
             final LocalDate dataFim = request.periodoFechado() ? dataReferencia.minusDays(1) : dataReferencia;
 
             log.console("\n" + "=".repeat(88));
-            log.info("VALIDACAO DETALHADA 24H | API (POSTMAN-LIKE) x BANCO | COMPARACAO CHAVE A CHAVE");
+            log.info("VALIDACAO DETALHADA | JANELA OPERACIONAL RECENTE | API (POSTMAN-LIKE) x BANCO | COMPARACAO CHAVE A CHAVE");
             log.info("Periodo API: {} a {}", dataInicio, dataFim);
             if (request.periodoFechado()) {
                 log.info("Modo: PERIODO FECHADO (sem dia em andamento)");
@@ -145,7 +145,7 @@ public class ValidacaoApiBanco24hDetalhadaUseCase {
         final ResumoExecucao resumo = reporter.reportar(resultados);
         if (resumo.falhas() > 0) {
             throw new RuntimeException(
-                "Comparacao detalhada API x Banco 24h reprovada: "
+                "Comparacao detalhada API x Banco reprovada: "
                     + resumo.falhas()
                     + " entidade(s) com divergencia."
             );

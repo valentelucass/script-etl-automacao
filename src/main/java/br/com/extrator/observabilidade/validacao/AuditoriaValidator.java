@@ -272,7 +272,7 @@ public class AuditoriaValidator {
             if (registrosEsperados > 0) {
                 resultado.setPercentualCompletude((registros24h * 100.0) / registrosEsperados);
             }
-            resultado.setColunaUtilizada("log_extracoes (comparacao banco vs log - ultimas 24h)");
+            resultado.setColunaUtilizada("log_extracoes (comparacao banco vs log - janela operacional recente)");
             logger.info(
                 "Comparando banco vs log para {}: {} registros no banco (24h), {} esperados do log",
                 nomeTabela,

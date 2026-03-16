@@ -4,7 +4,7 @@ Classe  : TesteApiUseCase (class)
 Pacote  : br.com.extrator.aplicacao.extracao
 Modulo  : Use Case - Extracao
 
-Papel   : Testa funcionalidade de um endpoint API (GraphQL ou DataExport) em ultimas 24h.
+Papel   : Testa funcionalidade de um endpoint API (GraphQL ou DataExport) na janela principal diaria D-1..D.
 
 Conecta com:
 - PipelineOrchestrator (executa steps)
@@ -51,14 +51,26 @@ import br.com.extrator.aplicacao.pipeline.PipelineStep;
 import br.com.extrator.aplicacao.pipeline.runtime.StepExecutionResult;
 import br.com.extrator.aplicacao.pipeline.runtime.StepStatus;
 import br.com.extrator.suporte.console.BannerUtil;
+import br.com.extrator.suporte.banco.SqlServerExecutionLockManager;
 import br.com.extrator.suporte.tempo.RelogioSistema;
 import br.com.extrator.suporte.validacao.ConstantesEntidades;
 
 public class TesteApiUseCase {
+    private static final String EXECUTION_LOCK_RESOURCE = "etl-global-execution";
     private static final Logger logger = LoggerFactory.getLogger(TesteApiUseCase.class);
     private static final String FLAG_SEM_FATURAS_GRAPHQL = "--sem-faturas-graphql";
+    private final ExecutionLockManager executionLockManager;
+
+    public TesteApiUseCase() {
+        this(new SqlServerExecutionLockManager());
+    }
+
+    TesteApiUseCase(final ExecutionLockManager executionLockManager) {
+        this.executionLockManager = executionLockManager;
+    }
 
     public void executar(final TesteApiRequest request) throws Exception {
+        try (AutoCloseable ignored = executionLockManager.acquire(EXECUTION_LOCK_RESOURCE)) {
         final String tipoApi = request.tipoApi();
         boolean incluirFaturasGraphQL = request.incluirFaturasGraphQL();
         final boolean somenteFaturasGraphQL = isEntidadeFaturasGraphQL(request.entidade());
@@ -81,7 +93,7 @@ public class TesteApiUseCase {
                 + dataInicio.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
                 + " a "
                 + dataFim.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-                + " (ultimas 24h)"
+                + " (janela principal D-1..D; nao representa 24h corridas)"
         );
         if ("graphql".equalsIgnoreCase(tipoApi) && request.entidade() == null) {
             System.out.println(
@@ -111,6 +123,7 @@ public class TesteApiUseCase {
             System.err.println("Erro durante execucao: " + e.getMessage());
             logger.error("Erro durante execucao: {}", e.getMessage(), e);
             throw e;
+        }
         }
     }
 

@@ -153,18 +153,18 @@ final class ValidacaoApiBanco24hDetalhadaApiCollector {
         final boolean permitirFallbackJanela
     ) {
         final List<String> entidadesSolicitadas = new ArrayList<>(List.of(
-            ConstantesEntidades.USUARIOS_SISTEMA,
+            ConstantesEntidades.FRETES,
+            ConstantesEntidades.COLETAS,
             ConstantesEntidades.MANIFESTOS,
             ConstantesEntidades.COTACOES,
             ConstantesEntidades.LOCALIZACAO_CARGAS,
             ConstantesEntidades.CONTAS_A_PAGAR,
-            ConstantesEntidades.FATURAS_POR_CLIENTE,
-            ConstantesEntidades.FRETES,
-            ConstantesEntidades.COLETAS
+            ConstantesEntidades.FATURAS_POR_CLIENTE
         ));
         if (incluirFaturasGraphQL) {
             entidadesSolicitadas.add(ConstantesEntidades.FATURAS_GRAPHQL);
         }
+        entidadesSolicitadas.add(ConstantesEntidades.USUARIOS_SISTEMA);
         return criarEntidades(
             conexao,
             dataReferencia,

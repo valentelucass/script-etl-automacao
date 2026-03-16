@@ -4,7 +4,7 @@ Classe  : FluxoCompletoUseCase (class)
 Pacote  : br.com.extrator.aplicacao.extracao
 Modulo  : Use Case - Extracao
 
-Papel   : Orquestra fluxo ETL completo de 24h: extracao, validacao de completude e integridade, data quality.
+Papel   : Orquestra fluxo ETL completo da janela principal D-1..D: extracao, validacao de completude e integridade, data quality.
 
 Conecta com:
 - PreBackfillReferencialColetasUseCase (pre-backfill orfaos)
@@ -15,7 +15,7 @@ Conecta com:
 - RelogioSistema (marca tempo de execucao)
 
 Fluxo geral:
-1) executar() orquestra extracao completa de ultimas 24h.
+1) executar() orquestra extracao completa da janela principal diaria D-1..D.
 2) Executa pre-backfill de referencial de coletas (orfaos dinamicos).
 3) Orquestra pipeline (GraphQL + DataExport + Data Quality).
 4) Valida completude (origem x destino), integridade e data quality.
@@ -58,6 +58,7 @@ import br.com.extrator.aplicacao.pipeline.PipelineStep;
 import br.com.extrator.aplicacao.pipeline.runtime.StepExecutionResult;
 import br.com.extrator.aplicacao.pipeline.runtime.StepStatus;
 import br.com.extrator.suporte.configuracao.ConfigEtl;
+import br.com.extrator.suporte.banco.SqlServerExecutionLockManager;
 import br.com.extrator.suporte.console.BannerUtil;
 import br.com.extrator.suporte.console.LoggerConsole;
 import br.com.extrator.suporte.formatacao.FormatadorData;
@@ -65,20 +66,31 @@ import br.com.extrator.suporte.tempo.RelogioSistema;
 import br.com.extrator.suporte.validacao.ConstantesEntidades;
 
 public class FluxoCompletoUseCase {
+    private static final String EXECUTION_LOCK_RESOURCE = "etl-global-execution";
     private static final LoggerConsole log = LoggerConsole.getLogger(FluxoCompletoUseCase.class);
     private static final String ARQUIVO_ULTIMO_RUN = "runtime/state/last_run.properties";
     private static final String PROPRIEDADE_ULTIMO_RUN = "last_successful_run";
     private final PreBackfillReferencialColetasUseCase preBackfillReferencialColetasUseCase;
+    private final ExecutionLockManager executionLockManager;
 
     public FluxoCompletoUseCase() {
-        this(new PreBackfillReferencialColetasUseCase());
+        this(new PreBackfillReferencialColetasUseCase(), new SqlServerExecutionLockManager());
     }
 
     FluxoCompletoUseCase(final PreBackfillReferencialColetasUseCase preBackfillReferencialColetasUseCase) {
+        this(preBackfillReferencialColetasUseCase, new SqlServerExecutionLockManager());
+    }
+
+    FluxoCompletoUseCase(
+        final PreBackfillReferencialColetasUseCase preBackfillReferencialColetasUseCase,
+        final ExecutionLockManager executionLockManager
+    ) {
         this.preBackfillReferencialColetasUseCase = preBackfillReferencialColetasUseCase;
+        this.executionLockManager = executionLockManager;
     }
 
     public void executar(final boolean incluirFaturasGraphQL, final boolean modoLoopDaemon) throws Exception {
+        try (AutoCloseable ignored = executionLockManager.acquire(EXECUTION_LOCK_RESOURCE)) {
         BannerUtil.exibirBannerExtracaoCompleta();
 
         final LocalDate dataFim = RelogioSistema.hoje();
@@ -88,7 +100,9 @@ public class FluxoCompletoUseCase {
         log.console("\n" + "=".repeat(60));
         log.console("INICIANDO PROCESSO DE EXTRACAO DE DADOS");
         log.console("=".repeat(60));
-        log.console("Modo: ULTIMAS 24H");
+        log.console("Modo: JANELA PRINCIPAL DIARIA D-1..D");
+        log.console("Observacao: a janela principal nao representa 24h corridas.");
+        log.console("Observacao: coletas executa pre-backfill e pos-hidratacao referencial fora da janela principal.");
         if (modoLoopDaemon) {
             log.console("Contexto: LOOP DAEMON (integridade final nao bloqueante)");
         }
@@ -382,6 +396,7 @@ public class FluxoCompletoUseCase {
         throw new PartialExecutionException(
             "Fluxo completo concluido com falhas parciais. Runners falhados: " + String.join(", ", runnersFalhados)
         );
+        }
     }
 
     private void gravarDataExecucao() {

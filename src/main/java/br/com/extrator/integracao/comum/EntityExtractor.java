@@ -89,11 +89,23 @@ public interface EntityExtractor<T> {
         private final int registrosSalvos;
         private final int totalUnicos;
         private final int registrosInvalidos;
+        private final int registrosPersistidos;
+        private final int registrosNoOpIdempotente;
 
         public SaveMetrics(final int registrosSalvos, final int totalUnicos, final int registrosInvalidos) {
+            this(registrosSalvos, totalUnicos, registrosInvalidos, registrosSalvos, 0);
+        }
+
+        public SaveMetrics(final int registrosSalvos,
+                           final int totalUnicos,
+                           final int registrosInvalidos,
+                           final int registrosPersistidos,
+                           final int registrosNoOpIdempotente) {
             this.registrosSalvos = registrosSalvos;
             this.totalUnicos = totalUnicos;
             this.registrosInvalidos = registrosInvalidos;
+            this.registrosPersistidos = registrosPersistidos;
+            this.registrosNoOpIdempotente = registrosNoOpIdempotente;
         }
 
         public int getRegistrosSalvos() {
@@ -106,6 +118,14 @@ public interface EntityExtractor<T> {
 
         public int getRegistrosInvalidos() {
             return registrosInvalidos;
+        }
+
+        public int getRegistrosPersistidos() {
+            return registrosPersistidos;
+        }
+
+        public int getRegistrosNoOpIdempotente() {
+            return registrosNoOpIdempotente;
         }
     }
 }

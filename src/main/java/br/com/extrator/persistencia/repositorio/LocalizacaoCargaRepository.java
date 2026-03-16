@@ -51,6 +51,11 @@ public class LocalizacaoCargaRepository extends AbstractRepository<LocalizacaoCa
         return NOME_TABELA;
     }
 
+    @Override
+    protected boolean aceitarMergeSemAlteracoesComoSucesso(final LocalizacaoCargaEntity carga) {
+        return true;
+    }
+
     /**
      * Executa a operação MERGE (UPSERT) para inserir ou atualizar um registro de localização no banco.
      * A lógica é segura e baseada na nova arquitetura de Entidade.
@@ -62,12 +67,16 @@ public class LocalizacaoCargaRepository extends AbstractRepository<LocalizacaoCa
             throw new SQLException("Não é possível executar o MERGE para Localização de Carga sem um 'sequence_number'.");
         }
 
+        final String freshnessGuard = buildMonotonicUpdateGuard(
+            "COALESCE(CAST(target.predicted_delivery_at AS datetime2), CAST(target.service_at AS datetime2))",
+            "COALESCE(CAST(source.predicted_delivery_at AS datetime2), CAST(source.service_at AS datetime2))"
+        );
         final String sql = String.format("""
             MERGE %s AS target
             USING (VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?))
                 AS source (sequence_number, type, service_at, invoices_volumes, taxed_weight, invoices_value, total_value, service_type, branch_nickname, predicted_delivery_at, destination_location_name, destination_branch_nickname, classification, status, status_branch_nickname, origin_location_name, origin_branch_nickname, fit_fln_cln_nickname, metadata, data_extracao)
             ON target.sequence_number = source.sequence_number
-            WHEN MATCHED THEN
+            WHEN MATCHED AND %s THEN
                 UPDATE SET
                     type = source.type,
                     service_at = source.service_at,
@@ -91,7 +100,7 @@ public class LocalizacaoCargaRepository extends AbstractRepository<LocalizacaoCa
             WHEN NOT MATCHED THEN
                 INSERT (sequence_number, type, service_at, invoices_volumes, taxed_weight, invoices_value, total_value, service_type, branch_nickname, predicted_delivery_at, destination_location_name, destination_branch_nickname, classification, status, status_branch_nickname, origin_location_name, origin_branch_nickname, fit_fln_cln_nickname, metadata, data_extracao)
                 VALUES (source.sequence_number, source.type, source.service_at, source.invoices_volumes, source.taxed_weight, source.invoices_value, source.total_value, source.service_type, source.branch_nickname, source.predicted_delivery_at, source.destination_location_name, source.destination_branch_nickname, source.classification, source.status, source.status_branch_nickname, source.origin_location_name, source.origin_branch_nickname, source.fit_fln_cln_nickname, source.metadata, source.data_extracao);
-            """, NOME_TABELA);
+            """, NOME_TABELA, freshnessGuard);
 
         try (PreparedStatement statement = conexao.prepareStatement(sql)) {
             // Define os parâmetros de forma segura e na ordem correta conforme MERGE SQL

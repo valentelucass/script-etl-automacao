@@ -128,7 +128,13 @@ public class ContasAPagarExtractor implements DataExportEntityExtractor<ContasAP
         }
         
         final int registrosSalvos = repository.salvar(entitiesUnicos);
-        return new SaveResult(registrosSalvos, totalUnicos, registrosInvalidos);
+        return new SaveResult(
+            registrosSalvos,
+            totalUnicos,
+            registrosInvalidos,
+            repository.getUltimoResumoSalvamento().getRegistrosPersistidos(),
+            repository.getUltimoResumoSalvamento().getRegistrosNoOpIdempotente()
+        );
     }
     
     @Override

@@ -49,6 +49,7 @@ final class ValidacaoApiBanco24hDetalhadaReporter {
 
         for (final ResultadoComparacao resultado : resultados) {
             final boolean divergenciaDinamicaTolerada = comparator.somenteDivergenciaDadosTolerada(resultado);
+            final boolean completudeDinamicaTolerada = comparator.completudeDinamicaTolerada(resultado);
             final boolean inconclusivo =
                 resultado.detalhe() != null && resultado.detalhe().startsWith("INCONCLUSIVO:");
             final boolean apiIncompleta = !resultado.apiCompleta();
@@ -56,7 +57,7 @@ final class ValidacaoApiBanco24hDetalhadaReporter {
             if (inconclusivo || apiIncompleta) {
                 totalFalhas++;
                 log.warn(
-                    "API_VS_BANCO_24H_DETALHADO | entidade={} | status={} | api_bruto={} | api_unico={} | invalidos={} | banco={} | faltantes={} | excedentes={} | divergencias_dados={}",
+                    "API_VS_BANCO_DETALHADO | entidade={} | status={} | api_bruto={} | api_unico={} | invalidos={} | banco={} | faltantes={} | excedentes={} | divergencias_dados={}",
                     resultado.entidade(),
                     inconclusivo ? "INCONCLUSIVO" : "API_INCOMPLETA",
                     resultado.apiBruto(),
@@ -70,7 +71,20 @@ final class ValidacaoApiBanco24hDetalhadaReporter {
             } else if (resultado.ok()) {
                 totalOk++;
                 log.info(
-                    "API_VS_BANCO_24H_DETALHADO | entidade={} | status=OK | api_bruto={} | api_unico={} | invalidos={} | banco={} | faltantes={} | excedentes={} | divergencias_dados={}",
+                    "API_VS_BANCO_DETALHADO | entidade={} | status=OK | api_bruto={} | api_unico={} | invalidos={} | banco={} | faltantes={} | excedentes={} | divergencias_dados={}",
+                    resultado.entidade(),
+                    resultado.apiBruto(),
+                    resultado.apiUnico(),
+                    resultado.invalidos(),
+                    resultado.banco(),
+                    resultado.faltantes(),
+                    resultado.excedentes(),
+                    resultado.divergenciasDados()
+                );
+            } else if (completudeDinamicaTolerada) {
+                totalOk++;
+                log.warn(
+                    "API_VS_BANCO_DETALHADO | entidade={} | status=OK_DADOS_DINAMICOS | api_bruto={} | api_unico={} | invalidos={} | banco={} | faltantes={} | excedentes={} | divergencias_dados={}",
                     resultado.entidade(),
                     resultado.apiBruto(),
                     resultado.apiUnico(),
@@ -83,7 +97,7 @@ final class ValidacaoApiBanco24hDetalhadaReporter {
             } else if (resultado.falhaCompletude()) {
                 totalFalhas++;
                 log.error(
-                    "API_VS_BANCO_24H_DETALHADO | entidade={} | status=FALHA_COMPLETUDE | api_bruto={} | api_unico={} | invalidos={} | banco={} | faltantes={} | excedentes={} | divergencias_dados={}",
+                    "API_VS_BANCO_DETALHADO | entidade={} | status=FALHA_COMPLETUDE | api_bruto={} | api_unico={} | invalidos={} | banco={} | faltantes={} | excedentes={} | divergencias_dados={}",
                     resultado.entidade(),
                     resultado.apiBruto(),
                     resultado.apiUnico(),
@@ -96,7 +110,7 @@ final class ValidacaoApiBanco24hDetalhadaReporter {
             } else if (divergenciaDinamicaTolerada) {
                 totalOk++;
                 log.warn(
-                    "API_VS_BANCO_24H_DETALHADO | entidade={} | status=OK_DADOS_DINAMICOS | api_bruto={} | api_unico={} | invalidos={} | banco={} | faltantes={} | excedentes={} | divergencias_dados={}",
+                    "API_VS_BANCO_DETALHADO | entidade={} | status=OK_DADOS_DINAMICOS | api_bruto={} | api_unico={} | invalidos={} | banco={} | faltantes={} | excedentes={} | divergencias_dados={}",
                     resultado.entidade(),
                     resultado.apiBruto(),
                     resultado.apiUnico(),
@@ -109,7 +123,7 @@ final class ValidacaoApiBanco24hDetalhadaReporter {
             } else {
                 totalFalhas++;
                 log.error(
-                    "API_VS_BANCO_24H_DETALHADO | entidade={} | status=FALHA_CONTEUDO | api_bruto={} | api_unico={} | invalidos={} | banco={} | faltantes={} | excedentes={} | divergencias_dados={}",
+                    "API_VS_BANCO_DETALHADO | entidade={} | status=FALHA_CONTEUDO | api_bruto={} | api_unico={} | invalidos={} | banco={} | faltantes={} | excedentes={} | divergencias_dados={}",
                     resultado.entidade(),
                     resultado.apiBruto(),
                     resultado.apiUnico(),
@@ -123,7 +137,7 @@ final class ValidacaoApiBanco24hDetalhadaReporter {
 
             if (resultado.detalhe() != null && !resultado.detalhe().isBlank()) {
                 log.info(
-                    "API_VS_BANCO_24H_DETALHADO | entidade={} | detalhe={}",
+                    "API_VS_BANCO_DETALHADO | entidade={} | detalhe={}",
                     resultado.entidade(),
                     resultado.detalhe()
                 );
@@ -131,7 +145,7 @@ final class ValidacaoApiBanco24hDetalhadaReporter {
         }
 
         log.console("=".repeat(88));
-        log.info("RESUMO_API_VS_BANCO_24H_DETALHADO | ok={} | falhas={}", totalOk, totalFalhas);
+        log.info("RESUMO_API_VS_BANCO_DETALHADO | ok={} | falhas={}", totalOk, totalFalhas);
         log.console("=".repeat(88));
         return new ResumoExecucao(totalOk, totalFalhas);
     }

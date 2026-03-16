@@ -102,7 +102,13 @@ public class ColetaExtractor implements EntityExtractor<ColetaNodeDTO> {
         }
         
         final int registrosSalvos = repository.salvar(entitiesUnicos);
-        return new EntityExtractor.SaveMetrics(registrosSalvos, entitiesUnicos.size(), 0);
+        return new EntityExtractor.SaveMetrics(
+            registrosSalvos,
+            entitiesUnicos.size(),
+            0,
+            repository.getUltimoResumoSalvamento().getRegistrosPersistidos(),
+            repository.getUltimoResumoSalvamento().getRegistrosNoOpIdempotente()
+        );
     }
     
     /**
@@ -116,6 +122,7 @@ public class ColetaExtractor implements EntityExtractor<ColetaNodeDTO> {
      */
     private List<ColetaEntity> deduplicarPorId(final List<ColetaEntity> entities) {
         return entities.stream()
+            .peek(this::validarChavePrimaria)
             .collect(Collectors.toMap(
                 ColetaEntity::getId,
                 e -> e,
@@ -128,6 +135,12 @@ public class ColetaExtractor implements EntityExtractor<ColetaNodeDTO> {
             .values()
             .stream()
             .collect(Collectors.toList());
+    }
+
+    private void validarChavePrimaria(final ColetaEntity entity) {
+        if (entity == null || entity.getId() == null || entity.getId().isBlank()) {
+            throw new IllegalStateException("Coleta sem ID estavel nao pode ser persistida.");
+        }
     }
     
     @Override

@@ -106,7 +106,7 @@ public class ValidacaoManifestosUseCase {
             : queries.contarDesdeUltimaExtracaoComFallback(conn);
 
         log.info("Total de registros na tabela (todos): {}", totalBanco);
-        log.info("Total de registros (ultimas 24h): {}", totalUltimas24h);
+        log.info("Total de registros (janela operacional recente): {}", totalUltimas24h);
         if (timestampFim != null) {
             totalDesdeUltimaExtracao = queries.contarDesdeUltimaExtracaoComFallback(conn);
             log.info("Total de registros (desde ultima extracao): {}", totalDesdeUltimaExtracao);
@@ -126,7 +126,7 @@ public class ValidacaoManifestosUseCase {
             );
         } else {
             System.out.println("Nao foi possivel comparar - nenhuma extracao encontrada no log.");
-            System.out.println("Total no banco (ultimas 24h): " + totalUltimas24h);
+            System.out.println("Total no banco (janela operacional recente): " + totalUltimas24h);
             System.out.println("Total no banco (todos): " + totalBanco);
         }
         log.console("");
@@ -207,7 +207,7 @@ public class ValidacaoManifestosUseCase {
                                   final int totalUltimas24h,
                                   final int totalDesdeUltimaExtracao) {
         System.out.println("Registros no log_extracoes (ultima execucao): " + registrosExtraidos);
-        System.out.println("Registros no banco (ultimas 24h): " + totalUltimas24h);
+        System.out.println("Registros no banco (janela operacional recente): " + totalUltimas24h);
         if (timestampFim != null) {
             System.out.println("Registros no banco (desde ultima extracao): " + totalDesdeUltimaExtracao);
         }
@@ -236,9 +236,9 @@ public class ValidacaoManifestosUseCase {
             if (totalDesdeUltimaExtracao >= 0) {
                 return new Comparacao(registrosExtraidos - totalDesdeUltimaExtracao, "desde ultima extracao");
             }
-            return new Comparacao(registrosExtraidos - totalUltimas24h, "ultimas 24h");
+            return new Comparacao(registrosExtraidos - totalUltimas24h, "janela operacional recente");
         }
-        return new Comparacao(registrosExtraidos - totalUltimas24h, "ultimas 24h");
+        return new Comparacao(registrosExtraidos - totalUltimas24h, "janela operacional recente");
     }
 
     private void exibirResultadoComparacao(final int registrosExtraidos,
@@ -263,7 +263,7 @@ public class ValidacaoManifestosUseCase {
             if (timestampFim != null) {
                 System.out.println("   Encontrado no banco (desde ultima extracao): " + totalDesdeUltimaExtracao);
             }
-            System.out.println("   Encontrado no banco (ultimas 24h): " + totalUltimas24h);
+            System.out.println("   Encontrado no banco (janela operacional recente): " + totalUltimas24h);
             log.console("");
             System.out.println("Interpretacao:");
             System.out.println("   - Se o log e antigo: normal, duplicados podem ter sido removidos");
@@ -284,7 +284,7 @@ public class ValidacaoManifestosUseCase {
         if (timestampFim != null) {
             System.out.println("   Encontrado no banco (desde ultima extracao): " + totalDesdeUltimaExtracao);
         }
-        System.out.println("   Encontrado no banco (ultimas 24h): " + totalUltimas24h);
+        System.out.println("   Encontrado no banco (janela operacional recente): " + totalUltimas24h);
         log.console("");
         System.out.println("Possiveis causas:");
         System.out.println("   - execucoes anteriores adicionaram registros");
@@ -403,7 +403,7 @@ public class ValidacaoManifestosUseCase {
                     FROM manifestos
                     WHERE data_extracao >= DATEADD(HOUR, -24, GETDATE())""")) {
             if (rs.next()) {
-                System.out.println("Analise de data_extracao (ultimas 24h):");
+                System.out.println("Analise de data_extracao (janela operacional recente):");
                 System.out.println("   Data minima: " + valorOuPadrao(rs.getString("data_minima")));
                 System.out.println("   Data maxima: " + valorOuPadrao(rs.getString("data_maxima")));
                 System.out.println("   Total: " + rs.getInt("total"));
@@ -450,7 +450,7 @@ public class ValidacaoManifestosUseCase {
                                    final int registrosComPickNull) {
         System.out.println("RESUMO FINAL:");
         log.console("");
-        System.out.println("Total no banco (ultimas 24h): " + totalUltimas24h);
+        System.out.println("Total no banco (janela operacional recente): " + totalUltimas24h);
         if (timestampFim != null && totalDesdeUltimaExtracao > 0) {
             System.out.println("Total no banco (desde ultima extracao): " + totalDesdeUltimaExtracao);
         }
@@ -460,7 +460,7 @@ public class ValidacaoManifestosUseCase {
             if (timestampFim != null && totalDesdeUltimaExtracao > 0) {
                 System.out.println("Diferenca (desde ultima extracao): " + (registrosExtraidos - totalDesdeUltimaExtracao));
             }
-            System.out.println("Diferenca (ultimas 24h): " + (registrosExtraidos - totalUltimas24h));
+            System.out.println("Diferenca (janela operacional recente): " + (registrosExtraidos - totalUltimas24h));
         }
         System.out.println("Duplicados por sequence_code: " + duplicadosCount);
         if (temIdentificadorUnico) {

@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +40,7 @@ import br.com.extrator.suporte.validacao.ConstantesEntidades;
 public class IntegridadeEtlValidator {
 
     private static final Logger logger = LoggerFactory.getLogger(IntegridadeEtlValidator.class);
+    private static final Pattern PADRAO_METRICA_LOG = Pattern.compile("\\b%s=(-?\\d+)\\b");
     private static final Map<String, IntegridadeEtlSpec> SPECS = IntegridadeEtlSpecCatalog.carregarSpecs();
     private final IntegridadeEtlSqlSupport sqlSupport = new IntegridadeEtlSqlSupport();
 
@@ -106,20 +109,24 @@ public class IntegridadeEtlValidator {
                     continue;
                 }
 
+                final Integer esperadoPersistido = extrairNumeroCampoMensagem(logEntidade.mensagem(), "db_persisted");
+                final int origemEsperada = esperadoPersistido != null
+                    ? esperadoPersistido
+                    : logEntidade.registrosExtraidos();
                 final int totalBanco = contarRegistrosNoIntervalo(
                     conexao, spec, logEntidade.inicio(), logEntidade.fim()
                 );
-                if (totalBanco != logEntidade.registrosExtraidos()) {
+                if (totalBanco != origemEsperada) {
                     registrarFalha(falhas, "DIVERGENCIA_CONTAGEM",
                         String.format("Entidade '%s': origem=%d, destino=%d (janela %s ate %s).",
                             entidade,
-                            logEntidade.registrosExtraidos(),
+                            origemEsperada,
                             totalBanco,
                             logEntidade.inicio(),
                             logEntidade.fim()));
                 } else {
                     registrarEventoInfo("CONTAGEM_OK", entidade,
-                        "origem=" + logEntidade.registrosExtraidos() + ", destino=" + totalBanco);
+                        "origem=" + origemEsperada + ", destino=" + totalBanco);
                 }
 
                 final int chavesNulas = contarChavesNulas(conexao, spec, logEntidade.inicio(), logEntidade.fim());
@@ -144,6 +151,22 @@ public class IntegridadeEtlValidator {
         }
 
         return new ResultadoValidacao(falhas.isEmpty(), falhas);
+    }
+
+    private Integer extrairNumeroCampoMensagem(final String mensagem, final String campo) {
+        if (mensagem == null || mensagem.isBlank() || campo == null || campo.isBlank()) {
+            return null;
+        }
+        final Pattern pattern = Pattern.compile(PADRAO_METRICA_LOG.pattern().formatted(Pattern.quote(campo)));
+        final Matcher matcher = pattern.matcher(mensagem);
+        if (!matcher.find()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(matcher.group(1));
+        } catch (final NumberFormatException e) {
+            return null;
+        }
     }
 
     private void validarSchema(final Connection conexao,
