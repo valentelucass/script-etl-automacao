@@ -74,6 +74,7 @@ class IsolatedStepProcessExecutorTest {
         assertTrue(comando.contains("-DETL_GRAPHQL_TIMEOUT_ENTIDADE_FRETES_MS=900000"));
         assertTrue(comando.contains("-DETL_GRAPHQL_TIMEOUT_ENTIDADE_USUARIOS_SISTEMA_MS=5400000"));
         assertTrue(comando.contains("-DETL_REFERENCIAL_COLETAS_BACKFILL_MAX_EXPANSAO_DIAS=400"));
+        assertTrue(comando.contains("-Dextrator.logger.console.mirror=true"));
         assertFalse(comando.contains("-Detl.process.isolation.enabled=true"));
     }
 

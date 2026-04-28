@@ -28,6 +28,7 @@ package br.com.extrator.bootstrap.pipeline;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.nio.file.Path;
 import java.util.Locale;
 
 import br.com.extrator.integracao.dataexport.services.DataExportExtractionService;
@@ -60,13 +61,16 @@ public final class DataExportGatewayAdapter implements DataExportGateway {
         final boolean usarIsolamento = !ConfigEtl.isProcessoFilhoIsolado()
             && (ConfigEtl.isIsolamentoProcessoAtivo() || forcarIsolamentoNoDaemon);
         final Long childPid;
+        final Path childLogFile;
         if (usarIsolamento) {
             final IsolatedStepProcessExecutor.ProcessExecutionResult processResult =
                 isolatedExecutor.executar(ApiType.DATAEXPORT, dataInicio, dataFim, filtroEntidade, resolverTimeoutIsolado(filtroEntidade));
             childPid = processResult.pid();
+            childLogFile = processResult.logFile();
         } else {
             service.executar(dataInicio, dataFim, filtroEntidade);
             childPid = null;
+            childLogFile = null;
         }
         final String entidadeExecucao = filtroEntidade == null ? "dataexport" : filtroEntidade;
         return StepExecutionResult.builder("dataexport:" + entidadeExecucao, entidadeExecucao)
@@ -78,6 +82,7 @@ public final class DataExportGatewayAdapter implements DataExportGateway {
             .metadata("execution_mode", usarIsolamento ? "isolated_process" : "in_process")
             .metadata("forced_by_daemon", forcarIsolamentoNoDaemon)
             .metadata("child_pid", childPid)
+            .metadata("child_log_file", childLogFile == null ? null : childLogFile.toString())
             .build();
     }
 

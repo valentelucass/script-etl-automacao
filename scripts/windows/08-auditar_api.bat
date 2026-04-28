@@ -3,6 +3,7 @@ setlocal enableextensions
 set "SCRIPT_DIR=%~dp0"
 for %%I in ("%SCRIPT_DIR%.") do set "SCRIPT_DIR=%%~fI"
 for %%I in ("%SCRIPT_DIR%\..\..") do set "REPO_ROOT=%%~fI"
+set "JAVA_BASE_OPTS=--enable-native-access=ALL-UNNAMED -DETL_BASE_DIR=%REPO_ROOT% -Detl.base.dir=%REPO_ROOT%"
 if not defined JAR_PATH set "JAR_PATH=%REPO_ROOT%\target\extrator.jar"
 if not defined MVN_CMD set "MVN_CMD=%REPO_ROOT%\mvn.bat"
 REM ==[DOC-FILE]===============================================================
@@ -106,7 +107,7 @@ if errorlevel 1 exit /b 1
 echo Executando auditor...
 echo.
 
-java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --auditar-api
+java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --auditar-api
 set "EXITCODE=%ERRORLEVEL%"
 
 if %EXITCODE% NEQ 0 (
@@ -137,7 +138,7 @@ exit /b 0
 if /i "%EXTRATOR_SKIP_AUTH_CHECK%"=="1" exit /b 0
 echo.
 echo Autenticacao obrigatoria para executar esta acao.
-java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --auth-check %~1 "%~2"
+java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --auth-check %~1 "%~2"
 if errorlevel 1 (
     echo Acesso negado.
     echo.

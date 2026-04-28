@@ -95,6 +95,21 @@ class ExecutionWindowPlannerTest {
     }
 
     @Test
+    void deveLimitarConsultaDeFaturasGraphqlMesmoComWatermarkAntigo() {
+        final LocalDateTime watermark = LocalDateTime.of(2026, 3, 1, 5, 30);
+        final ExecutionWindowPlanner planner = new ExecutionWindowPlanner(new StubExecutionAuditPort(watermark));
+
+        final ExecutionWindowPlan plano = planner.planejarEntidade(
+            ConstantesEntidades.FATURAS_GRAPHQL,
+            LocalDate.of(2026, 3, 25)
+        );
+
+        assertEquals(LocalDate.of(2026, 3, 24), plano.consultaDataInicio());
+        assertEquals(LocalDate.of(2026, 3, 25), plano.consultaDataFim());
+        assertEquals(watermark, plano.confirmacaoInicio());
+    }
+
+    @Test
     void deveFalharQuandoEntidadeNaoPossuirStrategyRegistrada() {
         final ExecutionWindowPlanner planner = new ExecutionWindowPlanner(new StubExecutionAuditPort());
 

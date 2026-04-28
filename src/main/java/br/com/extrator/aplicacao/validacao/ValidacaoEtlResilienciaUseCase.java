@@ -28,6 +28,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -263,6 +264,7 @@ public class ValidacaoEtlResilienciaUseCase {
 
     private ScenarioResult executarHttpHalfOpen() throws Exception {
         final AtomicInteger conexoesAceitas = new AtomicInteger();
+        final CountDownLatch conexaoAceita = new CountDownLatch(1);
         final List<Socket> socketsAbertos = Collections.synchronizedList(new ArrayList<>());
         final long inicio = System.nanoTime();
 
@@ -273,6 +275,7 @@ public class ValidacaoEtlResilienciaUseCase {
                         final Socket socket = serverSocket.accept();
                         conexoesAceitas.incrementAndGet();
                         socketsAbertos.add(socket);
+                        conexaoAceita.countDown();
                     } catch (final IOException ignored) {
                         return;
                     }
@@ -299,11 +302,12 @@ public class ValidacaoEtlResilienciaUseCase {
             }
 
             final long duracaoMs = Duration.ofNanos(System.nanoTime() - inicio).toMillis();
+            final boolean registrouConexao = conexoesAceitas.get() >= 1 || conexaoAceita.await(300, TimeUnit.MILLISECONDS);
             final Throwable causaRaiz = rootCause(erroCapturado);
             final boolean passou = erroCapturado != null
                 && causaRaiz instanceof HttpTimeoutException
                 && duracaoMs < 1_500L
-                && conexoesAceitas.get() >= 1;
+                && registrouConexao;
 
             return new ScenarioResult(
                 "HTTP_HALF_OPEN",
@@ -319,6 +323,7 @@ public class ValidacaoEtlResilienciaUseCase {
                 true,
                 List.of(
                     "conexoes_aceitas=" + conexoesAceitas.get(),
+                    "conexao_registrada=" + registrouConexao,
                     "erro=" + (causaRaiz == null ? "sem_erro" : causaRaiz.getClass().getSimpleName()),
                     "duracao_ms=" + duracaoMs
                 ),

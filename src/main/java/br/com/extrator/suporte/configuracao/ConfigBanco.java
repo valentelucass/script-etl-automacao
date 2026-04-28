@@ -20,6 +20,12 @@ import org.slf4j.LoggerFactory;
 
 public final class ConfigBanco {
     private static final Logger logger = LoggerFactory.getLogger(ConfigBanco.class);
+    private static final int POOL_MAX_SIZE_DEFAULT = 10;
+    private static final int POOL_MIN_IDLE_DEFAULT = 2;
+    private static final long POOL_IDLE_TIMEOUT_DEFAULT = 600_000L;
+    private static final long POOL_CONNECTION_TIMEOUT_DEFAULT = 30_000L;
+    private static final long POOL_MAX_LIFETIME_DEFAULT = 1_800_000L;
+    private static final long POOL_INITIALIZATION_FAIL_TIMEOUT_DEFAULT = 30_000L;
 
     private ConfigBanco() {
     }
@@ -75,6 +81,72 @@ public final class ConfigBanco {
             logger,
             "db.validation.timeout",
             "5"
+        );
+    }
+
+    public static int obterPoolMaximumSize() {
+        return ConfigValueParser.parseInt(
+            ConfigSource.obterConfiguracao("DB_POOL_MAX_SIZE", "db.pool.maximum_size"),
+            POOL_MAX_SIZE_DEFAULT,
+            value -> value > 0,
+            logger,
+            "db.pool.maximum_size",
+            Integer.toString(POOL_MAX_SIZE_DEFAULT)
+        );
+    }
+
+    public static int obterPoolMinimumIdle() {
+        return ConfigValueParser.parseInt(
+            ConfigSource.obterConfiguracao(new String[] { "DB_POOL_MIN_IDLE", "DB_POOL_MIN_SIZE" }, "db.pool.minimum_idle"),
+            POOL_MIN_IDLE_DEFAULT,
+            value -> value >= 0,
+            logger,
+            "db.pool.minimum_idle",
+            Integer.toString(POOL_MIN_IDLE_DEFAULT)
+        );
+    }
+
+    public static long obterPoolIdleTimeoutMs() {
+        return ConfigValueParser.parseLong(
+            ConfigSource.obterConfiguracao("DB_POOL_IDLE_TIMEOUT", "db.pool.idle_timeout_ms"),
+            POOL_IDLE_TIMEOUT_DEFAULT,
+            value -> value >= 0L,
+            logger,
+            "db.pool.idle_timeout_ms",
+            Long.toString(POOL_IDLE_TIMEOUT_DEFAULT)
+        );
+    }
+
+    public static long obterPoolConnectionTimeoutMs() {
+        return ConfigValueParser.parseLong(
+            ConfigSource.obterConfiguracao("DB_POOL_CONN_TIMEOUT", "db.pool.connection_timeout_ms"),
+            POOL_CONNECTION_TIMEOUT_DEFAULT,
+            value -> value > 0L,
+            logger,
+            "db.pool.connection_timeout_ms",
+            Long.toString(POOL_CONNECTION_TIMEOUT_DEFAULT)
+        );
+    }
+
+    public static long obterPoolMaxLifetimeMs() {
+        return ConfigValueParser.parseLong(
+            ConfigSource.obterConfiguracao("DB_POOL_MAX_LIFETIME", "db.pool.max_lifetime_ms"),
+            POOL_MAX_LIFETIME_DEFAULT,
+            value -> value > 0L,
+            logger,
+            "db.pool.max_lifetime_ms",
+            Long.toString(POOL_MAX_LIFETIME_DEFAULT)
+        );
+    }
+
+    public static long obterPoolInitializationFailTimeoutMs() {
+        return ConfigValueParser.parseLong(
+            ConfigSource.obterConfiguracao("DB_POOL_INIT_FAIL_TIMEOUT", "db.pool.initialization_fail_timeout_ms"),
+            POOL_INITIALIZATION_FAIL_TIMEOUT_DEFAULT,
+            value -> value > 0L,
+            logger,
+            "db.pool.initialization_fail_timeout_ms",
+            Long.toString(POOL_INITIALIZATION_FAIL_TIMEOUT_DEFAULT)
         );
     }
 

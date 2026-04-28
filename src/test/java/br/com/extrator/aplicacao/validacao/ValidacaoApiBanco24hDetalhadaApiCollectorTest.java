@@ -27,8 +27,10 @@ import br.com.extrator.integracao.ResultadoExtracao;
 import br.com.extrator.integracao.mapeamento.dataexport.contasapagar.ContasAPagarMapper;
 import br.com.extrator.integracao.mapeamento.dataexport.cotacao.CotacaoMapper;
 import br.com.extrator.integracao.mapeamento.dataexport.faturaporcliente.FaturaPorClienteMapper;
+import br.com.extrator.integracao.mapeamento.dataexport.inventario.InventarioMapper;
 import br.com.extrator.integracao.mapeamento.dataexport.localizacaocarga.LocalizacaoCargaMapper;
 import br.com.extrator.integracao.mapeamento.dataexport.manifestos.ManifestoMapper;
+import br.com.extrator.integracao.mapeamento.dataexport.sinistros.SinistroMapper;
 import br.com.extrator.integracao.mapeamento.graphql.coletas.ColetaMapper;
 import br.com.extrator.integracao.mapeamento.graphql.fretes.FreteMapper;
 import br.com.extrator.integracao.mapeamento.graphql.usuarios.UsuarioSistemaMapper;
@@ -156,6 +158,26 @@ class ValidacaoApiBanco24hDetalhadaApiCollectorTest {
         assertTrue(resultado.detalhe().contains("fretes_origem_janela=EXECUTION_AUDIT"));
     }
 
+    @Test
+    void deveIncluirInventarioESinistrosNaListaPadraoDeEntidadesDetalhadas() {
+        final RecordingClienteApiGraphQL clienteGraphQL = new RecordingClienteApiGraphQL();
+        final ValidacaoApiBanco24hDetalhadaApiCollector collector = novoCollector(clienteGraphQL);
+
+        final List<EntidadeValidacao> entidades = collector.criarEntidades(
+            conexaoQueFalhaSeConsultarDimUsuarios(),
+            LocalDate.of(2026, 4, 23),
+            LocalDate.of(2026, 4, 22),
+            LocalDate.of(2026, 4, 23),
+            true,
+            false,
+            Map.of()
+        );
+
+        final List<String> nomes = entidades.stream().map(EntidadeValidacao::entidade).toList();
+        assertTrue(nomes.contains(ConstantesEntidades.INVENTARIO));
+        assertTrue(nomes.contains(ConstantesEntidades.SINISTROS));
+    }
+
     private ValidacaoApiBanco24hDetalhadaApiCollector novoCollector(final RecordingClienteApiGraphQL clienteGraphQL) {
         return novoCollector(
             clienteGraphQL,
@@ -178,6 +200,8 @@ class ValidacaoApiBanco24hDetalhadaApiCollectorTest {
             new LocalizacaoCargaMapper(),
             new ContasAPagarMapper(),
             new FaturaPorClienteMapper(),
+            new InventarioMapper(),
+            new SinistroMapper(),
             new FreteMapper(),
             new ColetaMapper(),
             new UsuarioSistemaMapper(),

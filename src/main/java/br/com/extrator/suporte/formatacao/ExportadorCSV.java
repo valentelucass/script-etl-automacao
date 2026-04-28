@@ -45,9 +45,11 @@ import br.com.extrator.suporte.console.LoggerConsole;
 
 /**
  * Exportador de dados para CSV
- * Exporta todas as entidades do banco para arquivos CSV
+ * Exporta as entidades finais de dominio e dimensoes operacionais para arquivos CSV.
+ * Tabelas internas de auditoria permanecem disponiveis para exportacao explicita,
+ * mas ficam fora da exportacao padrao.
  * Inclui: Cotacoes, Coletas, Contas a Pagar, Faturas por Cliente, Faturas GraphQL,
- *         Fretes, Manifestos, Localizacao de Cargas, dim_usuarios, page_audit
+ *         Fretes, Manifestos, Localizacao de Cargas, Inventario, Sinistros, dim_usuarios
  */
 public class ExportadorCSV {
     private static final String ENTIDADE_COTACOES = "cotacoes";
@@ -75,8 +77,7 @@ public class ExportadorCSV {
         ENTIDADE_LOCALIZACAO_CARGAS,
         ENTIDADE_INVENTARIO,
         ENTIDADE_SINISTROS,
-        "dim_usuarios",  // Tabela dimensão de usuários do sistema
-        "page_audit"     // Entidade especial de auditoria, não precisa de constante
+        "dim_usuarios"  // Tabela dimensão de usuários do sistema
     };
     
     private static final String PASTA_DESTINO = "runtime/exports";

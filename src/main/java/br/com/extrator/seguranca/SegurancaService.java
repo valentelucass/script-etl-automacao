@@ -63,7 +63,7 @@ public class SegurancaService {
         this.minutosBloqueio = ConfigSeguranca.obterMinutosBloqueio();
     }
 
-    public void autenticarEAutorizar(
+    public UsuarioSeguranca autenticarEAutorizar(
         final String usernameRaw,
         final char[] senha,
         final AcaoSeguranca acao,
@@ -128,6 +128,7 @@ public class SegurancaService {
             true,
             detalhe == null ? acao.getDescricao() : detalhe
         );
+        return usuario;
     }
 
     public void bootstrapAdmin(final String usernameRaw, final String displayName, final char[] senha) {

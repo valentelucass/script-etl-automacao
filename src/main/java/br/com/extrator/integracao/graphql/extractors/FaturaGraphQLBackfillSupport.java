@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import br.com.extrator.integracao.ClienteApiGraphQL;
 import br.com.extrator.persistencia.entidade.FaturaGraphQLEntity;
@@ -49,6 +50,8 @@ final class FaturaGraphQLBackfillSupport {
     }
 
     int executar(final Map<Long, FaturaGraphQLEntity> faturasUnicas,
+                 final Set<Integer> idsBancos,
+                 final Map<Long, Integer> faturaIdParaBancoId,
                  final LocalDate dataInicioExtracao,
                  final LocalDate dataFimExtracao) {
         if (dataInicioExtracao == null || dataFimExtracao == null) {
@@ -86,7 +89,12 @@ final class FaturaGraphQLBackfillSupport {
                 try {
                     final Optional<CreditCustomerBillingNodeDTO> faturaOpt = buscarFaturaPorIdComRetentativa(billingId);
                     if (faturaOpt.isPresent()) {
-                        faturasUnicas.put(billingId, entityMapper.mapear(faturaOpt.get()));
+                        final CreditCustomerBillingNodeDTO dto = faturaOpt.get();
+                        faturasUnicas.put(billingId, entityMapper.mapear(dto));
+                        if (dto.getTicketAccountId() != null) {
+                            idsBancos.add(dto.getTicketAccountId());
+                            faturaIdParaBancoId.put(billingId, dto.getTicketAccountId());
+                        }
                         adicionadas++;
                     } else {
                         naoEncontradas++;

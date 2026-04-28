@@ -25,17 +25,24 @@ Atributos-chave:
 
 package br.com.extrator.comandos.cli.seguranca;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.stream.Collectors;
 
 import br.com.extrator.comandos.cli.base.Comando;
 import br.com.extrator.seguranca.AcaoSeguranca;
 import br.com.extrator.seguranca.SegurancaConsolePrompt;
 import br.com.extrator.seguranca.SegurancaService;
+import br.com.extrator.seguranca.UsuarioSeguranca;
 
 /**
  * Comando para autenticar usuario e autorizar acao sensivel.
  */
 public class AuthCheckComando implements Comando {
+    private static final String ENV_AUTH_CONTEXT_FILE = "EXTRATOR_AUTH_CONTEXT_FILE";
 
     @Override
     public void executar(final String[] args) throws Exception {
@@ -50,7 +57,13 @@ public class AuthCheckComando implements Comando {
         );
         final SegurancaService segurancaService = new SegurancaService();
         try {
-            segurancaService.autenticarEAutorizar(credenciais.usuario(), credenciais.senha(), acao, detalhe);
+            final UsuarioSeguranca usuario = segurancaService.autenticarEAutorizar(
+                credenciais.usuario(),
+                credenciais.senha(),
+                acao,
+                detalhe
+            );
+            gravarContextoSessao(usuario);
         } finally {
             Arrays.fill(credenciais.senha(), '\0');
         }
@@ -69,5 +82,44 @@ public class AuthCheckComando implements Comando {
             sb.append(args[i]);
         }
         return sb.toString();
+    }
+
+    private void gravarContextoSessao(final UsuarioSeguranca usuario) {
+        final String caminho = System.getenv(ENV_AUTH_CONTEXT_FILE);
+        if (caminho == null || caminho.isBlank()) {
+            return;
+        }
+
+        final String acoesPermitidas = Arrays.stream(AcaoSeguranca.values())
+            .filter(acao -> acao.permite(usuario.perfilAcesso()))
+            .map(AcaoSeguranca::name)
+            .collect(Collectors.joining(";"));
+
+        final String conteudo = "username=" + limparValorContexto(usuario.username()) + System.lineSeparator()
+            + "role=" + usuario.perfilAcesso().name() + System.lineSeparator()
+            + "actions=" + acoesPermitidas + System.lineSeparator();
+
+        try {
+            final Path arquivo = Path.of(caminho).toAbsolutePath().normalize();
+            final Path diretorio = arquivo.getParent();
+            if (diretorio != null) {
+                Files.createDirectories(diretorio);
+            }
+            Files.writeString(arquivo, conteudo, StandardCharsets.UTF_8);
+        } catch (final IOException | RuntimeException e) {
+            System.err.println("Aviso: nao foi possivel gravar contexto de sessao: " + e.getMessage());
+        }
+    }
+
+    private String limparValorContexto(final String valor) {
+        if (valor == null) {
+            return "";
+        }
+        return valor
+            .replace('\r', ' ')
+            .replace('\n', ' ')
+            .replace('=', '_')
+            .replace(';', '_')
+            .trim();
     }
 }

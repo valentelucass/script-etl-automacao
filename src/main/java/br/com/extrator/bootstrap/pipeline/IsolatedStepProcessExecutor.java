@@ -17,16 +17,20 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-import br.com.extrator.observabilidade.LogRetentionPolicy;
 import br.com.extrator.observabilidade.LogStoragePaths;
+import br.com.extrator.observabilidade.LogRetentionPolicy;
+import br.com.extrator.plataforma.auditoria.dominio.ExecutionPlanContext;
 import br.com.extrator.suporte.concorrencia.ExecutionTimeoutException;
 import br.com.extrator.suporte.configuracao.ConfigEtl;
+import br.com.extrator.suporte.console.LoggerConsole;
 import br.com.extrator.suporte.observabilidade.ExecutionContext;
 
 public class IsolatedStepProcessExecutor {
     private static final DateTimeFormatter FILE_TS = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
     private static final String MAIN_CLASS_NAME = "br.com.extrator.bootstrap.Main";
     private static final String CHILD_PROCESS_PROPERTY = "etl.process.isolated.child";
+    private static final long HEARTBEAT_INTERVAL_MS = 30_000L;
+    private static final LoggerConsole log = LoggerConsole.getLogger(IsolatedStepProcessExecutor.class);
 
     public ProcessExecutionResult executar(final ApiType apiType,
                                            final LocalDate dataInicio,
@@ -60,15 +64,20 @@ public class IsolatedStepProcessExecutor {
         final Path logFile = criarArquivoLog(apiType, entidade, faultMode);
         final List<String> comando = construirComando(apiType, dataInicio, dataFim, entidade, faultMode);
         final ProcessBuilder processBuilder = new ProcessBuilder(comando);
-        processBuilder.directory(Path.of(System.getProperty("user.dir")).toFile());
+        processBuilder.directory(LogStoragePaths.PROJECT_ROOT.toFile());
         processBuilder.redirectOutput(logFile.toFile());
         processBuilder.redirectError(logFile.toFile());
 
         final Process process = processBuilder.start();
+        final Thread shutdownHook = criarShutdownHook(process, apiType, entidade);
+        final boolean shutdownHookRegistrado = registrarShutdownHook(shutdownHook);
         final Duration timeoutAplicado = timeout == null || timeout.isNegative() || timeout.isZero()
             ? resolverTimeoutPadrao(apiType, entidade)
             : timeout;
+        final long inicioNanos = System.nanoTime();
         final long deadlineNanos = System.nanoTime() + timeoutAplicado.toNanos();
+        long proximoHeartbeatNanos = inicioNanos
+            + java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(HEARTBEAT_INTERVAL_MS);
         try {
             while (true) {
                 try {
@@ -80,7 +89,9 @@ public class IsolatedStepProcessExecutor {
                                 + apiType.name().toLowerCase(Locale.ROOT)
                                 + " excedeu timeout de "
                                 + timeoutAplicado.toMillis()
-                                + " ms. Ultimas linhas: "
+                                + " ms. Log: "
+                                + logFile.toAbsolutePath()
+                                + ". Ultimas linhas: "
                                 + lerTail(logFile)
                         );
                     }
@@ -90,6 +101,18 @@ public class IsolatedStepProcessExecutor {
                     );
                     if (process.waitFor(esperaAtualMs, java.util.concurrent.TimeUnit.MILLISECONDS)) {
                         break;
+                    }
+                    final long agoraNanos = System.nanoTime();
+                    if (agoraNanos >= proximoHeartbeatNanos) {
+                        log.console(
+                            "[INFO] Step isolado {}:{} em andamento ha {} min. Log runtime: {}",
+                            apiType.name().toLowerCase(Locale.ROOT),
+                            entidade == null || entidade.isBlank() ? "all" : entidade,
+                            Math.max(1L, java.util.concurrent.TimeUnit.NANOSECONDS.toMinutes(agoraNanos - inicioNanos)),
+                            LogStoragePaths.APP_RUNTIME_DIR.resolve("extrator-esl.log").toAbsolutePath()
+                        );
+                        proximoHeartbeatNanos = agoraNanos
+                            + java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(HEARTBEAT_INTERVAL_MS);
                     }
                 } catch (final InterruptedException e) {
                     destruirProcesso(process);
@@ -102,6 +125,7 @@ public class IsolatedStepProcessExecutor {
                 throw new IllegalStateException(
                     "Processo isolado " + apiType.name().toLowerCase(Locale.ROOT)
                         + " falhou com exit_code=" + exitCode
+                        + " | log=" + logFile.toAbsolutePath()
                         + ". Ultimas linhas: " + lerTail(logFile)
                 );
             }
@@ -109,6 +133,9 @@ public class IsolatedStepProcessExecutor {
         } finally {
             if (process.isAlive()) {
                 destruirProcesso(process);
+            }
+            if (shutdownHookRegistrado) {
+                removerShutdownHook(shutdownHook);
             }
         }
     }
@@ -123,7 +150,9 @@ public class IsolatedStepProcessExecutor {
         comando.add("-Dfile.encoding=UTF-8");
         comando.add("-Dsun.stdout.encoding=UTF-8");
         comando.add("-Dsun.stderr.encoding=UTF-8");
-        comando.add("-Dextrator.logger.console.mirror=false");
+        comando.add("-DETL_BASE_DIR=" + LogStoragePaths.PROJECT_ROOT);
+        comando.add("-Detl.base.dir=" + LogStoragePaths.PROJECT_ROOT);
+        comando.add("-Dextrator.logger.console.mirror=true");
         comando.add("-Detl.process.isolation.enabled=false");
         comando.add("-D" + CHILD_PROCESS_PROPERTY + "=true");
         comando.add("-Detl.parent.execution.id=" + ExecutionContext.currentExecutionId());
@@ -134,6 +163,7 @@ public class IsolatedStepProcessExecutor {
             comando.add("-Detl.parent.retry.max_attempts=" + ExecutionContext.currentRetryMaxAttempts());
         }
         adicionarSystemPropertiesConfiguracao(comando);
+        adicionarPlanosExecucao(comando);
 
         final Path jarAtual = resolverJarAtual();
         if (jarAtual != null && Files.exists(jarAtual)) {
@@ -216,6 +246,7 @@ public class IsolatedStepProcessExecutor {
             ? "all"
             : entidade.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-");
         final String nomeFault = faultMode == null ? FaultMode.NONE.cliValue() : faultMode.cliValue();
+        final String sufixoExecucao = resolverSufixoExecucaoArquivo();
         final Path arquivo = dir.resolve(
             "isolated_step_"
                 + apiType.name().toLowerCase(Locale.ROOT)
@@ -223,6 +254,7 @@ public class IsolatedStepProcessExecutor {
                 + nomeEntidade
                 + "_"
                 + nomeFault
+                + sufixoExecucao
                 + "_"
                 + FILE_TS.format(LocalDateTime.now())
                 + ".log"
@@ -239,6 +271,36 @@ public class IsolatedStepProcessExecutor {
         return arquivo;
     }
 
+    private Thread criarShutdownHook(final Process process, final ApiType apiType, final String entidade) {
+        return new Thread(() -> {
+            if (process != null && process.isAlive()) {
+                log.console(
+                    "[AVISO] Encerrando processo isolado {}:{} junto com a execucao principal.",
+                    apiType.name().toLowerCase(Locale.ROOT),
+                    entidade == null || entidade.isBlank() ? "all" : entidade
+                );
+                destruirProcesso(process);
+            }
+        }, "isolated-step-shutdown-" + (process == null ? "unknown" : process.pid()));
+    }
+
+    private boolean registrarShutdownHook(final Thread shutdownHook) {
+        try {
+            Runtime.getRuntime().addShutdownHook(shutdownHook);
+            return true;
+        } catch (final IllegalStateException e) {
+            return false;
+        }
+    }
+
+    private void removerShutdownHook(final Thread shutdownHook) {
+        try {
+            Runtime.getRuntime().removeShutdownHook(shutdownHook);
+        } catch (final IllegalStateException ignored) {
+            // JVM ja esta em shutdown; o hook cuidara do encerramento do filho.
+        }
+    }
+
     private void destruirProcesso(final Process process) {
         process.descendants().forEach(ProcessHandle::destroyForcibly);
         process.destroy();
@@ -253,6 +315,11 @@ public class IsolatedStepProcessExecutor {
             process.destroyForcibly();
             Thread.currentThread().interrupt();
         }
+    }
+
+    private void adicionarPlanosExecucao(final List<String> comando) {
+        ExecutionPlanContext.exportarSystemProperties()
+            .forEach((chave, valor) -> comando.add("-D" + chave + "=" + valor));
     }
 
     private String lerTail(final Path logFile) {
@@ -399,6 +466,30 @@ public class IsolatedStepProcessExecutor {
             return ConfigEtl.obterTimeoutStepGraphQLCompleto();
         }
         return ConfigEtl.obterTimeoutEntidadeGraphQL(entidade);
+    }
+
+    private String resolverSufixoExecucaoArquivo() {
+        final String executionId = sanitizarComponenteArquivo(ExecutionContext.currentExecutionId());
+        final String cycleId = sanitizarComponenteArquivo(ExecutionContext.currentCycleId());
+        final StringBuilder sufixo = new StringBuilder();
+        if (!executionId.isBlank()) {
+            sufixo.append("_exec_").append(executionId);
+        }
+        if (!cycleId.isBlank()) {
+            sufixo.append("_cycle_").append(cycleId);
+        }
+        return sufixo.toString();
+    }
+
+    private String sanitizarComponenteArquivo(final String valor) {
+        if (valor == null || valor.isBlank() || "n/a".equalsIgnoreCase(valor)) {
+            return "";
+        }
+        return valor
+            .toLowerCase(Locale.ROOT)
+            .replaceAll("[^a-z0-9_-]", "-")
+            .replaceAll("-+", "-")
+            .replaceAll("^-|-$", "");
     }
 
     public enum ApiType {

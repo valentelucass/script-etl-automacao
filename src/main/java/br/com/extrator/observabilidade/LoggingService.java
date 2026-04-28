@@ -56,10 +56,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import br.com.extrator.suporte.observabilidade.ExecutionContext;
 import br.com.extrator.suporte.tempo.RelogioSistema;
 
 /**
@@ -72,6 +75,7 @@ public class LoggingService {
     private static final DateTimeFormatter FORMATTER_LOG = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final String SEPARADOR = "=".repeat(80);
     private static final String SEPARADOR_SECAO = "-".repeat(80);
+    private static final int MAX_RUNTIME_SUMMARY_LINES = 80;
     
     private PrintStream originalOut;
     private PrintStream originalErr;
@@ -117,6 +121,7 @@ public class LoggingService {
         System.out.println("Operacao: " + nomeOperacao);
         System.out.println("Data/Hora de Inicio: " + inicioOperacao.format(FORMATTER_LOG));
         System.out.println("Diretorio de Logs: " + LogStoragePaths.APP_OPERATIONS_DIR.toAbsolutePath());
+        System.out.println("Log runtime detalhado: " + caminhoLogRuntime().toAbsolutePath());
         System.out.println(SEPARADOR_SECAO);
         System.out.println();
     }
@@ -161,13 +166,20 @@ public class LoggingService {
         System.out.println("Duracao Total: " + formatarDuracao(duracao));
         System.out.println("Status final: " + (statusNormalizado.isEmpty() ? "DESCONHECIDO" : statusNormalizado));
         System.out.println();
+
+        if (teeOut != null) {
+            teeOut.flush();
+        }
+        if (teeErr != null) {
+            teeErr.flush();
+        }
         
         // Restaurar streams originais
         System.setOut(originalOut);
         System.setErr(originalErr);
         
         // Salvar logs em arquivo
-        salvarLogsEmArquivo(fimOperacao, duracao);
+        salvarLogsEmArquivo(fimOperacao, duracao, statusNormalizado);
         
         // Limpar recursos
         try {
@@ -193,7 +205,11 @@ public class LoggingService {
     /**
      * Salva os logs capturados em um arquivo
      */
-    private void salvarLogsEmArquivo(final LocalDateTime fimOperacao, final java.time.Duration duracao) {
+    private void salvarLogsEmArquivo(
+        final LocalDateTime fimOperacao,
+        final java.time.Duration duracao,
+        final String statusNormalizado
+    ) {
         try {
             final String nomeArquivo = gerarNomeArquivoLog();
             final Path caminhoArquivo = LogStoragePaths.APP_OPERATIONS_DIR.resolve(nomeArquivo);
@@ -209,7 +225,11 @@ public class LoggingService {
             conteudoLog.append("Data/Hora de Inicio: ").append(inicioOperacao.format(FORMATTER_LOG)).append("\n");
             conteudoLog.append("Data/Hora de Fim: ").append(fimOperacao.format(FORMATTER_LOG)).append("\n");
             conteudoLog.append("Duracao Total: ").append(formatarDuracao(duracao)).append("\n");
+            conteudoLog.append("Status final: ")
+                .append(statusNormalizado == null || statusNormalizado.isBlank() ? "DESCONHECIDO" : statusNormalizado)
+                .append("\n");
             conteudoLog.append("Arquivo: ").append(nomeArquivo).append("\n");
+            conteudoLog.append("Log runtime detalhado: ").append(caminhoLogRuntime().toAbsolutePath()).append("\n");
             conteudoLog.append(SEPARADOR_SECAO).append("\n");
             conteudoLog.append("\n");
             
@@ -224,6 +244,15 @@ public class LoggingService {
             conteudoLog.append("   - Total de linhas: ").append(formatarNumero(totalLinhas)).append("\n");
             conteudoLog.append(SEPARADOR_SECAO).append("\n");
             conteudoLog.append("\n");
+
+            final String resumoRuntime = capturarResumoRuntimeAtual(MAX_RUNTIME_SUMMARY_LINES);
+            if (!resumoRuntime.isBlank()) {
+                conteudoLog.append(SEPARADOR).append("\n");
+                conteudoLog.append("RESUMO DO LOG RUNTIME (ultimas linhas desta execucao)\n");
+                conteudoLog.append(SEPARADOR).append("\n");
+                conteudoLog.append("\n");
+                conteudoLog.append(resumoRuntime).append("\n\n");
+            }
             
             // Saída padrão (System.out)
             if (tamanhoOutput > 0) {
@@ -331,8 +360,52 @@ public class LoggingService {
                 .replaceAll("[^a-z0-9]", "_")
                 .replaceAll("_+", "_")
                 .replaceAll("^_|_$", "");
-        
-        return String.format("%s_%s.log", operacaoLimpa, timestamp);
+        final String executionId = sanitizarComponenteArquivo(ExecutionContext.currentExecutionId());
+        final String cycleId = sanitizarComponenteArquivo(ExecutionContext.currentCycleId());
+
+        final StringBuilder nome = new StringBuilder(operacaoLimpa);
+        if (!"na".equals(executionId)) {
+            nome.append("_exec_").append(executionId);
+        }
+        if (!"na".equals(cycleId)) {
+            nome.append("_cycle_").append(cycleId);
+        }
+        nome.append('_').append(timestamp).append(".log");
+        return nome.toString();
+    }
+
+    private Path caminhoLogRuntime() {
+        return LogStoragePaths.APP_RUNTIME_DIR.resolve("extrator-esl.log");
+    }
+
+    private String capturarResumoRuntimeAtual(final int maxLines) {
+        final String executionId = ExecutionContext.currentExecutionId();
+        if (executionId == null || executionId.isBlank() || "n/a".equalsIgnoreCase(executionId)) {
+            return "";
+        }
+
+        final Path runtimeLog = caminhoLogRuntime();
+        if (!Files.exists(runtimeLog)) {
+            return "";
+        }
+
+        final String executionMarker = "[exec:" + executionId + "]";
+        final Deque<String> linhas = new ArrayDeque<>();
+
+        try (var stream = Files.lines(runtimeLog, StandardCharsets.UTF_8)) {
+            stream
+                .filter(line -> line.contains(executionMarker))
+                .forEach(line -> {
+                    linhas.addLast(line);
+                    while (linhas.size() > maxLines) {
+                        linhas.removeFirst();
+                    }
+                });
+        } catch (final IOException e) {
+            logger.warn("Nao foi possivel anexar resumo do runtime ao log operacional: {}", e.getMessage());
+        }
+
+        return String.join(System.lineSeparator(), linhas);
     }
     
     /**
@@ -408,7 +481,7 @@ public class LoggingService {
     public static void organizarLogsTxtNaPastaLogs() {
         try {
             LogStoragePaths.ensureBaseDirectories();
-            try (var arquivos = Files.list(Path.of("."))) {
+            try (var arquivos = Files.list(LogStoragePaths.PROJECT_ROOT)) {
                 for (final Path arquivo : arquivos.toList()) {
                     if (!Files.isRegularFile(arquivo)) {
                         continue;
@@ -443,5 +516,16 @@ public class LoggingService {
         } catch (final IOException | SecurityException e) {
             logger.warn("Não foi possível organizar artefatos operacionais: {}", e.getMessage());
         }
+    }
+
+    private String sanitizarComponenteArquivo(final String value) {
+        if (value == null || value.isBlank() || "n/a".equalsIgnoreCase(value)) {
+            return "na";
+        }
+        return value
+            .toLowerCase()
+            .replaceAll("[^a-z0-9_-]", "-")
+            .replaceAll("-+", "-")
+            .replaceAll("^-|-$", "");
     }
 }

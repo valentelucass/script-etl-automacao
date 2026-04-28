@@ -27,7 +27,10 @@ import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import br.com.extrator.plataforma.auditoria.dominio.ExecutionPlanContext;
+import br.com.extrator.plataforma.auditoria.dominio.ExecutionWindowPlan;
 import br.com.extrator.suporte.banco.GerenciadorConexao;
+import br.com.extrator.suporte.observabilidade.ExecutionContext;
 
 public final class SqlServerDataQualityQueryAdapter implements DataQualityQueryPort {
     private static final Logger logger = LoggerFactory.getLogger(SqlServerDataQualityQueryAdapter.class);
@@ -64,7 +67,14 @@ public final class SqlServerDataQualityQueryAdapter implements DataQualityQueryP
 
     @Override
     public long contarLinhasIncompletas(final String entidade, final LocalDate dataInicio, final LocalDate dataFim) {
-        final MessagePatterns patterns = MessagePatterns.of(dataInicio, dataFim);
+        final String normalized = normalize(entidade);
+        final Long incompletosExecucaoAtual = contarIncompletudeDaExecucaoAtual(normalized);
+        if (incompletosExecucaoAtual != null) {
+            return incompletosExecucaoAtual.longValue();
+        }
+
+        final ExecutionWindow window = resolverJanelaConsulta(normalized, dataInicio, dataFim);
+        final MessagePatterns patterns = MessagePatterns.of(window.inicio(), window.fim());
         final String sql = """
             WITH latest_run AS (
                 SELECT TOP 1 status_final
@@ -80,7 +90,7 @@ public final class SqlServerDataQualityQueryAdapter implements DataQualityQueryP
             END
             """;
         return queryLong(sql, ps -> {
-            ps.setString(1, normalize(entidade));
+            ps.setString(1, normalized);
             ps.setString(2, patterns.primary());
             ps.setString(3, patterns.secondary());
         });
@@ -194,8 +204,78 @@ public final class SqlServerDataQualityQueryAdapter implements DataQualityQueryP
         return 0L;
     }
 
+    private Long queryNullableLong(final String sql, final SqlBinder binder) {
+        try (Connection connection = connectionProvider.get();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            binder.bind(statement);
+            try (ResultSet rs = statement.executeQuery()) {
+                if (rs.next()) {
+                    final long value = rs.getLong(1);
+                    return rs.wasNull() ? null : value;
+                }
+            }
+        } catch (SQLException e) {
+            logger.warn("Falha em query de data quality: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    private Long contarIncompletudeDaExecucaoAtual(final String entidade) {
+        final String executionUuid = ExecutionContext.currentExecutionId();
+        if (executionUuid == null || executionUuid.isBlank() || "n/a".equalsIgnoreCase(executionUuid)) {
+            return null;
+        }
+
+        final String sql = """
+            IF OBJECT_ID(N'dbo.sys_execution_audit', N'U') IS NULL
+            BEGIN
+                SELECT CAST(NULL AS BIGINT);
+            END
+            ELSE
+            BEGIN
+                WITH current_run AS (
+                    SELECT TOP 1 status_execucao, api_completa, api_total_unico, db_persistidos, invalid_count
+                    FROM dbo.sys_execution_audit
+                    WHERE execution_uuid = ?
+                      AND entidade = ?
+                    ORDER BY updated_at DESC, finished_at DESC, started_at DESC
+                )
+                SELECT CASE
+                    WHEN NOT EXISTS (SELECT 1 FROM current_run) THEN CAST(NULL AS BIGINT)
+                    WHEN EXISTS (
+                        SELECT 1
+                        FROM current_run
+                        WHERE status_execucao <> 'COMPLETO'
+                           OR api_completa = 0
+                           OR db_persistidos < api_total_unico
+                           OR invalid_count > 0
+                    ) THEN CAST(1 AS BIGINT)
+                    ELSE CAST(0 AS BIGINT)
+                END
+            END
+            """;
+        return queryNullableLong(sql, ps -> {
+            ps.setString(1, executionUuid);
+            ps.setString(2, entidade);
+        });
+    }
+
+    private ExecutionWindow resolverJanelaConsulta(final String entidade, final LocalDate dataInicio, final LocalDate dataFim) {
+        final ExecutionWindowPlan plano = ExecutionPlanContext.getPlano(entidade).orElse(null);
+        if (plano != null) {
+            return new ExecutionWindow(plano.consultaDataInicio(), plano.consultaDataFim());
+        }
+
+        final LocalDate inicio = dataInicio;
+        final LocalDate fim = dataFim == null ? dataInicio : dataFim;
+        return new ExecutionWindow(inicio, fim);
+    }
+
     private String normalize(final String entidade) {
         return entidade == null ? "" : entidade.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private record ExecutionWindow(LocalDate inicio, LocalDate fim) {
     }
 
     private record MessagePatterns(String primary, String secondary) {

@@ -78,6 +78,12 @@ final class ValidacaoApiBanco24hDetalhadaComparator {
     private static final double LIMIAR_FATURAS_POR_CLIENTE_VARIACAO_PERCENTUAL_ABERTO = 0.10d;
     private static final int LIMIAR_FATURAS_POR_CLIENTE_DIVERGENCIA_ABSOLUTO_ABERTO = 60;
     private static final double LIMIAR_FATURAS_POR_CLIENTE_DIVERGENCIA_PERCENTUAL_ABERTO = 0.04d;
+    private static final int LIMIAR_INVENTARIO_VARIACAO_ABSOLUTO_ABERTO = 20;
+    private static final double LIMIAR_INVENTARIO_VARIACAO_PERCENTUAL_ABERTO = 0.01d;
+    private static final int LIMIAR_INVENTARIO_DIVERGENCIA_ABSOLUTO_ABERTO = 30;
+    private static final double LIMIAR_INVENTARIO_DIVERGENCIA_PERCENTUAL_ABERTO = 0.012d;
+    private static final int LIMIAR_FATURAS_GRAPHQL_VARIACAO_ABSOLUTO_ABERTO = 15;
+    private static final double LIMIAR_FATURAS_GRAPHQL_VARIACAO_PERCENTUAL_ABERTO = 0.03d;
 
     private final ValidacaoApiBanco24hDetalhadaRepository repository;
     private boolean periodoFechadoContexto;
@@ -316,6 +322,8 @@ final class ValidacaoApiBanco24hDetalhadaComparator {
             || cotacoesMarginalmenteDinamicas(resultado)
             || localizacaoCargasMarginalmenteDinamicas(resultado)
             || faturasPorClienteMarginalmenteDinamicas(resultado)
+            || inventarioMarginalmenteDinamico(resultado)
+            || faturasGraphqlMarginaisToleradas(resultado)
             || contasAPagarMarginaisToleradas(resultado);
     }
 
@@ -501,6 +509,62 @@ final class ValidacaoApiBanco24hDetalhadaComparator {
             && resultado.excedentes() <= limiteCompletude
             && resultado.divergenciasDados() <= limiteDivergencia
             && Math.abs(resultado.banco() - resultado.apiUnico()) <= limiteCompletude;
+    }
+
+    private boolean inventarioMarginalmenteDinamico(final ResultadoComparacao resultado) {
+        if (periodoFechadoContexto || !ConstantesEntidades.INVENTARIO.equals(resultado.entidade())) {
+            return false;
+        }
+        final int base = Math.max(resultado.apiUnico(), resultado.banco());
+        final int limiteCompletude = ajustarLimitePorIdade(
+            resultado,
+            calcularLimite(
+                base,
+                LIMIAR_INVENTARIO_VARIACAO_PERCENTUAL_ABERTO,
+                2,
+                LIMIAR_INVENTARIO_VARIACAO_ABSOLUTO_ABERTO
+            ),
+            2,
+            10
+        );
+        final int limiteDivergencia = ajustarLimitePorIdade(
+            resultado,
+            calcularLimite(
+                base,
+                LIMIAR_INVENTARIO_DIVERGENCIA_PERCENTUAL_ABERTO,
+                4,
+                LIMIAR_INVENTARIO_DIVERGENCIA_ABSOLUTO_ABERTO
+            ),
+            4,
+            20
+        );
+        return resultado.faltantes() <= limiteCompletude
+            && resultado.excedentes() <= limiteCompletude
+            && resultado.divergenciasDados() <= limiteDivergencia
+            && Math.abs(resultado.apiUnico() - resultado.banco()) <= limiteCompletude;
+    }
+
+    private boolean faturasGraphqlMarginaisToleradas(final ResultadoComparacao resultado) {
+        if (periodoFechadoContexto
+            || !ConstantesEntidades.FATURAS_GRAPHQL.equals(resultado.entidade())
+            || resultado.divergenciasDados() != 0) {
+            return false;
+        }
+        final int base = Math.max(resultado.apiUnico(), resultado.banco());
+        final int limiteCompletude = ajustarLimitePorIdade(
+            resultado,
+            calcularLimite(
+                base,
+                LIMIAR_FATURAS_GRAPHQL_VARIACAO_PERCENTUAL_ABERTO,
+                2,
+                LIMIAR_FATURAS_GRAPHQL_VARIACAO_ABSOLUTO_ABERTO
+            ),
+            2,
+            10
+        );
+        return resultado.faltantes() <= limiteCompletude
+            && resultado.excedentes() <= limiteCompletude
+            && Math.abs(resultado.apiUnico() - resultado.banco()) <= limiteCompletude;
     }
 
     private boolean contasAPagarMarginaisToleradas(final ResultadoComparacao resultado) {

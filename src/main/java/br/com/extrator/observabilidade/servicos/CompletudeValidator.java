@@ -507,6 +507,18 @@ public class CompletudeValidator {
             totaisEslCloud.put(ConstantesEntidades.FATURAS_POR_CLIENTE, contagemFaturasPorCliente);
             logger.info("DataExport faturas_por_cliente: {} registros", contagemFaturasPorCliente);
 
+            final int contagemInventario = contarResultadoDataExport(
+                clienteApiDataExport.buscarInventario(dataInicio, dataReferencia)
+            );
+            totaisEslCloud.put(ConstantesEntidades.INVENTARIO, contagemInventario);
+            logger.info("DataExport inventario: {} registros", contagemInventario);
+
+            final int contagemSinistros = contarResultadoDataExport(
+                clienteApiDataExport.buscarSinistros(dataInicio, dataReferencia)
+            );
+            totaisEslCloud.put(ConstantesEntidades.SINISTROS, contagemSinistros);
+            logger.info("DataExport sinistros: {} registros", contagemSinistros);
+
             final int totalGeralRegistros = totaisEslCloud.values().stream()
                 .filter(v -> v >= 0)
                 .mapToInt(Integer::intValue)

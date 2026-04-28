@@ -60,7 +60,8 @@ public final class DaemonResilienceHarness {
             cyclesDir,
             historyDir,
             reconciliacaoDir,
-            "extrator.loop.reconciliacao.history.dir"
+            "extrator.loop.reconciliacao.history.dir",
+            false
         );
         final LoopReconciliationService reconciliationService = new LoopReconciliationService(
             reconciliationState,

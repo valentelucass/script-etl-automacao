@@ -9,11 +9,17 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
+
+import br.com.extrator.plataforma.auditoria.dominio.ExecutionPlanContext;
+import br.com.extrator.plataforma.auditoria.dominio.ExecutionWindowPlan;
+import br.com.extrator.suporte.observabilidade.ExecutionContext;
 
 class SqlServerDataQualityQueryAdapterTest {
 
@@ -66,6 +72,63 @@ class SqlServerDataQualityQueryAdapterTest {
         assertEquals("fretes", capture.parameters().get(1));
         assertEquals("%Data: 2026-04-14%", capture.parameters().get(2));
         assertEquals("%Per\u00edodo: 2026-04-14 a 2026-04-14%", capture.parameters().get(3));
+    }
+
+    @Test
+    void devePriorizarAuditoriaEstruturadaDaExecucaoCorrenteParaCompletude() {
+        final SqlCapture capture = new SqlCapture();
+        final Connection connection = criarConexao(capture, List.of(Map.of("1", 0L)));
+        final SqlServerDataQualityQueryAdapter adapter =
+            new SqlServerDataQualityQueryAdapter(() -> connection);
+
+        MDC.put(ExecutionContext.MDC_EXECUTION_ID, "exec-123");
+        try {
+            final long incompletos = adapter.contarLinhasIncompletas(
+                "faturas_graphql",
+                LocalDate.of(2026, 4, 17),
+                LocalDate.of(2026, 4, 23)
+            );
+
+            assertEquals(0L, incompletos);
+            assertTrue(capture.sql().contains("FROM dbo.sys_execution_audit"));
+            assertEquals("exec-123", capture.parameters().get(1));
+            assertEquals("faturas_graphql", capture.parameters().get(2));
+        } finally {
+            MDC.clear();
+        }
+    }
+
+    @Test
+    void deveUsarJanelaPlanejadaDaEntidadeNoFallbackDeLogExterno() {
+        final SqlCapture capture = new SqlCapture();
+        final Connection connection = criarConexao(capture, List.of(Map.of("1", 0L)));
+        final SqlServerDataQualityQueryAdapter adapter =
+            new SqlServerDataQualityQueryAdapter(() -> connection);
+
+        ExecutionPlanContext.setPlanos(Map.of(
+            "faturas_graphql",
+            new ExecutionWindowPlan(
+                LocalDate.of(2026, 4, 22),
+                LocalDate.of(2026, 4, 23),
+                LocalDateTime.of(2026, 4, 22, 0, 0),
+                LocalDateTime.of(2026, 4, 23, 23, 59, 59)
+            )
+        ));
+        try {
+            final long incompletos = adapter.contarLinhasIncompletas(
+                "faturas_graphql",
+                LocalDate.of(2026, 4, 17),
+                LocalDate.of(2026, 4, 23)
+            );
+
+            assertEquals(0L, incompletos);
+            assertTrue(capture.sql().contains("FROM dbo.log_extracoes"));
+            assertEquals("faturas_graphql", capture.parameters().get(1));
+            assertEquals("%2026-04-22 a 2026-04-23%", capture.parameters().get(2));
+            assertEquals("%2026-04-22%2026-04-23%", capture.parameters().get(3));
+        } finally {
+            ExecutionPlanContext.clear();
+        }
     }
 
     private Connection criarConexao(final SqlCapture capture, final List<Map<String, Object>> rows) {

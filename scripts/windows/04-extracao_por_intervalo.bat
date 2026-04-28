@@ -3,6 +3,7 @@ setlocal EnableDelayedExpansion
 set "SCRIPT_DIR=%~dp0"
 for %%I in ("%SCRIPT_DIR%.") do set "SCRIPT_DIR=%%~fI"
 for %%I in ("%SCRIPT_DIR%\..\..") do set "REPO_ROOT=%%~fI"
+set "JAVA_BASE_OPTS=--enable-native-access=ALL-UNNAMED -DETL_BASE_DIR=%REPO_ROOT% -Detl.base.dir=%REPO_ROOT%"
 if not defined JAR_PATH set "JAR_PATH=%REPO_ROOT%\target\extrator.jar"
 if not defined MVN_CMD set "MVN_CMD=%REPO_ROOT%\mvn.bat"
 REM ==[DOC-FILE]===============================================================
@@ -41,6 +42,7 @@ if /i not "%EXTRATOR_SKIP_CHCP%"=="1" chcp 65001 >nul
 set "FINAL_EXIT_CODE=0"
 set "FLAG_FATURAS_GRAPHQL="
 set "PARAM_FLAG_FATURAS="
+set "PARAM_FLAG_RAPIDO="
 
 REM Configurar JAVA_HOME automaticamente (Java 17+)
 if not defined JAVA_HOME (
@@ -78,6 +80,7 @@ REM   04-extracao_por_intervalo.bat YYYY-MM-DD YYYY-MM-DD api
 REM   04-extracao_por_intervalo.bat YYYY-MM-DD YYYY-MM-DD api entidade
 REM   04-extracao_por_intervalo.bat YYYY-MM-DD YYYY-MM-DD [api] [entidade] --sem-faturas-graphql
 REM   04-extracao_por_intervalo.bat YYYY-MM-DD YYYY-MM-DD [api] [entidade] --com-faturas-graphql
+REM   04-extracao_por_intervalo.bat YYYY-MM-DD YYYY-MM-DD --sem-faturas-graphql --modo-rapido-24h
 REM
 REM Exemplos:
 REM   04-extracao_por_intervalo.bat 2024-10-26 2024-12-26
@@ -87,6 +90,7 @@ REM   04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 dataexport inventario
 REM   04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 dataexport sinistros
 REM   04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 --sem-faturas-graphql
 REM   04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 --com-faturas-graphql
+REM   04-extracao_por_intervalo.bat 2026-04-27 2026-04-28 --sem-faturas-graphql --modo-rapido-24h
 REM
 REM Funcionalidades:
 REM   - Aceita parametros na linha de comando OU menu interativo
@@ -102,16 +106,16 @@ if /i not "%EXTRATOR_SKIP_AUTH_CHECK%"=="1" (
     if not exist "%JAR_PATH%" (
         echo ERRO: Arquivo target\extrator.jar nao encontrado para autenticacao.
         echo.
-        pause
+        if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
         exit /b 1
     )
     echo.
     echo Autenticacao obrigatoria para executar esta acao.
-    java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --auth-check RUN_EXTRACAO_INTERVALO "Executar extracao por intervalo"
+    java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --auth-check RUN_EXTRACAO_INTERVALO "Executar extracao por intervalo"
     if errorlevel 1 (
         echo Acesso negado.
         echo.
-        pause
+        if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
         exit /b 1
     )
 )
@@ -127,7 +131,11 @@ set "DATA_INICIO=%~1"
 set "DATA_FIM=%~2"
 set "API_ESCOLHIDA=%~3"
 set "ENTIDADE_ESCOLHIDA=%~4"
-set "PARAM_FLAG_FATURAS=%~5"
+set "PARAM_FLAG_FATURAS="
+set "PARAM_FLAG_RAPIDO="
+set "PARAM_EXTRA_FLAG1=%~5"
+set "PARAM_EXTRA_FLAG2=%~6"
+set "PARAM_EXTRA_FLAG3=%~7"
 
 if /i "%API_ESCOLHIDA%"=="--sem-faturas-graphql" (
     set "API_ESCOLHIDA="
@@ -137,6 +145,10 @@ if /i "%API_ESCOLHIDA%"=="--com-faturas-graphql" (
     set "API_ESCOLHIDA="
     set "PARAM_FLAG_FATURAS=--com-faturas-graphql"
 )
+if /i "%API_ESCOLHIDA%"=="--modo-rapido-24h" (
+    set "API_ESCOLHIDA="
+    set "PARAM_FLAG_RAPIDO=--modo-rapido-24h"
+)
 if /i "%ENTIDADE_ESCOLHIDA%"=="--sem-faturas-graphql" (
     set "ENTIDADE_ESCOLHIDA="
     set "PARAM_FLAG_FATURAS=--sem-faturas-graphql"
@@ -145,23 +157,30 @@ if /i "%ENTIDADE_ESCOLHIDA%"=="--com-faturas-graphql" (
     set "ENTIDADE_ESCOLHIDA="
     set "PARAM_FLAG_FATURAS=--com-faturas-graphql"
 )
+if /i "%ENTIDADE_ESCOLHIDA%"=="--modo-rapido-24h" (
+    set "ENTIDADE_ESCOLHIDA="
+    set "PARAM_FLAG_RAPIDO=--modo-rapido-24h"
+)
+call :CAPTURAR_PARAM_FLAG "%PARAM_EXTRA_FLAG1%"
+call :CAPTURAR_PARAM_FLAG "%PARAM_EXTRA_FLAG2%"
+call :CAPTURAR_PARAM_FLAG "%PARAM_EXTRA_FLAG3%"
 
 REM Validar que pelo menos as datas foram fornecidas
 if "%DATA_INICIO%"=="" (
     echo ERRO: Data de inicio nao informada!
     echo.
-    echo Uso: 04-extracao_por_intervalo.bat [DATA_INICIO] [DATA_FIM] [API] [ENTIDADE] [--sem-faturas-graphql^|--com-faturas-graphql]
+    echo Uso: 04-extracao_por_intervalo.bat [DATA_INICIO] [DATA_FIM] [API] [ENTIDADE] [--sem-faturas-graphql^|--com-faturas-graphql] [--modo-rapido-24h]
     echo Exemplo: 04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 dataexport localizacao_cargas
-    pause
+    if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
     exit /b 1
 )
 
 if "%DATA_FIM%"=="" (
     echo ERRO: Data de fim nao informada!
     echo.
-    echo Uso: 04-extracao_por_intervalo.bat [DATA_INICIO] [DATA_FIM] [API] [ENTIDADE] [--sem-faturas-graphql^|--com-faturas-graphql]
+    echo Uso: 04-extracao_por_intervalo.bat [DATA_INICIO] [DATA_FIM] [API] [ENTIDADE] [--sem-faturas-graphql^|--com-faturas-graphql] [--modo-rapido-24h]
     echo Exemplo: 04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 dataexport localizacao_cargas
-    pause
+    if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
     exit /b 1
 )
 
@@ -172,7 +191,7 @@ call :VALIDAR_DATA "%DATA_INICIO%"
 if errorlevel 1 (
     echo ERRO: Data de inicio deve estar no formato YYYY-MM-DD
     echo Valor recebido: %DATA_INICIO%
-    pause
+    if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
     exit /b 1
 )
 
@@ -180,7 +199,7 @@ call :VALIDAR_DATA "%DATA_FIM%"
 if errorlevel 1 (
     echo ERRO: Data de fim deve estar no formato YYYY-MM-DD
     echo Valor recebido: %DATA_FIM%
-    pause
+    if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
     exit /b 1
 )
 
@@ -205,7 +224,7 @@ REM Solicitar data de inicio
 set /p DATA_INICIO="Digite a data de inicio (YYYY-MM-DD): "
 if "%DATA_INICIO%"=="" (
     echo ERRO: Data de inicio nao informada!
-    pause
+    if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
     exit /b 1
 )
 
@@ -214,7 +233,7 @@ set "DATA_INICIO=%DATA_INICIO: =%"
 call :VALIDAR_DATA "%DATA_INICIO%"
 if errorlevel 1 (
     echo ERRO: Formato de data invalido! Use YYYY-MM-DD ^(exemplo: 2024-11-01^)
-    pause
+    if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
     exit /b 1
 )
 
@@ -222,7 +241,7 @@ REM Solicitar data de fim
 set /p DATA_FIM="Digite a data de fim (YYYY-MM-DD): "
 if "%DATA_FIM%"=="" (
     echo ERRO: Data de fim nao informada!
-    pause
+    if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
     exit /b 1
 )
 
@@ -231,7 +250,7 @@ set "DATA_FIM=%DATA_FIM: =%"
 call :VALIDAR_DATA "%DATA_FIM%"
 if errorlevel 1 (
     echo ERRO: Formato de data invalido! Use YYYY-MM-DD ^(exemplo: 2025-03-31^)
-    pause
+    if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
     exit /b 1
 )
 
@@ -279,7 +298,7 @@ if "%OPCAO_API%"=="2" (
         set "API_ESCOLHIDA=dataexport"
     ) else (
         echo ERRO: Opcao invalida!
-        pause
+        if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
         exit /b 1
     )
     
@@ -312,7 +331,7 @@ if "%OPCAO_API%"=="2" (
             set "ENTIDADE_ESCOLHIDA=usuarios_sistema"
         ) else (
             echo ERRO: Numero invalido!
-            pause
+            if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
             exit /b 1
         )
     ) else if "!API_ESCOLHIDA!"=="dataexport" (
@@ -345,7 +364,7 @@ if "%OPCAO_API%"=="2" (
             set "ENTIDADE_ESCOLHIDA=sinistros"
         ) else (
             echo ERRO: Numero invalido!
-            pause
+            if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
             exit /b 1
         )
     )
@@ -355,7 +374,7 @@ if "%OPCAO_API%"=="2" (
 call :CONFIGURAR_FATURAS_GRAPHQL
 if errorlevel 1 (
     echo ERRO ao configurar opcao de Faturas GraphQL.
-    pause
+    if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
     exit /b 1
 )
 
@@ -381,6 +400,9 @@ if defined FLAG_FATURAS_GRAPHQL (
 ) else (
     echo Faturas GraphQL: INCLUIDO
 )
+if defined PARAM_FLAG_RAPIDO (
+    echo Modo rapido 24h: ATIVO ^(sem pre-backfill e sem pos-hidratacao referencial^)
+)
 echo.
 
 REM Se parametros foram passados, pular confirmacao interativa
@@ -395,12 +417,12 @@ if /i "%CONFIRMA%"=="S" goto :COMPILAR
 if "%CONFIRMA%"=="1" goto :COMPILAR
 if /i "%CONFIRMA%"=="N" (
     echo Operacao cancelada pelo usuario.
-    pause
+    if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
     exit /b 0
 )
 if "%CONFIRMA%"=="2" (
     echo Operacao cancelada pelo usuario.
-    pause
+    if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
     exit /b 0
 )
 echo Opcao invalida. Digite 1, 2, S ou N.
@@ -419,7 +441,7 @@ if /i "%PROD_MODE%"=="1" (
     if errorlevel 1 (
         echo ERRO: Compilacao falhou
         echo.
-        pause
+        if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
         exit /b 1
     )
 )
@@ -432,7 +454,7 @@ if not exist "%JAR_PATH%" (
         echo Execute primeiro: mvn package -DskipTests
     )
     echo.
-    pause
+    if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
     exit /b 1
 )
 
@@ -460,6 +482,9 @@ if defined FLAG_FATURAS_GRAPHQL (
 ) else (
     echo Faturas GraphQL: INCLUIDO
 )
+if defined PARAM_FLAG_RAPIDO (
+    echo Modo rapido 24h: ATIVO ^(sem pre-backfill e sem pos-hidratacao referencial^)
+)
 echo.
 echo ATENCAO: Este processo pode demorar varios minutos...
 echo O sistema dividira automaticamente em blocos de 30 dias ^(sem limite de horas^).
@@ -477,9 +502,12 @@ if not "!API_ESCOLHIDA!"=="" (
 if defined FLAG_FATURAS_GRAPHQL (
     set "CMD_ARGS=!CMD_ARGS! !FLAG_FATURAS_GRAPHQL!"
 )
+if defined PARAM_FLAG_RAPIDO (
+    set "CMD_ARGS=!CMD_ARGS! !PARAM_FLAG_RAPIDO!"
+)
 
 REM Executar comando
-java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --extracao-intervalo !CMD_ARGS!
+java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --extracao-intervalo !CMD_ARGS!
 set "JAVA_EXIT_CODE=%ERRORLEVEL%"
 set "FINAL_EXIT_CODE=%JAVA_EXIT_CODE%"
 
@@ -505,9 +533,15 @@ echo.
 echo Verifique os logs na pasta 'logs' para mais detalhes.
 echo Referencia de entidades novas nos logs: dataexport:inventario e dataexport:sinistros.
 echo.
-pause
+if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
 set "RET_CODE=%FINAL_EXIT_CODE%"
 endlocal & exit /b %RET_CODE%
+
+:CAPTURAR_PARAM_FLAG
+if /i "%~1"=="--sem-faturas-graphql" set "PARAM_FLAG_FATURAS=--sem-faturas-graphql"
+if /i "%~1"=="--com-faturas-graphql" set "PARAM_FLAG_FATURAS=--com-faturas-graphql"
+if /i "%~1"=="--modo-rapido-24h" set "PARAM_FLAG_RAPIDO=--modo-rapido-24h"
+exit /b 0
 
 :CONFIGURAR_FATURAS_GRAPHQL
 set "FLAG_FATURAS_GRAPHQL="

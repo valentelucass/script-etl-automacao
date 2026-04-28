@@ -56,6 +56,7 @@ import br.com.extrator.suporte.console.BannerUtil;
 import br.com.extrator.suporte.console.LoggerConsole;
 import br.com.extrator.suporte.formatacao.FormatadorData;
 import br.com.extrator.suporte.configuracao.ScopedSystemPropertyOverride;
+
 public class ExtracaoPorIntervaloUseCase {
     private static final String EXECUTION_LOCK_RESOURCE = "etl-global-execution";
     private static final String PROP_PRUNE_AUSENTES_FRETES = "ETL_FRETES_PRUNE_AUSENTES";
@@ -63,6 +64,10 @@ public class ExtracaoPorIntervaloUseCase {
     private static final String PROP_TIMEOUT_COLETAS = "ETL_GRAPHQL_TIMEOUT_ENTIDADE_COLETAS_MS";
     private static final String PROP_BACKFILL_MAX_EXPANSAO_COLETAS =
         "ETL_REFERENCIAL_COLETAS_BACKFILL_MAX_EXPANSAO_DIAS";
+    private static final String PROP_BACKFILL_DIAS_COLETAS =
+        "ETL_REFERENCIAL_COLETAS_BACKFILL_DIAS";
+    private static final String PROP_LOOKAHEAD_DIAS_COLETAS =
+        "ETL_REFERENCIAL_COLETAS_LOOKAHEAD_DIAS";
     private static final long TIMEOUT_FRETES_INTERVALO_MS = 10_800_000L;
     private static final LoggerConsole log = LoggerConsole.getLogger(ExtracaoPorIntervaloUseCase.class);
     private static final int TAMANHO_BLOCO_DIAS = 30;
@@ -97,6 +102,7 @@ public class ExtracaoPorIntervaloUseCase {
 
     public void executar(final ExtracaoPorIntervaloRequest request) throws Exception {
         try (AutoCloseable ignored = executionLockManager.acquire(EXECUTION_LOCK_RESOURCE)) {
+        final boolean modoRapido24h = request.modoRapido24h();
         final Map<String, String> overridesTemporarios = new LinkedHashMap<>();
         overridesTemporarios.put(PROP_PRUNE_AUSENTES_FRETES, Boolean.TRUE.toString());
         overridesTemporarios.put(PROP_TIMEOUT_FRETES, resolverTimeoutMinimo(PROP_TIMEOUT_FRETES, TIMEOUT_FRETES_INTERVALO_MS));
@@ -114,6 +120,10 @@ public class ExtracaoPorIntervaloUseCase {
                 ConfigEtl.obterEtlReferencialColetasBackfillMaxExpansaoDiasIntervalo()
             )
         );
+        if (modoRapido24h) {
+            overridesTemporarios.put(PROP_BACKFILL_DIAS_COLETAS, "0");
+            overridesTemporarios.put(PROP_LOOKAHEAD_DIAS_COLETAS, "0");
+        }
         try (ScopedSystemPropertyOverride scopedOverride = ScopedSystemPropertyOverride.apply(overridesTemporarios)) {
         final LocalDate dataInicio = request.dataInicio();
         final LocalDate dataFim = request.dataFim();
@@ -144,6 +154,9 @@ public class ExtracaoPorIntervaloUseCase {
             "Faturas GraphQL: {}",
             incluirFaturasGraphQL ? "INCLUIDO" : "DESABILITADO (flag --sem-faturas-graphql)"
         );
+        if (modoRapido24h) {
+            log.console("Modo rapido 24h: ATIVO (sem pre-backfill e sem pos-hidratacao referencial de coletas)");
+        }
 
         final ValidadorLimiteExtracao validador = new ValidadorLimiteExtracao();
         final long diasPeriodo = validador.calcularDuracaoPeriodo(dataInicio, dataFim);
@@ -179,7 +192,13 @@ public class ExtracaoPorIntervaloUseCase {
 
         log.console("=".repeat(60) + "\n");
 
-        executarPreBackfillReferencialColetas(dataInicio, apiEspecifica, entidadeEspecifica, modoLoopDaemon);
+        executarPreBackfillReferencialColetas(
+            dataInicio,
+            apiEspecifica,
+            entidadeEspecifica,
+            modoLoopDaemon,
+            modoRapido24h
+        );
 
         final LocalDateTime inicioExecucao = LocalDateTime.now();
         int blocosCompletos = 0;
@@ -243,7 +262,8 @@ public class ExtracaoPorIntervaloUseCase {
                 apiEspecifica,
                 entidadeEspecifica,
                 modoLoopDaemon,
-                blocoComFalha
+                blocoComFalha,
+                modoRapido24h
             );
 
             final LocalDateTime fimExecucaoBloco = LocalDateTime.now();
@@ -590,9 +610,14 @@ public class ExtracaoPorIntervaloUseCase {
         final LocalDate dataInicio,
         final String apiEspecifica,
         final String entidadeEspecifica,
-        final boolean modoLoopDaemon
+        final boolean modoLoopDaemon,
+        final boolean modoRapido24h
     ) {
         if (modoLoopDaemon) {
+            return;
+        }
+        if (modoRapido24h) {
+            log.console("Pre-backfill referencial de coletas: ignorado no modo rapido 24h.");
             return;
         }
 
@@ -642,9 +667,14 @@ public class ExtracaoPorIntervaloUseCase {
         final String apiEspecifica,
         final String entidadeEspecifica,
         final boolean modoLoopDaemon,
-        final boolean houveFalhaNoBloco
+        final boolean houveFalhaNoBloco,
+        final boolean modoRapido24h
     ) {
         if (modoLoopDaemon || houveFalhaNoBloco) {
+            return;
+        }
+        if (modoRapido24h) {
+            log.console("Pos-hidratacao referencial de coletas: ignorada no modo rapido 24h.");
             return;
         }
 

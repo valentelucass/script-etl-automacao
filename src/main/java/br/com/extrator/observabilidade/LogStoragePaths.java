@@ -3,7 +3,6 @@ package br.com.extrator.observabilidade;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
 /**
@@ -12,7 +11,11 @@ import java.util.List;
 public final class LogStoragePaths {
     public static final int MAX_FILES_PER_BUCKET = 20;
 
-    public static final Path ROOT_DIR = Paths.get("logs");
+    public static final Path PROJECT_ROOT = ProjectPaths.projectRoot();
+    public static final Path ROOT_DIR = PROJECT_ROOT.resolve("logs");
+    public static final Path RUNTIME_DIR = PROJECT_ROOT.resolve("runtime");
+    public static final Path RUNTIME_STATE_DIR = RUNTIME_DIR.resolve("state");
+    public static final Path RUNTIME_REPORTS_DIR = RUNTIME_DIR.resolve("reports");
 
     public static final Path APP_DIR = ROOT_DIR.resolve("aplicacao");
     public static final Path APP_RUNTIME_DIR = APP_DIR.resolve("runtime");
@@ -42,7 +45,11 @@ public final class LogStoragePaths {
 
     public static List<Path> allDirectories() {
         return List.of(
+            PROJECT_ROOT,
             ROOT_DIR,
+            RUNTIME_DIR,
+            RUNTIME_STATE_DIR,
+            RUNTIME_REPORTS_DIR,
             APP_DIR,
             APP_RUNTIME_DIR,
             APP_OPERATIONS_DIR,

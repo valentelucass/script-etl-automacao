@@ -24,6 +24,7 @@ Atributos-chave:
 package br.com.extrator.comandos.cli.validacao;
 
 import br.com.extrator.comandos.cli.base.Comando;
+import br.com.extrator.suporte.banco.GerenciadorConexao;
 import br.com.extrator.suporte.console.LoggerConsole;
 import br.com.extrator.suporte.configuracao.ConfigBanco;
 
@@ -36,27 +37,43 @@ public class ValidarAcessoComando implements Comando {
     
     @Override
     public void executar(String[] args) throws Exception {
-        log.info("[INFO] Validando configuracoes do sistema...");
+        infoConsole("[INFO] Validando configuracoes do sistema...");
         log.console("=".repeat(50));
 
         try {
-            log.info("[INFO] Validando conexao com banco de dados...");
+            infoConsole("[INFO] Validando conexao com banco de dados...");
             ConfigBanco.validarConexaoBancoDados();
-            log.info("[OK] Conexao com banco de dados: OK");
+            infoConsole("[OK] Conexao com banco de dados: OK");
 
-            log.info("[OK] Tabela dbo.log_extracoes deve existir (criada via scripts SQL em database/)");
+            infoConsole("[INFO] Validando pool HikariCP...");
+            if (!GerenciadorConexao.isPoolSaudavel()) {
+                throw new IllegalStateException("Pool HikariCP indisponivel para conexoes SQL Server");
+            }
+            infoConsole("[OK] Pool HikariCP: OK - {}", GerenciadorConexao.obterEstatisticasPool());
 
-            log.info("[INFO] Validando configuracoes das APIs...");
-            log.info("[OK] Configuracoes das APIs: OK");
+            infoConsole("[OK] Tabela dbo.log_extracoes deve existir (criada via scripts SQL em database/)");
+
+            infoConsole("[INFO] Validando configuracoes das APIs...");
+            infoConsole("[OK] Configuracoes das APIs: OK");
 
             log.console("=".repeat(50));
-            log.info("[OK] Todas as validacoes foram bem-sucedidas.");
-            log.info("O sistema esta pronto para execucao.");
+            infoConsole("[OK] Todas as validacoes foram bem-sucedidas.");
+            infoConsole("O sistema esta pronto para execucao.");
 
         } catch (final Exception e) {
-            log.error("[ERRO] ERRO na validacao: {}", e.getMessage());
-            log.error("Verifique as configuracoes e tente novamente.");
+            errorConsole("[ERRO] ERRO na validacao: {}", e.getMessage());
+            errorConsole("Verifique as configuracoes e tente novamente.");
             throw e;
         }
+    }
+
+    private void infoConsole(final String message, final Object... args) {
+        log.info(message, args);
+        log.console(message, args);
+    }
+
+    private void errorConsole(final String message, final Object... args) {
+        log.error(message, args);
+        log.console(message, args);
     }
 }

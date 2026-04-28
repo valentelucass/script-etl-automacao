@@ -34,6 +34,8 @@ import br.com.extrator.dominio.graphql.faturas.CreditCustomerBillingNodeDTO;
 import br.com.extrator.integracao.comum.ConstantesExtracao;
 import br.com.extrator.integracao.comum.EntityExtractor;
 import br.com.extrator.integracao.comum.ExtractionHelper;
+import br.com.extrator.plataforma.auditoria.dominio.ExecutionPlanContext;
+import br.com.extrator.plataforma.auditoria.dominio.ExecutionWindowPlan;
 import br.com.extrator.suporte.console.LoggerConsole;
 import br.com.extrator.suporte.validacao.ConstantesEntidades;
 
@@ -85,18 +87,37 @@ public class FaturaGraphQLExtractor implements EntityExtractor<CreditCustomerBil
 
         final Map<Long, FaturaGraphQLEntity> faturasUnicas = saveSupport.deduplicarDtos(dtos);
         log.info("Deduplicacao concluida: {} faturas unicas de {} totais", faturasUnicas.size(), dtos.size());
+        final Set<Integer> idsBancos = new HashSet<>();
+        final Map<Long, Integer> faturaIdParaBancoId = new HashMap<>();
+
+        final ExecutionWindowPlan planoFretes = ExecutionPlanContext.getPlano(ConstantesEntidades.FRETES)
+            .orElseGet(() -> new ExecutionWindowPlan(
+                dataInicioExtracao,
+                dataFimExtracao,
+                dataInicioExtracao.atStartOfDay(),
+                dataFimExtracao.atTime(java.time.LocalTime.MAX)
+            ));
+        if (dataInicioExtracao != null
+            && dataFimExtracao != null
+            && (!planoFretes.consultaDataInicio().equals(dataInicioExtracao)
+                || !planoFretes.consultaDataFim().equals(dataFimExtracao))) {
+            log.info(
+                "Backfill referencial de faturas alinhado a janela de fretes: {} a {}",
+                planoFretes.consultaDataInicio(),
+                planoFretes.consultaDataFim()
+            );
+        }
 
         final int adicionadasPorBackfill = backfillSupport.executar(
             faturasUnicas,
-            dataInicioExtracao,
-            dataFimExtracao
+            idsBancos,
+            faturaIdParaBancoId,
+            planoFretes.consultaDataInicio(),
+            planoFretes.consultaDataFim()
         );
         if (adicionadasPorBackfill > 0) {
             log.info("Backfill por accounting_credit_id adicionou {} faturas antes do enriquecimento", adicionadasPorBackfill);
         }
-
-        final Set<Integer> idsBancos = new HashSet<>();
-        final Map<Long, Integer> faturaIdParaBancoId = new HashMap<>();
 
         saveSupport.coletarDadosDisponiveisNaQueryPrincipal(dtos, faturasUnicas, idsBancos, faturaIdParaBancoId);
 

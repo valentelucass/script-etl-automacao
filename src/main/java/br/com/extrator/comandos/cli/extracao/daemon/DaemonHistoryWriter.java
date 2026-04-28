@@ -93,6 +93,7 @@ public final class DaemonHistoryWriter {
     private final Path daemonHistoryDir;
     private final Path reconciliacaoHistoryDirDefault;
     private final String reconciliacaoHistoryDirOverrideKey;
+    private final boolean calcularTotalRegistrosDb;
 
     public static DaemonHistoryWriter criarPadrao() {
         return new DaemonHistoryWriter(
@@ -109,11 +110,28 @@ public final class DaemonHistoryWriter {
                                final Path daemonHistoryDir,
                                final Path reconciliacaoHistoryDirDefault,
                                final String reconciliacaoHistoryDirOverrideKey) {
+        this(
+            daemonDir,
+            cyclesDir,
+            daemonHistoryDir,
+            reconciliacaoHistoryDirDefault,
+            reconciliacaoHistoryDirOverrideKey,
+            true
+        );
+    }
+
+    DaemonHistoryWriter(final Path daemonDir,
+                        final Path cyclesDir,
+                        final Path daemonHistoryDir,
+                        final Path reconciliacaoHistoryDirDefault,
+                        final String reconciliacaoHistoryDirOverrideKey,
+                        final boolean calcularTotalRegistrosDb) {
         this.daemonDir = daemonDir;
         this.cyclesDir = cyclesDir;
         this.daemonHistoryDir = daemonHistoryDir;
         this.reconciliacaoHistoryDirDefault = reconciliacaoHistoryDirDefault;
         this.reconciliacaoHistoryDirOverrideKey = reconciliacaoHistoryDirOverrideKey;
+        this.calcularTotalRegistrosDb = calcularTotalRegistrosDb;
     }
 
     public void ensureDirectories() throws IOException {
@@ -188,7 +206,7 @@ public final class DaemonHistoryWriter {
         }
 
         final long duracaoSegundos = Math.max(0L, Duration.between(inicio, fim).getSeconds());
-        final int totalRegistros = calculateTotalRecords(inicio, fim);
+        final int totalRegistros = sucesso && calcularTotalRegistrosDb ? calculateTotalRecords(inicio, fim) : 0;
         final String statusCiclo = determineCycleStatus(sucesso, alertaIntegridade, statusIncompleto, errors);
         final String detalheResumo = buildDetailSummary(
             detalheBase,

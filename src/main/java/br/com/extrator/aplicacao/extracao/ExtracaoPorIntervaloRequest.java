@@ -32,8 +32,20 @@ public record ExtracaoPorIntervaloRequest(
     String apiEspecifica,
     String entidadeEspecifica,
     boolean incluirFaturasGraphQL,
-    boolean modoLoopDaemon
+    boolean modoLoopDaemon,
+    boolean modoRapido24h
 ) {
+    public ExtracaoPorIntervaloRequest(
+        final LocalDate dataInicio,
+        final LocalDate dataFim,
+        final String apiEspecifica,
+        final String entidadeEspecifica,
+        final boolean incluirFaturasGraphQL,
+        final boolean modoLoopDaemon
+    ) {
+        this(dataInicio, dataFim, apiEspecifica, entidadeEspecifica, incluirFaturasGraphQL, modoLoopDaemon, false);
+    }
+
     public ExtracaoPorIntervaloRequest {
         Objects.requireNonNull(dataInicio, "dataInicio nao pode ser null");
         Objects.requireNonNull(dataFim, "dataFim nao pode ser null");

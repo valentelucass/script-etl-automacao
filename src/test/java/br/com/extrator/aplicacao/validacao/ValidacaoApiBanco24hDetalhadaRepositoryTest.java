@@ -285,6 +285,94 @@ class ValidacaoApiBanco24hDetalhadaRepositoryTest {
     }
 
     @Test
+    void deveUsarChaveIdentificadorUnicoParaInventarioESinistros() throws SQLException {
+        final Connection conexaoInventario = criarConexao(sql -> {
+            assertTrue(sql.contains("FROM dbo.inventario"));
+            assertTrue(sql.contains("identificador_unico AS chave"));
+            return criarPreparedStatement(new LinkedHashMap<>(), criarResultSet(List.of()));
+        });
+        final Connection conexaoSinistros = criarConexao(sql -> {
+            assertTrue(sql.contains("FROM dbo.sinistros"));
+            assertTrue(sql.contains("identificador_unico AS chave"));
+            return criarPreparedStatement(new LinkedHashMap<>(), criarResultSet(List.of()));
+        });
+        final JanelaExecucao janela = new JanelaExecucao(
+            LocalDateTime.of(2026, 4, 22, 10, 0),
+            LocalDateTime.of(2026, 4, 22, 10, 5),
+            true
+        );
+
+        repository.carregarChavesBancoNaJanela(
+            conexaoInventario,
+            ConstantesEntidades.INVENTARIO,
+            janela,
+            LocalDate.of(2026, 4, 22),
+            LocalDate.of(2026, 4, 23)
+        );
+        repository.carregarChavesBancoNaJanela(
+            conexaoSinistros,
+            ConstantesEntidades.SINISTROS,
+            janela,
+            LocalDate.of(2026, 4, 22),
+            LocalDate.of(2026, 4, 23)
+        );
+    }
+
+    @Test
+    void devePreservarPickSequenceCodeOriginalDoMetadataNaChaveDeManifestos() {
+        final String metadata = """
+            {
+              "mft_pfs_pck_sequence_code": 71920,
+              "mft_mfs_number": 1503
+            }
+            """;
+
+        final String chave = ValidacaoApiBanco24hDetalhadaRepository.montarChaveManifestoValidacao(
+            48831L,
+            null,
+            null,
+            metadata
+        );
+
+        assertEquals("48831|71920|1503", chave);
+    }
+
+    @Test
+    void deveCarregarChavesDeManifestosUsandoPickPreservadoNoMetadataQuandoColunaEstiverNormalizada() throws SQLException {
+        final Connection conexao = criarConexao(sql -> {
+            assertTrue(sql.contains("FROM dbo.manifestos"));
+            assertTrue(sql.contains("sequence_code"));
+            assertTrue(sql.contains("pick_sequence_code"));
+            assertTrue(sql.contains("mdfe_number"));
+            assertTrue(sql.contains("metadata"));
+            final Map<String, Object> row = new LinkedHashMap<>();
+            row.put("sequence_code", 48831L);
+            row.put("pick_sequence_code", null);
+            row.put("mdfe_number", 1503);
+            row.put("metadata", "{\"mft_pfs_pck_sequence_code\":71920,\"mft_mfs_number\":1503}");
+            return criarPreparedStatement(
+                new LinkedHashMap<>(),
+                criarResultSet(List.of(row))
+            );
+        });
+        final JanelaExecucao janela = new JanelaExecucao(
+            LocalDateTime.of(2026, 4, 23, 9, 0),
+            LocalDateTime.of(2026, 4, 23, 9, 5),
+            true
+        );
+
+        final Set<String> chaves = repository.carregarChavesBancoNaJanela(
+            conexao,
+            ConstantesEntidades.MANIFESTOS,
+            janela,
+            LocalDate.of(2026, 4, 22),
+            LocalDate.of(2026, 4, 23)
+        );
+
+        assertEquals(Set.of("48831|71920|1503"), chaves);
+    }
+
+    @Test
     void deveResolverExecutionUuidAncoraAPartirDaAuditoriaEstruturada() throws SQLException {
         final Map<Integer, Object> captured = new LinkedHashMap<>();
         final Connection conexao = criarConexao(sql -> {

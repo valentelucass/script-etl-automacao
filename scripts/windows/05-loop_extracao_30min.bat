@@ -32,6 +32,7 @@ if /i not "%EXTRATOR_SKIP_CHCP%"=="1" chcp 1252 >nul
 set "SCRIPT_DIR=%~dp0"
 for %%I in ("%SCRIPT_DIR%.") do set "SCRIPT_DIR=%%~fI"
 for %%I in ("%SCRIPT_DIR%\..\..") do set "REPO_ROOT=%%~fI"
+set "JAVA_BASE_OPTS=--enable-native-access=ALL-UNNAMED -DETL_BASE_DIR=%REPO_ROOT% -Detl.base.dir=%REPO_ROOT%"
 set "JAR_PATH=%REPO_ROOT%\target\extrator.jar"
 set "LOOP_LOG=%REPO_ROOT%\logs\daemon\runtime\loop_daemon_console.log"
 
@@ -83,6 +84,16 @@ if defined JAVA_HOME (
   )
 )
 set "LOOP_STATUS_AUTH_CACHE=0"
+set "AUTH_SESSION_ACTIVE=0"
+set "AUTH_SESSION_USER="
+set "AUTH_SESSION_ROLE="
+set "AUTH_SESSION_ACTIONS="
+if /i "%EXTRATOR_AUTH_SESSION_ACTIVE%"=="1" (
+  set "AUTH_SESSION_ACTIVE=1"
+  set "AUTH_SESSION_USER=%EXTRATOR_AUTH_SESSION_USER%"
+  set "AUTH_SESSION_ROLE=%EXTRATOR_AUTH_SESSION_ROLE%"
+  set "AUTH_SESSION_ACTIONS=%EXTRATOR_AUTH_SESSION_ACTIONS%"
+)
 
 :MENU
 echo.
@@ -126,15 +137,17 @@ call :AUTH_CHECK LOOP_START "Iniciar loop daemon"
 if errorlevel 1 goto :MENU
 call :ASK_FATURAS_GRAPHQL_LOOP
 if errorlevel 1 goto :MENU
+call :EXECUTION_SAFETY_GATE "Iniciar loop daemon"
+if errorlevel 1 goto :MENU
 
 if /i "%FLAG_FATURAS_GRAPHQL%"=="--sem-faturas-graphql" (
   echo Iniciando loop daemon com Faturas GraphQL DESABILITADO...
   echo As trilhas DataExport de inventario e sinistros permanecem ativas no loop.
-  java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --loop-daemon-start --sem-faturas-graphql
+  java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --loop-daemon-start --sem-faturas-graphql
 ) else (
   echo Iniciando loop daemon com Faturas GraphQL INCLUIDO...
   echo As trilhas DataExport de inventario e sinistros permanecem ativas no loop.
-  java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --loop-daemon-start
+  java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --loop-daemon-start
 )
 echo.
 pause
@@ -143,24 +156,15 @@ goto :MENU
 :STATUS
 call :AUTH_CHECK LOOP_STATUS "Consultar status do loop daemon"
 if errorlevel 1 goto :MENU
-java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --loop-daemon-status
+java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --loop-daemon-status
 echo.
 pause
 goto :MENU
 
 :STOP
-if /i "%EXTRATOR_SKIP_AUTH_CHECK%"=="1" goto :DO_STOP
-echo.
-echo Autenticacao obrigatoria para executar esta acao.
-java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --auth-check LOOP_STOP "Parar loop daemon"
-if errorlevel 1 (
-  echo Acesso negado.
-  echo.
-  pause
-  goto :MENU
-)
-:DO_STOP
-java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --loop-daemon-stop
+call :AUTH_CHECK LOOP_STOP "Parar loop daemon"
+if errorlevel 1 goto :MENU
+java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --loop-daemon-stop
 echo.
 pause
 goto :MENU
@@ -172,11 +176,11 @@ call :ASK_FATURAS_GRAPHQL_LOOP
 if errorlevel 1 goto :MENU
 
 echo Reiniciando loop daemon com nova configuracao de Faturas GraphQL...
-java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --loop-daemon-stop >nul 2>&1
+java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --loop-daemon-stop >nul 2>&1
 if /i "%FLAG_FATURAS_GRAPHQL%"=="--sem-faturas-graphql" (
-  java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --loop-daemon-start --sem-faturas-graphql
+  java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --loop-daemon-start --sem-faturas-graphql
 ) else (
-  java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --loop-daemon-start
+  java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --loop-daemon-start
 )
 echo.
 pause
@@ -206,30 +210,123 @@ pause
 goto :MENU
 
 :EXIT_LOOP
-call :AUTH_CHECK LOOP_EXIT_MENU "Sair do menu de loop"
-if errorlevel 1 goto :MENU
 goto :END
+
+:EXECUTION_SAFETY_GATE
+set "SAFETY_CONTEXT=%~1"
+if not defined SAFETY_CONTEXT set "SAFETY_CONTEXT=execucao"
+
+if /i "%EXTRATOR_ALLOW_CONCURRENT_RUN%"=="1" (
+  echo.
+  echo [AVISO] Trava de execucao paralela ignorada por EXTRATOR_ALLOW_CONCURRENT_RUN=1.
+  exit /b 0
+)
+
+if not exist "%SCRIPT_DIR%\verificar_execucao_ativa.ps1" (
+  echo.
+  echo ERRO: Verificador de execucao ativa nao encontrado:
+  echo   %SCRIPT_DIR%\verificar_execucao_ativa.ps1
+  echo.
+  exit /b 1
+)
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%\verificar_execucao_ativa.ps1" -RepoRoot "%REPO_ROOT%"
+set "SAFETY_EXIT=%ERRORLEVEL%"
+if "%SAFETY_EXIT%"=="0" exit /b 0
+if not "%SAFETY_EXIT%"=="2" (
+  echo.
+  echo ERRO: Falha ao verificar execucoes ativas ^(codigo %SAFETY_EXIT%^).
+  exit /b 1
+)
+
+if /i "%EXTRATOR_NONINTERACTIVE%"=="1" (
+  echo.
+  echo [BLOQUEIO] %SAFETY_CONTEXT% cancelada: existe outra execucao ativa.
+  exit /b 1
+)
+
+:EXECUTION_SAFETY_CHOICE
+echo.
+echo O que deseja fazer agora?
+echo   1. Cancelar agora ^(recomendado^)
+echo   2. Continuar mesmo assim
+echo.
+set "SAFETY_OP="
+set /p "SAFETY_OP=Escolha uma opcao [1-2]: " || exit /b 1
+set "SAFETY_OP=%SAFETY_OP: =%"
+
+if "%SAFETY_OP%"=="1" (
+  echo.
+  echo Execucao cancelada antes de iniciar: %SAFETY_CONTEXT%.
+  exit /b 1
+)
+if "%SAFETY_OP%"=="2" goto :EXECUTION_SAFETY_FORCE_CONTINUE
+
+echo Opcao invalida.
+goto :EXECUTION_SAFETY_CHOICE
+
+:EXECUTION_SAFETY_FORCE_CONTINUE
+echo.
+echo Continuar em paralelo pode causar disputa de lock, lentidao e dados incompletos.
+set "SAFETY_CONFIRM="
+set /p "SAFETY_CONFIRM=Digite CONTINUAR para seguir mesmo assim: " || exit /b 1
+if /i not "%SAFETY_CONFIRM%"=="CONTINUAR" (
+  echo Execucao cancelada.
+  exit /b 1
+)
+echo.
+echo [AVISO] Execucao paralela autorizada manualmente: %SAFETY_CONTEXT%.
+exit /b 0
 
 :AUTH_CHECK
 if /i "%EXTRATOR_SKIP_AUTH_CHECK%"=="1" exit /b 0
 set "AUTH_ACTION=%~1"
-if /i "%AUTH_ACTION%"=="LOOP_STATUS" (
-  if /i "%LOOP_STATUS_AUTH_CACHE%"=="1" exit /b 0
+call :AUTH_SESSION_PERMITS "%AUTH_ACTION%"
+if not errorlevel 1 (
+  echo.
+  echo [OK] Sessao autenticada reutilizada para: %~2
+  exit /b 0
 )
-if /i "%AUTH_ACTION%"=="LOOP_EXIT_MENU" (
+if /i "%AUTH_ACTION%"=="LOOP_STATUS" (
   if /i "%LOOP_STATUS_AUTH_CACHE%"=="1" exit /b 0
 )
 echo.
 echo Autenticacao obrigatoria para executar esta acao.
-java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --auth-check %~1 "%~2"
-if errorlevel 1 (
+set "AUTH_CONTEXT_FILE=%TEMP%\extrator_auth_loop_%RANDOM%_%RANDOM%.ctx"
+set "EXTRATOR_AUTH_CONTEXT_FILE=%AUTH_CONTEXT_FILE%"
+java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --auth-check %~1 "%~2"
+set "AUTH_EXIT=!ERRORLEVEL!"
+set "EXTRATOR_AUTH_CONTEXT_FILE="
+if not "!AUTH_EXIT!"=="0" (
   echo Acesso negado.
   echo.
   pause
   exit /b 1
 )
+call :LOAD_AUTH_CONTEXT "%AUTH_CONTEXT_FILE%"
+if exist "%AUTH_CONTEXT_FILE%" del "%AUTH_CONTEXT_FILE%" >nul 2>&1
 if /i "%AUTH_ACTION%"=="LOOP_START" set "LOOP_STATUS_AUTH_CACHE=1"
 if /i "%AUTH_ACTION%"=="LOOP_STATUS" set "LOOP_STATUS_AUTH_CACHE=1"
+exit /b 0
+
+:AUTH_SESSION_PERMITS
+if not "%AUTH_SESSION_ACTIVE%"=="1" exit /b 1
+set "AUTH_REQUIRED=%~1"
+if not defined AUTH_REQUIRED exit /b 1
+if not defined AUTH_SESSION_ACTIONS exit /b 1
+set "AUTH_ACTIONS_CHECK=;%AUTH_SESSION_ACTIONS%;"
+if not "!AUTH_ACTIONS_CHECK:;%AUTH_REQUIRED%;=!"=="!AUTH_ACTIONS_CHECK!" exit /b 0
+exit /b 1
+
+:LOAD_AUTH_CONTEXT
+set "AUTH_CONTEXT_FILE_PATH=%~1"
+if not exist "%AUTH_CONTEXT_FILE_PATH%" exit /b 0
+for /f "usebackq tokens=1,* delims==" %%A in ("%AUTH_CONTEXT_FILE_PATH%") do (
+  if /i "%%A"=="username" set "AUTH_SESSION_USER=%%B"
+  if /i "%%A"=="role" set "AUTH_SESSION_ROLE=%%B"
+  if /i "%%A"=="actions" set "AUTH_SESSION_ACTIONS=%%B"
+)
+if defined AUTH_SESSION_ACTIONS set "AUTH_SESSION_ACTIVE=1"
 exit /b 0
 
 :ASK_FATURAS_GRAPHQL_LOOP

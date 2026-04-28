@@ -1,7 +1,8 @@
 param(
     [string]$DataInicio = ((Get-Date).AddDays(-1).ToString("yyyy-MM-dd")),
     [string]$DataFim = ((Get-Date).AddDays(-1).ToString("yyyy-MM-dd")),
-    [string]$ExecutionUuid
+    [string]$ExecutionUuid,
+    [string[]]$Entidades
 )
 
 Set-StrictMode -Version Latest
@@ -97,10 +98,10 @@ function Invoke-SqlScalar {
     )
 
     $lines = Invoke-SqlLines -Config $Config -Query $Query
-    if ($lines.Count -eq 0) {
+    if (@($lines).Count -eq 0) {
         return $null
     }
-    return $lines[0]
+    return @($lines)[0]
 }
 
 function ConvertFrom-JsonPreserveStrings {
@@ -211,13 +212,13 @@ function Get-Value {
 }
 
 function Normalize-Text {
-    param([AllowNull()][string]$Value)
+    param($Value)
 
     if ($null -eq $Value) {
         return "<null>"
     }
 
-    $trimmed = $Value.Trim()
+    $trimmed = ([string]$Value).Trim()
     if ([string]::IsNullOrWhiteSpace($trimmed)) {
         return "<empty>"
     }
@@ -258,13 +259,13 @@ function Normalize-OffsetDateTimeValue {
 function Normalize-List {
     param($Items)
 
-    if ($null -eq $Items) {
+    if ($null -eq $Items -or @($Items).Count -eq 0) {
         return "<null>"
     }
 
     $normalized = New-Object System.Collections.Generic.List[string]
     foreach ($item in @($Items)) {
-        $value = Normalize-Text -Value ([string]$item)
+        $value = Normalize-Text -Value $item
         if ($value -ne "<null>" -and $value -ne "<empty>") {
             [void]$normalized.Add($value)
         }
@@ -296,12 +297,19 @@ function Get-FaturaPorClienteCanonicalKey {
 
     $nfseNumber = Get-Value $Item "fit_nse_number"
     if ($null -eq $nfseNumber -or [string]::IsNullOrWhiteSpace([string]$nfseNumber)) {
-        $nfseNumber = Get-Value $Item "nfse_number"
+        $nfseNumberRaw = Get-Value $Item "nfse_number"
+        if ($null -ne $nfseNumberRaw -and -not [string]::IsNullOrWhiteSpace([string]$nfseNumberRaw)) {
+            try {
+                $nfseNumber = ([Int64]([string]$nfseNumberRaw).Trim()).ToString()
+            } catch {
+                $nfseNumber = $null
+            }
+        }
     }
 
     $cteNumber = Get-Value $Item "fit_fhe_cte_number"
     $faturaDocument = Get-Value $Item "fit_ant_document"
-    $faturaIssueDate = Normalize-DateOnlyValue (Get-Value $Item "fit_ant_issue_date")
+    $faturaIssueDate = Get-Value $Item "fit_ant_issue_date"
     $billingId = Get-Value $Item "billingId"
     $pagadorDocumento = Get-Value $Item "fit_pyr_document"
     $remetenteDocumento = Get-Value $Item "fit_rpt_document"
@@ -313,37 +321,37 @@ function Get-FaturaPorClienteCanonicalKey {
 
     $sb = New-Object System.Text.StringBuilder
     if ($nfseNumber -ne $null -and -not [string]::IsNullOrWhiteSpace([string]$nfseNumber)) {
-        [void]$sb.Append("identitySource=").Append((Normalize-Text ([string]"nfse"))).Append("|")
-        [void]$sb.Append("nfseNumber=").Append((Normalize-Text ([string]$nfseNumber))).Append("|")
-        [void]$sb.Append("pagadorDocumento=").Append((Normalize-Text ([string]$pagadorDocumento))).Append("|")
-        [void]$sb.Append("remetenteDocumento=").Append((Normalize-Text ([string]$remetenteDocumento))).Append("|")
-        [void]$sb.Append("destinatarioDocumento=").Append((Normalize-Text ([string]$destinatarioDocumento))).Append("|")
+        [void]$sb.Append("identitySource=").Append((Normalize-Text "nfse")).Append("|")
+        [void]$sb.Append("nfseNumber=").Append((Normalize-Text $nfseNumber)).Append("|")
+        [void]$sb.Append("pagadorDocumento=").Append((Normalize-Text $pagadorDocumento)).Append("|")
+        [void]$sb.Append("remetenteDocumento=").Append((Normalize-Text $remetenteDocumento)).Append("|")
+        [void]$sb.Append("destinatarioDocumento=").Append((Normalize-Text $destinatarioDocumento)).Append("|")
     } elseif ($cteNumber -ne $null -and -not [string]::IsNullOrWhiteSpace([string]$cteNumber)) {
-        [void]$sb.Append("identitySource=").Append((Normalize-Text ([string]"cte"))).Append("|")
-        [void]$sb.Append("cteNumber=").Append((Normalize-Text ([string]$cteNumber))).Append("|")
-        [void]$sb.Append("pagadorDocumento=").Append((Normalize-Text ([string]$pagadorDocumento))).Append("|")
-        [void]$sb.Append("remetenteDocumento=").Append((Normalize-Text ([string]$remetenteDocumento))).Append("|")
-        [void]$sb.Append("destinatarioDocumento=").Append((Normalize-Text ([string]$destinatarioDocumento))).Append("|")
+        [void]$sb.Append("identitySource=").Append((Normalize-Text "cte")).Append("|")
+        [void]$sb.Append("cteNumber=").Append((Normalize-Text $cteNumber)).Append("|")
+        [void]$sb.Append("pagadorDocumento=").Append((Normalize-Text $pagadorDocumento)).Append("|")
+        [void]$sb.Append("remetenteDocumento=").Append((Normalize-Text $remetenteDocumento)).Append("|")
+        [void]$sb.Append("destinatarioDocumento=").Append((Normalize-Text $destinatarioDocumento)).Append("|")
     } elseif (-not [string]::IsNullOrWhiteSpace([string]$faturaDocument)) {
-        [void]$sb.Append("identitySource=").Append((Normalize-Text ([string]"fatura"))).Append("|")
-        [void]$sb.Append("document=").Append((Normalize-Text ([string]$faturaDocument))).Append("|")
-        [void]$sb.Append("issueDate=").Append((Normalize-Text ([string]$faturaIssueDate))).Append("|")
-        [void]$sb.Append("pagadorDocumento=").Append((Normalize-Text ([string]$pagadorDocumento))).Append("|")
-        [void]$sb.Append("destinatarioDocumento=").Append((Normalize-Text ([string]$destinatarioDocumento))).Append("|")
+        [void]$sb.Append("identitySource=").Append((Normalize-Text "fatura")).Append("|")
+        [void]$sb.Append("document=").Append((Normalize-Text $faturaDocument)).Append("|")
+        [void]$sb.Append("issueDate=").Append((Normalize-Text $faturaIssueDate)).Append("|")
+        [void]$sb.Append("pagadorDocumento=").Append((Normalize-Text $pagadorDocumento)).Append("|")
+        [void]$sb.Append("destinatarioDocumento=").Append((Normalize-Text $destinatarioDocumento)).Append("|")
     } elseif (-not [string]::IsNullOrWhiteSpace([string]$billingId)) {
-        [void]$sb.Append("identitySource=").Append((Normalize-Text ([string]"billing"))).Append("|")
-        [void]$sb.Append("billingId=").Append((Normalize-Text ([string]$billingId))).Append("|")
-        [void]$sb.Append("pagadorDocumento=").Append((Normalize-Text ([string]$pagadorDocumento))).Append("|")
-        [void]$sb.Append("destinatarioDocumento=").Append((Normalize-Text ([string]$destinatarioDocumento))).Append("|")
+        [void]$sb.Append("identitySource=").Append((Normalize-Text "billing")).Append("|")
+        [void]$sb.Append("billingId=").Append((Normalize-Text $billingId)).Append("|")
+        [void]$sb.Append("pagadorDocumento=").Append((Normalize-Text $pagadorDocumento)).Append("|")
+        [void]$sb.Append("destinatarioDocumento=").Append((Normalize-Text $destinatarioDocumento)).Append("|")
     } else {
-        [void]$sb.Append("identitySource=").Append((Normalize-Text ([string]"fallback"))).Append("|")
-        [void]$sb.Append("pagadorDocumento=").Append((Normalize-Text ([string]$pagadorDocumento))).Append("|")
-        [void]$sb.Append("remetenteDocumento=").Append((Normalize-Text ([string]$remetenteDocumento))).Append("|")
-        [void]$sb.Append("destinatarioDocumento=").Append((Normalize-Text ([string]$destinatarioDocumento))).Append("|")
+        [void]$sb.Append("identitySource=").Append((Normalize-Text "fallback")).Append("|")
+        [void]$sb.Append("pagadorDocumento=").Append((Normalize-Text $pagadorDocumento)).Append("|")
+        [void]$sb.Append("remetenteDocumento=").Append((Normalize-Text $remetenteDocumento)).Append("|")
+        [void]$sb.Append("destinatarioDocumento=").Append((Normalize-Text $destinatarioDocumento)).Append("|")
         [void]$sb.Append("notasFiscais=").Append((Normalize-List $notasFiscais)).Append("|")
         [void]$sb.Append("pedidosCliente=").Append((Normalize-List $pedidosCliente)).Append("|")
-        [void]$sb.Append("valorFrete=").Append((Normalize-Text ([string]$valorFrete))).Append("|")
-        [void]$sb.Append("valorFatura=").Append((Normalize-Text ([string]$valorFatura))).Append("|")
+        [void]$sb.Append("valorFrete=").Append((Normalize-Text $valorFrete)).Append("|")
+        [void]$sb.Append("valorFatura=").Append((Normalize-Text $valorFatura)).Append("|")
     }
 
     return $sb.ToString()
@@ -359,14 +367,16 @@ function Get-InventarioBusinessKey {
     param($Item)
 
     $sequenceCode = [string](Get-Value $Item "sequence_code")
-    $numeroMinuta = [string](Get-Value $Item "cnr_c_s_fit_corporation_sequence_number")
+    $numeroMinutaValue = Get-Value $Item "cnr_c_s_fit_corporation_sequence_number"
+    $numeroMinuta = if ($null -eq $numeroMinutaValue) { "null" } else { [string]$numeroMinutaValue }
     $invoicesMapping = Get-Value $Item "cnr_c_s_fit_invoices_mapping"
     $invoicesMappingJson = if ($null -eq $invoicesMapping) {
         ""
     } else {
         ConvertTo-Json @($invoicesMapping) -Compress -Depth 100
     }
-    $startedAt = Normalize-OffsetDateTimeValue (Get-Value $Item "started_at")
+    $startedAtValue = Get-Value $Item "started_at"
+    $startedAt = if ($null -eq $startedAtValue) { "" } else { [string]$startedAtValue }
 
     return "{0}|{1}|{2}|{3}" -f $sequenceCode, $numeroMinuta, $invoicesMappingJson, $startedAt
 }
@@ -630,6 +640,137 @@ function Get-GraphQlPages {
     }
 }
 
+function Get-WindowDateInfo {
+    param([pscustomobject]$Window)
+
+    $start = [datetime]::Parse($Window.periodo_inicio).Date
+    $end = [datetime]::Parse($Window.periodo_fim).Date
+    $days = New-Object System.Collections.Generic.List[string]
+
+    for ($cursor = $start; $cursor -le $end; $cursor = $cursor.AddDays(1)) {
+        [void]$days.Add($cursor.ToString("yyyy-MM-dd"))
+    }
+
+    return [pscustomobject]@{
+        StartDate = $start.ToString("yyyy-MM-dd")
+        EndDate = $end.ToString("yyyy-MM-dd")
+        Range = "{0} - {1}" -f $start.ToString("yyyy-MM-dd"), $end.ToString("yyyy-MM-dd")
+        Days = @($days)
+    }
+}
+
+function Get-GraphQlPagesByDay {
+    param(
+        [string]$Name,
+        [string]$GraphQlUrl,
+        [hashtable]$Headers,
+        [string]$Query,
+        [scriptblock]$ParamsBuilder,
+        [string]$RootField,
+        [string]$RawDir,
+        [pscustomobject]$Window
+    )
+
+    $windowInfo = Get-WindowDateInfo -Window $Window
+    $allItems = @()
+    $totalPages = 0
+    $anomalies = @()
+
+    foreach ($day in $windowInfo.Days) {
+        $daySuffix = $day.Replace("-", "")
+        $result = Get-GraphQlPages `
+            -Name ("{0}-{1}" -f $Name, $daySuffix) `
+            -GraphQlUrl $GraphQlUrl `
+            -Headers $Headers `
+            -Query $Query `
+            -Params (& $ParamsBuilder $day) `
+            -RootField $RootField `
+            -RawDir $RawDir
+
+        $allItems += @($result.Items)
+        $totalPages += [int]$result.Pages
+        foreach ($anomaly in @($result.Anomalies)) {
+            $anomalies += "{0}:{1}" -f $day, $anomaly
+        }
+    }
+
+    return [pscustomobject]@{
+        Items = @($allItems)
+        RawCount = $allItems.Count
+        Pages = $totalPages
+        Anomalies = @($anomalies)
+    }
+}
+
+function Get-FaturasGraphqlPagesByDay {
+    param(
+        [string]$Name,
+        [string]$GraphQlUrl,
+        [hashtable]$Headers,
+        [string]$Query,
+        [hashtable]$BaseParams,
+        [string]$RootField,
+        [string]$RawDir,
+        [pscustomobject]$Window
+    )
+
+    $windowInfo = Get-WindowDateInfo -Window $Window
+    $allItems = @()
+    $totalPages = 0
+    $anomalies = @()
+    $camposFiltro = @("dueDate", "originalDueDate", "issueDate")
+
+    foreach ($day in $windowInfo.Days) {
+        $daySuffix = $day.Replace("-", "")
+        $dayResult = $null
+        $attemptErrors = New-Object System.Collections.Generic.List[string]
+
+        foreach ($campoFiltro in $camposFiltro) {
+            $params = @{}
+            if ($BaseParams) {
+                foreach ($key in $BaseParams.Keys) {
+                    $params[$key] = $BaseParams[$key]
+                }
+            }
+            $params[$campoFiltro] = $day
+
+            try {
+                $dayResult = Get-GraphQlPages `
+                    -Name ("{0}-{1}-{2}" -f $Name, $campoFiltro, $daySuffix) `
+                    -GraphQlUrl $GraphQlUrl `
+                    -Headers $Headers `
+                    -Query $Query `
+                    -Params $params `
+                    -RootField $RootField `
+                    -RawDir $RawDir
+                if ($campoFiltro -ne $camposFiltro[0]) {
+                    $anomalies += "{0}:fallback_filtro_{1}" -f $day, $campoFiltro
+                }
+                break
+            } catch {
+                [void]$attemptErrors.Add(("{0}={1}" -f $campoFiltro, $_.Exception.Message))
+            }
+        }
+
+        if ($null -eq $dayResult) {
+            throw ("Falha GraphQL faturas_graphql no dia {0}: {1}" -f $day, ($attemptErrors -join " | "))
+        }
+
+        $allItems += @($dayResult.Items)
+        $totalPages += [int]$dayResult.Pages
+        foreach ($anomaly in @($dayResult.Anomalies)) {
+            $anomalies += "{0}:{1}" -f $day, $anomaly
+        }
+    }
+
+    return [pscustomobject]@{
+        Items = @($allItems)
+        RawCount = $allItems.Count
+        Pages = $totalPages
+        Anomalies = @($anomalies)
+    }
+}
+
 function ConvertTo-KeySummary {
     param(
         [object[]]$Items,
@@ -698,9 +839,9 @@ SET NOCOUNT ON;
 SELECT CONCAT(
     CAST(sequence_code AS VARCHAR(50)),
     '|',
-    COALESCE(CAST(pick_sequence_code AS VARCHAR(50)), '-1'),
+    COALESCE(CAST(pick_sequence_code AS VARCHAR(50)), JSON_VALUE(metadata, '$.mft_pfs_pck_sequence_code'), '-1'),
     '|',
-    COALESCE(CAST(mdfe_number AS VARCHAR(50)), '-1')
+    COALESCE(CAST(mdfe_number AS VARCHAR(50)), JSON_VALUE(metadata, '$.mft_mfs_number'), '-1')
 )
 FROM dbo.manifestos
 WHERE data_extracao >= '$windowStart'
@@ -810,14 +951,14 @@ ORDER BY 1;
 
     $rows = Invoke-SqlLines -Config $Config -Query $query
     $distinct = New-Object System.Collections.Generic.HashSet[string]
-    foreach ($row in $rows) {
+    foreach ($row in @($rows)) {
         [void]$distinct.Add($row)
     }
 
     return [pscustomobject]@{
         RawKeys = @($rows)
         DistinctKeys = @($distinct)
-        RawCount = $rows.Count
+        RawCount = @($rows).Count
         UniqueCount = $distinct.Count
     }
 }
@@ -840,7 +981,7 @@ ORDER BY 1;
 
     $rows = Invoke-SqlLines -Config $Config -Query $query
     $distinct = New-Object System.Collections.Generic.HashSet[string]
-    foreach ($row in $rows) {
+    foreach ($row in @($rows)) {
         [void]$distinct.Add($row)
     }
     return @($distinct)
@@ -951,10 +1092,11 @@ function Save-MarkdownReport {
 
     $lines = New-Object System.Collections.Generic.List[string]
     $tick = [char]96
-    [void]$lines.Add("# Comparativo CURL x Banco - Periodo Fechado")
+    [void]$lines.Add("# Comparativo CURL x Banco - Execucao Ancorada")
     [void]$lines.Add("")
-    [void]$lines.Add("- Janela validada: $tick$DataInicio$tick a $tick$DataFim$tick")
+    [void]$lines.Add("- Janela solicitada para ancoragem: $tick$DataInicio$tick a $tick$DataFim$tick")
     [void]$lines.Add("- Execution UUID ancora: $tick$ExecutionUuid$tick")
+    [void]$lines.Add("- Criterio: cada entidade foi consultada com a janela real registrada em ${tick}sys_execution_audit${tick}.")
     [void]$lines.Add("- Resultado consolidado: ok=$tick$okCount$tick, falhas=$tick$failCount$tick")
     [void]$lines.Add("")
 
@@ -963,6 +1105,12 @@ function Save-MarkdownReport {
         [void]$lines.Add("")
         $status = if ($result.ok) { "OK" } else { "FALHA" }
         [void]$lines.Add("- Status: $tick$status$tick")
+        if ($result.PSObject.Properties["janela_consulta"]) {
+            [void]$lines.Add("- Janela da entidade: $tick$($result.janela_consulta)$tick")
+        }
+        if ($result.PSObject.Properties["api_paginas"]) {
+            [void]$lines.Add("- Paginas API: $($result.api_paginas)")
+        }
         [void]$lines.Add("- API: bruto=$($result.api_raw), unico=$($result.api_unico)")
         [void]$lines.Add("- Banco: linhas=$($result.banco_linhas), unico=$($result.banco_unico)")
         [void]$lines.Add("- Faltantes no banco: $($result.faltantes_no_banco)")
@@ -1010,19 +1158,23 @@ $dataExportHeaders = @{
     Accept = "application/json"
 }
 
-$requiredEntities = @(
-    "usuarios_sistema",
-    "coletas",
-    "fretes",
-    "faturas_graphql",
-    "manifestos",
-    "cotacoes",
-    "localizacao_cargas",
-    "contas_a_pagar",
-    "faturas_por_cliente",
-    "inventario",
-    "sinistros"
-)
+$requiredEntities = if ($Entidades -and @($Entidades).Count -gt 0) {
+    @($Entidades | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object { $_.Trim() })
+} else {
+    @(
+        "usuarios_sistema",
+        "coletas",
+        "fretes",
+        "faturas_graphql",
+        "manifestos",
+        "cotacoes",
+        "localizacao_cargas",
+        "contas_a_pagar",
+        "faturas_por_cliente",
+        "inventario",
+        "sinistros"
+    )
+}
 
 if (-not $ExecutionUuid) {
     $windowStart = ([datetime]::ParseExact($DataInicio, "yyyy-MM-dd", [System.Globalization.CultureInfo]::InvariantCulture)).ToString("yyyy-MM-ddT00:00:00")
@@ -1038,13 +1190,14 @@ WITH candidatos AS (
     FROM dbo.sys_execution_audit
     WHERE status_execucao IN ('COMPLETO', 'RECONCILIADO', 'RECONCILED')
       AND api_completa = 1
-      AND janela_consulta_inicio = '$windowStart'
-      AND janela_consulta_fim = '$windowEnd'
+      AND janela_consulta_inicio <= '$windowStart'
+      AND janela_consulta_fim >= '$windowEnd'
       AND entidade IN ($entityList)
     GROUP BY execution_uuid
 )
 SELECT TOP 1 execution_uuid
 FROM candidatos
+WHERE entidades_cobertas = $($requiredEntities.Count)
 ORDER BY entidades_cobertas DESC, ultimo_fim DESC;
 "@
     $ExecutionUuid = Invoke-SqlScalar -Config $cfg -Query $anchorQuery
@@ -1073,7 +1226,7 @@ ORDER BY entidade;
 
 $windowRows = Invoke-SqlLines -Config $cfg -Query $windowsQuery
 $windows = @{}
-foreach ($row in $windowRows) {
+foreach ($row in @($windowRows)) {
     $parts = $row -split "\|", 6
     if ($parts.Count -lt 6) {
         continue
@@ -1177,76 +1330,115 @@ query ProbeFaturas($params: CreditCustomerBillingInput!, $after: String) {
 }
 '@
 
-$coletasPages = Get-GraphQlPages -Name "coletas" -GraphQlUrl $graphQlUrl -Headers $graphQlHeaders -Query $queryColetas -Params @{ requestDate = $DataInicio } -RootField "pick" -RawDir $rawDir
-$fretesPages = Get-GraphQlPages -Name "fretes" -GraphQlUrl $graphQlUrl -Headers $graphQlHeaders -Query $queryFretes -Params @{ serviceAt = $range } -RootField "freight" -RawDir $rawDir
-$usuariosPages = Get-GraphQlPages -Name "usuarios_sistema" -GraphQlUrl $graphQlUrl -Headers $graphQlHeaders -Query $queryUsuarios -Params @{ enabled = $true; updatedAt = $range } -RootField "individual" -RawDir $rawDir
-
-$billingParams = @{ dueDate = $DataInicio }
+$billingParams = @{}
 if ($cfg.ContainsKey("API_CORPORATION_ID") -and -not [string]::IsNullOrWhiteSpace($cfg["API_CORPORATION_ID"])) {
     $billingParams["corporationId"] = $cfg["API_CORPORATION_ID"]
 }
-$faturasGraphqlPages = Get-GraphQlPages -Name "faturas_graphql" -GraphQlUrl $graphQlUrl -Headers $graphQlHeaders -Query $queryFaturasGraphql -Params $billingParams -RootField "creditCustomerBilling" -RawDir $rawDir
+$results = @()
+$apiPages = @{}
 
-$manifestosPages = Get-DataExportPages -Name "manifestos" -BaseUrl $baseUrl -Headers $dataExportHeaders -TemplateId 6399 -TabelaApi "manifests" -CampoData "service_date" -Range $range -Per 100 -OrderBy "sequence_code asc" -FiltrosExtras @{} -RawDir $rawDir
-$cotacoesPages = Get-DataExportPages -Name "cotacoes" -BaseUrl $baseUrl -Headers $dataExportHeaders -TemplateId 6906 -TabelaApi "quotes" -CampoData "requested_at" -Range $range -Per 100 -OrderBy "sequence_code asc" -FiltrosExtras @{} -RawDir $rawDir
-$localizacaoPages = Get-DataExportPages -Name "localizacao_cargas" -BaseUrl $baseUrl -Headers $dataExportHeaders -TemplateId 8656 -TabelaApi "freights" -CampoData "service_at" -Range $range -Per 10000 -OrderBy "sequence_number asc" -FiltrosExtras @{} -RawDir $rawDir
-$contasPages = Get-DataExportPages -Name "contas_a_pagar" -BaseUrl $baseUrl -Headers $dataExportHeaders -TemplateId 8636 -TabelaApi "accounting_debits" -CampoData "issue_date" -Range $range -Per 100 -OrderBy "issue_date desc" -FiltrosExtras @{ created_at = $range } -RawDir $rawDir
-$faturasClientePages = Get-DataExportPages -Name "faturas_por_cliente" -BaseUrl $baseUrl -Headers $dataExportHeaders -TemplateId 4924 -TabelaApi "freights" -CampoData "service_at" -Range $range -Per 100 -OrderBy "unique_id asc" -FiltrosExtras @{} -RawDir $rawDir
-$inventarioPages = Get-DataExportPages -Name "inventario" -BaseUrl $baseUrl -Headers $dataExportHeaders -TemplateId 10633 -TabelaApi "check_in_orders" -CampoData "started_at" -Range $range -Per 100 -OrderBy "sequence_code asc" -FiltrosExtras @{} -RawDir $rawDir
-$sinistrosPages = Get-DataExportPages -Name "sinistros" -BaseUrl $baseUrl -Headers $dataExportHeaders -TemplateId 6392 -TabelaApi "insurance_claims" -CampoData "opening_at_date" -Range $range -Per 100 -OrderBy "sequence_code asc" -FiltrosExtras @{} -RawDir $rawDir
+foreach ($entity in $requiredEntities) {
+    $window = $windows[$entity]
+    $windowInfo = Get-WindowDateInfo -Window $window
+    $pages = $null
+    $comparison = $null
 
-$apiColetas = ConvertTo-KeySummary -Items $coletasPages.Items -KeySelector { param($item) [string](Get-Value $item "id") }
-$apiFretes = ConvertTo-KeySummary -Items $fretesPages.Items -KeySelector { param($item) [string](Get-Value $item "id") }
-$apiUsuarios = ConvertTo-KeySummary -Items $usuariosPages.Items -KeySelector { param($item) [string](Get-Value $item "id") }
-$apiFaturasGraphql = ConvertTo-KeySummary -Items $faturasGraphqlPages.Items -KeySelector { param($item) [string](Get-Value $item "id") }
-$apiManifestos = ConvertTo-KeySummary -Items $manifestosPages.Items -KeySelector {
-    param($item)
-    $seq = [string](Get-Value $item "sequence_code")
-    $pick = [string](Get-Value $item "mft_pfs_pck_sequence_code")
-    $mdfe = [string](Get-Value $item "mft_mfs_number")
-    if ([string]::IsNullOrWhiteSpace($seq)) { return $null }
-    return "{0}|{1}|{2}" -f $seq, ($(if ([string]::IsNullOrWhiteSpace($pick)) { "-1" } else { $pick })), ($(if ([string]::IsNullOrWhiteSpace($mdfe)) { "-1" } else { $mdfe }))
-}
-$apiCotacoes = ConvertTo-KeySummary -Items $cotacoesPages.Items -KeySelector { param($item) [string](Get-Value $item "sequence_code") }
-$apiLocalizacao = ConvertTo-KeySummary -Items $localizacaoPages.Items -KeySelector {
-    param($item)
-    $value = Get-Value $item "corporation_sequence_number"
-    if ($null -eq $value -or [string]::IsNullOrWhiteSpace([string]$value)) {
-        $value = Get-Value $item "sequence_number"
+    switch ($entity) {
+        "usuarios_sistema" {
+            $pages = Get-GraphQlPages -Name "usuarios_sistema" -GraphQlUrl $graphQlUrl -Headers $graphQlHeaders -Query $queryUsuarios -Params @{ enabled = $true; updatedAt = $windowInfo.Range } -RootField "individual" -RawDir $rawDir
+            $api = ConvertTo-KeySummary -Items $pages.Items -KeySelector { param($item) [string](Get-Value $item "id") }
+            $db = Get-DbKeysForEntity -Config $cfg -Entity $entity -Window $window
+            $comparison = New-RegularComparison -Entity $entity -Api $api -Db $db -Anomalies $pages.Anomalies
+        }
+        "coletas" {
+            $pages = Get-GraphQlPagesByDay -Name "coletas" -GraphQlUrl $graphQlUrl -Headers $graphQlHeaders -Query $queryColetas -ParamsBuilder { param($day) @{ requestDate = $day } } -RootField "pick" -RawDir $rawDir -Window $window
+            $api = ConvertTo-KeySummary -Items $pages.Items -KeySelector { param($item) [string](Get-Value $item "id") }
+            $db = Get-DbKeysForEntity -Config $cfg -Entity $entity -Window $window
+            $comparison = New-RegularComparison -Entity $entity -Api $api -Db $db -Anomalies $pages.Anomalies
+        }
+        "fretes" {
+            $pages = Get-GraphQlPages -Name "fretes" -GraphQlUrl $graphQlUrl -Headers $graphQlHeaders -Query $queryFretes -Params @{ serviceAt = $windowInfo.Range } -RootField "freight" -RawDir $rawDir
+            $api = ConvertTo-KeySummary -Items $pages.Items -KeySelector { param($item) [string](Get-Value $item "id") }
+            $db = Get-DbKeysForEntity -Config $cfg -Entity $entity -Window $window
+            $comparison = New-RegularComparison -Entity $entity -Api $api -Db $db -Anomalies $pages.Anomalies
+        }
+        "faturas_graphql" {
+            $pages = Get-FaturasGraphqlPagesByDay -Name "faturas_graphql" -GraphQlUrl $graphQlUrl -Headers $graphQlHeaders -Query $queryFaturasGraphql -BaseParams $billingParams -RootField "creditCustomerBilling" -RawDir $rawDir -Window $window
+            $api = ConvertTo-KeySummary -Items $pages.Items -KeySelector { param($item) [string](Get-Value $item "id") }
+            $db = Get-DbKeysForEntity -Config $cfg -Entity $entity -Window $window
+            $freteAccountingCreditIds = if ($windows.ContainsKey("fretes")) {
+                Get-FreteAccountingCreditIds -Config $cfg -Window $windows["fretes"]
+            } else {
+                @()
+            }
+            $comparison = New-FaturasGraphqlComparison -Api $api -Db $db -FreteCreditIds $freteAccountingCreditIds -Anomalies $pages.Anomalies
+        }
+        "manifestos" {
+            $pages = Get-DataExportPages -Name "manifestos" -BaseUrl $baseUrl -Headers $dataExportHeaders -TemplateId 6399 -TabelaApi "manifests" -CampoData "service_date" -Range $windowInfo.Range -Per 100 -OrderBy "sequence_code asc" -FiltrosExtras @{} -RawDir $rawDir
+            $api = ConvertTo-KeySummary -Items $pages.Items -KeySelector {
+                param($item)
+                $seq = [string](Get-Value $item "sequence_code")
+                $pick = [string](Get-Value $item "mft_pfs_pck_sequence_code")
+                $mdfe = [string](Get-Value $item "mft_mfs_number")
+                if ([string]::IsNullOrWhiteSpace($seq)) { return $null }
+                return "{0}|{1}|{2}" -f $seq, ($(if ([string]::IsNullOrWhiteSpace($pick)) { "-1" } else { $pick })), ($(if ([string]::IsNullOrWhiteSpace($mdfe)) { "-1" } else { $mdfe }))
+            }
+            $db = Get-DbKeysForEntity -Config $cfg -Entity $entity -Window $window
+            $comparison = New-RegularComparison -Entity $entity -Api $api -Db $db -Anomalies $pages.Anomalies
+        }
+        "cotacoes" {
+            $pages = Get-DataExportPages -Name "cotacoes" -BaseUrl $baseUrl -Headers $dataExportHeaders -TemplateId 6906 -TabelaApi "quotes" -CampoData "requested_at" -Range $windowInfo.Range -Per 100 -OrderBy "sequence_code asc" -FiltrosExtras @{} -RawDir $rawDir
+            $api = ConvertTo-KeySummary -Items $pages.Items -KeySelector { param($item) [string](Get-Value $item "sequence_code") }
+            $db = Get-DbKeysForEntity -Config $cfg -Entity $entity -Window $window
+            $comparison = New-RegularComparison -Entity $entity -Api $api -Db $db -Anomalies $pages.Anomalies
+        }
+        "localizacao_cargas" {
+            $pages = Get-DataExportPages -Name "localizacao_cargas" -BaseUrl $baseUrl -Headers $dataExportHeaders -TemplateId 8656 -TabelaApi "freights" -CampoData "service_at" -Range $windowInfo.Range -Per 10000 -OrderBy "sequence_number asc" -FiltrosExtras @{} -RawDir $rawDir
+            $api = ConvertTo-KeySummary -Items $pages.Items -KeySelector {
+                param($item)
+                $value = Get-Value $item "corporation_sequence_number"
+                if ($null -eq $value -or [string]::IsNullOrWhiteSpace([string]$value)) {
+                    $value = Get-Value $item "sequence_number"
+                }
+                return [string]$value
+            }
+            $db = Get-DbKeysForEntity -Config $cfg -Entity $entity -Window $window
+            $comparison = New-RegularComparison -Entity $entity -Api $api -Db $db -Anomalies $pages.Anomalies
+        }
+        "contas_a_pagar" {
+            $pages = Get-DataExportPages -Name "contas_a_pagar" -BaseUrl $baseUrl -Headers $dataExportHeaders -TemplateId 8636 -TabelaApi "accounting_debits" -CampoData "issue_date" -Range $windowInfo.Range -Per 100 -OrderBy "issue_date desc" -FiltrosExtras @{ created_at = $windowInfo.Range } -RawDir $rawDir
+            $api = ConvertTo-KeySummary -Items $pages.Items -KeySelector { param($item) [string](Get-Value $item "ant_ils_sequence_code") }
+            $db = Get-DbKeysForEntity -Config $cfg -Entity $entity -Window $window
+            $comparison = New-RegularComparison -Entity $entity -Api $api -Db $db -Anomalies $pages.Anomalies
+        }
+        "faturas_por_cliente" {
+            $pages = Get-DataExportPages -Name "faturas_por_cliente" -BaseUrl $baseUrl -Headers $dataExportHeaders -TemplateId 4924 -TabelaApi "freights" -CampoData "service_at" -Range $windowInfo.Range -Per 100 -OrderBy "unique_id asc" -FiltrosExtras @{} -RawDir $rawDir
+            $api = ConvertTo-KeySummary -Items $pages.Items -KeySelector { param($item) Get-FaturaPorClienteUniqueId -Item $item }
+            $db = Get-DbKeysForEntity -Config $cfg -Entity $entity -Window $window
+            $comparison = New-RegularComparison -Entity $entity -Api $api -Db $db -Anomalies $pages.Anomalies
+        }
+        "inventario" {
+            $pages = Get-DataExportPages -Name "inventario" -BaseUrl $baseUrl -Headers $dataExportHeaders -TemplateId 10633 -TabelaApi "check_in_orders" -CampoData "started_at" -Range $windowInfo.Range -Per 100 -OrderBy "sequence_code asc" -FiltrosExtras @{} -RawDir $rawDir
+            $api = ConvertTo-KeySummary -Items $pages.Items -KeySelector { param($item) Get-InventarioUniqueId -Item $item }
+            $db = Get-DbKeysForEntity -Config $cfg -Entity $entity -Window $window
+            $comparison = New-RegularComparison -Entity $entity -Api $api -Db $db -Anomalies $pages.Anomalies
+        }
+        "sinistros" {
+            $pages = Get-DataExportPages -Name "sinistros" -BaseUrl $baseUrl -Headers $dataExportHeaders -TemplateId 6392 -TabelaApi "insurance_claims" -CampoData "opening_at_date" -Range $windowInfo.Range -Per 100 -OrderBy "sequence_code asc" -FiltrosExtras @{} -RawDir $rawDir
+            $api = ConvertTo-KeySummary -Items $pages.Items -KeySelector { param($item) Get-SinistroUniqueId -Item $item }
+            $db = Get-DbKeysForEntity -Config $cfg -Entity $entity -Window $window
+            $comparison = New-RegularComparison -Entity $entity -Api $api -Db $db -Anomalies $pages.Anomalies
+        }
+        default {
+            throw "Entidade sem coleta configurada no probe: $entity"
+        }
     }
-    return [string]$value
+
+    $apiPages[$entity] = [int]$pages.Pages
+    Add-Member -InputObject $comparison -NotePropertyName janela_consulta -NotePropertyValue ("{0} a {1}" -f $windowInfo.StartDate, $windowInfo.EndDate)
+    Add-Member -InputObject $comparison -NotePropertyName api_paginas -NotePropertyValue ([int]$pages.Pages)
+    $results += $comparison
 }
-$apiContas = ConvertTo-KeySummary -Items $contasPages.Items -KeySelector { param($item) [string](Get-Value $item "ant_ils_sequence_code") }
-$apiFaturasCliente = ConvertTo-KeySummary -Items $faturasClientePages.Items -KeySelector { param($item) Get-FaturaPorClienteUniqueId -Item $item }
-$apiInventario = ConvertTo-KeySummary -Items $inventarioPages.Items -KeySelector { param($item) Get-InventarioUniqueId -Item $item }
-$apiSinistros = ConvertTo-KeySummary -Items $sinistrosPages.Items -KeySelector { param($item) Get-SinistroUniqueId -Item $item }
-
-$dbColetas = Get-DbKeysForEntity -Config $cfg -Entity "coletas" -Window $windows["coletas"]
-$dbFretes = Get-DbKeysForEntity -Config $cfg -Entity "fretes" -Window $windows["fretes"]
-$dbUsuarios = Get-DbKeysForEntity -Config $cfg -Entity "usuarios_sistema" -Window $windows["usuarios_sistema"]
-$dbFaturasGraphql = Get-DbKeysForEntity -Config $cfg -Entity "faturas_graphql" -Window $windows["faturas_graphql"]
-$dbManifestos = Get-DbKeysForEntity -Config $cfg -Entity "manifestos" -Window $windows["manifestos"]
-$dbCotacoes = Get-DbKeysForEntity -Config $cfg -Entity "cotacoes" -Window $windows["cotacoes"]
-$dbLocalizacao = Get-DbKeysForEntity -Config $cfg -Entity "localizacao_cargas" -Window $windows["localizacao_cargas"]
-$dbContas = Get-DbKeysForEntity -Config $cfg -Entity "contas_a_pagar" -Window $windows["contas_a_pagar"]
-$dbFaturasCliente = Get-DbKeysForEntity -Config $cfg -Entity "faturas_por_cliente" -Window $windows["faturas_por_cliente"]
-$dbInventario = Get-DbKeysForEntity -Config $cfg -Entity "inventario" -Window $windows["inventario"]
-$dbSinistros = Get-DbKeysForEntity -Config $cfg -Entity "sinistros" -Window $windows["sinistros"]
-$freteAccountingCreditIds = Get-FreteAccountingCreditIds -Config $cfg -Window $windows["fretes"]
-
-$results = @(
-    (New-RegularComparison -Entity "usuarios_sistema" -Api $apiUsuarios -Db $dbUsuarios -Anomalies $usuariosPages.Anomalies),
-    (New-RegularComparison -Entity "coletas" -Api $apiColetas -Db $dbColetas -Anomalies $coletasPages.Anomalies),
-    (New-RegularComparison -Entity "fretes" -Api $apiFretes -Db $dbFretes -Anomalies $fretesPages.Anomalies),
-    (New-FaturasGraphqlComparison -Api $apiFaturasGraphql -Db $dbFaturasGraphql -FreteCreditIds $freteAccountingCreditIds -Anomalies $faturasGraphqlPages.Anomalies),
-    (New-RegularComparison -Entity "manifestos" -Api $apiManifestos -Db $dbManifestos -Anomalies $manifestosPages.Anomalies),
-    (New-RegularComparison -Entity "cotacoes" -Api $apiCotacoes -Db $dbCotacoes -Anomalies $cotacoesPages.Anomalies),
-    (New-RegularComparison -Entity "localizacao_cargas" -Api $apiLocalizacao -Db $dbLocalizacao -Anomalies $localizacaoPages.Anomalies),
-    (New-RegularComparison -Entity "contas_a_pagar" -Api $apiContas -Db $dbContas -Anomalies $contasPages.Anomalies),
-    (New-RegularComparison -Entity "faturas_por_cliente" -Api $apiFaturasCliente -Db $dbFaturasCliente -Anomalies $faturasClientePages.Anomalies),
-    (New-RegularComparison -Entity "inventario" -Api $apiInventario -Db $dbInventario -Anomalies $inventarioPages.Anomalies),
-    (New-RegularComparison -Entity "sinistros" -Api $apiSinistros -Db $dbSinistros -Anomalies $sinistrosPages.Anomalies)
-)
 
 $summary = [ordered]@{
     executado_em = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")

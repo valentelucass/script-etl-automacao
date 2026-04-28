@@ -210,7 +210,8 @@ class LoopDaemonRunHandlerTest {
             tempDir.resolve("daemon").resolve("ciclos"),
             tempDir.resolve("daemon").resolve("history"),
             tempDir.resolve("daemon").resolve("reconciliacao"),
-            "extrator.loop.reconciliacao.history.dir"
+            "extrator.loop.reconciliacao.history.dir",
+            false
         );
     }
 

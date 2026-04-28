@@ -64,15 +64,19 @@ import br.com.extrator.persistencia.entidade.ContasAPagarDataExportEntity;
 import br.com.extrator.persistencia.entidade.CotacaoEntity;
 import br.com.extrator.persistencia.entidade.FaturaPorClienteEntity;
 import br.com.extrator.persistencia.entidade.FreteEntity;
+import br.com.extrator.persistencia.entidade.InventarioEntity;
 import br.com.extrator.persistencia.entidade.LocalizacaoCargaEntity;
 import br.com.extrator.persistencia.entidade.ManifestoEntity;
+import br.com.extrator.persistencia.entidade.SinistroEntity;
 import br.com.extrator.persistencia.entidade.UsuarioSistemaEntity;
 import br.com.extrator.integracao.mapeamento.dataexport.contasapagar.ContasAPagarMapper;
 import br.com.extrator.integracao.mapeamento.dataexport.cotacao.CotacaoMapper;
 import br.com.extrator.dominio.dataexport.faturaporcliente.FaturaPorClienteDTO;
 import br.com.extrator.integracao.mapeamento.dataexport.faturaporcliente.FaturaPorClienteMapper;
+import br.com.extrator.integracao.mapeamento.dataexport.inventario.InventarioMapper;
 import br.com.extrator.integracao.mapeamento.dataexport.localizacaocarga.LocalizacaoCargaMapper;
 import br.com.extrator.integracao.mapeamento.dataexport.manifestos.ManifestoMapper;
+import br.com.extrator.integracao.mapeamento.dataexport.sinistros.SinistroMapper;
 import br.com.extrator.integracao.mapeamento.graphql.coletas.ColetaMapper;
 import br.com.extrator.dominio.graphql.faturas.CreditCustomerBillingNodeDTO;
 import br.com.extrator.dominio.graphql.usuarios.IndividualNodeDTO;
@@ -92,6 +96,8 @@ final class ValidacaoApiBanco24hDetalhadaApiCollector {
     private final LocalizacaoCargaMapper localizacaoMapper;
     private final ContasAPagarMapper contasMapper;
     private final FaturaPorClienteMapper faturaPorClienteMapper;
+    private final InventarioMapper inventarioMapper;
+    private final SinistroMapper sinistroMapper;
     private final FreteMapper freteMapper;
     private final ColetaMapper coletaMapper;
     private final UsuarioSistemaMapper usuarioSistemaMapper;
@@ -110,6 +116,8 @@ final class ValidacaoApiBanco24hDetalhadaApiCollector {
             new LocalizacaoCargaMapper(),
             new ContasAPagarMapper(),
             new FaturaPorClienteMapper(),
+            new InventarioMapper(),
+            new SinistroMapper(),
             new FreteMapper(),
             new ColetaMapper(),
             new UsuarioSistemaMapper(),
@@ -126,6 +134,8 @@ final class ValidacaoApiBanco24hDetalhadaApiCollector {
         final LocalizacaoCargaMapper localizacaoMapper,
         final ContasAPagarMapper contasMapper,
         final FaturaPorClienteMapper faturaPorClienteMapper,
+        final InventarioMapper inventarioMapper,
+        final SinistroMapper sinistroMapper,
         final FreteMapper freteMapper,
         final ColetaMapper coletaMapper,
         final UsuarioSistemaMapper usuarioSistemaMapper,
@@ -139,6 +149,8 @@ final class ValidacaoApiBanco24hDetalhadaApiCollector {
         this.localizacaoMapper = localizacaoMapper;
         this.contasMapper = contasMapper;
         this.faturaPorClienteMapper = faturaPorClienteMapper;
+        this.inventarioMapper = inventarioMapper;
+        this.sinistroMapper = sinistroMapper;
         this.freteMapper = freteMapper;
         this.coletaMapper = coletaMapper;
         this.usuarioSistemaMapper = usuarioSistemaMapper;
@@ -184,7 +196,9 @@ final class ValidacaoApiBanco24hDetalhadaApiCollector {
             ConstantesEntidades.COTACOES,
             ConstantesEntidades.LOCALIZACAO_CARGAS,
             ConstantesEntidades.CONTAS_A_PAGAR,
-            ConstantesEntidades.FATURAS_POR_CLIENTE
+            ConstantesEntidades.FATURAS_POR_CLIENTE,
+            ConstantesEntidades.INVENTARIO,
+            ConstantesEntidades.SINISTROS
         ));
         if (incluirFaturasGraphQL) {
             entidadesSolicitadas.add(ConstantesEntidades.FATURAS_GRAPHQL);
@@ -251,6 +265,10 @@ final class ValidacaoApiBanco24hDetalhadaApiCollector {
                 entidades.add(new EntidadeValidacao(entidade, () -> carregarContasAPagar(periodo.inicio(), periodo.fim())));
             } else if (ConstantesEntidades.FATURAS_POR_CLIENTE.equals(entidade)) {
                 entidades.add(new EntidadeValidacao(entidade, () -> carregarFaturasPorCliente(periodo.inicio(), periodo.fim())));
+            } else if (ConstantesEntidades.INVENTARIO.equals(entidade)) {
+                entidades.add(new EntidadeValidacao(entidade, () -> carregarInventario(periodo.inicio(), periodo.fim())));
+            } else if (ConstantesEntidades.SINISTROS.equals(entidade)) {
+                entidades.add(new EntidadeValidacao(entidade, () -> carregarSinistros(periodo.inicio(), periodo.fim())));
             } else if (ConstantesEntidades.FRETES.equals(entidade)) {
                 entidades.add(new EntidadeValidacao(entidade, () -> carregarFretes(periodo.inicio(), periodo.fim())));
             } else if (ConstantesEntidades.COLETAS.equals(entidade)) {
@@ -450,6 +468,30 @@ final class ValidacaoApiBanco24hDetalhadaApiCollector {
             entity -> String.valueOf(entity.getId()),
             FreteEntity::getMetadata,
             ConstantesEntidades.FRETES
+        );
+    }
+
+    private ResultadoApiChaves carregarInventario(final LocalDate dataInicio, final LocalDate dataFim) {
+        return carregarDataExport(
+            () -> clienteDataExport.buscarInventario(dataInicio, dataFim),
+            inventarioMapper::toEntity,
+            entity -> entity != null && entity.getIdentificadorUnico() != null && !entity.getIdentificadorUnico().isBlank(),
+            lista -> deduplicarPorChave(lista, InventarioEntity::getIdentificadorUnico),
+            InventarioEntity::getIdentificadorUnico,
+            InventarioEntity::getMetadata,
+            ConstantesEntidades.INVENTARIO
+        );
+    }
+
+    private ResultadoApiChaves carregarSinistros(final LocalDate dataInicio, final LocalDate dataFim) {
+        return carregarDataExport(
+            () -> clienteDataExport.buscarSinistros(dataInicio, dataFim),
+            sinistroMapper::toEntity,
+            entity -> entity != null && entity.getIdentificadorUnico() != null && !entity.getIdentificadorUnico().isBlank(),
+            lista -> deduplicarPorChave(lista, SinistroEntity::getIdentificadorUnico),
+            SinistroEntity::getIdentificadorUnico,
+            SinistroEntity::getMetadata,
+            ConstantesEntidades.SINISTROS
         );
     }
 
@@ -682,6 +724,26 @@ final class ValidacaoApiBanco24hDetalhadaApiCollector {
             resultado.getMotivoInterrupcao(),
             resultado.getPaginasProcessadas(),
             caminhosEstruturais
+        );
+    }
+
+    private <ENTITY> List<ENTITY> deduplicarPorChave(
+        final List<ENTITY> lista,
+        final Function<ENTITY, String> chaveResolver
+    ) {
+        if (lista == null || lista.isEmpty()) {
+            return lista;
+        }
+
+        return new ArrayList<>(
+            lista.stream()
+                .collect(Collectors.toMap(
+                    chaveResolver,
+                    Function.identity(),
+                    (primeiro, segundo) -> segundo,
+                    LinkedHashMap::new
+                ))
+                .values()
         );
     }
 

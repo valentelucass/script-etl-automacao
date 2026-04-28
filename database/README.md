@@ -18,6 +18,31 @@ Fontes usadas para montar este documento:
 - A fonte canônica para recriação do schema fica em `database/*.sql`, mesmo quando o Java também mantém DDL defensivo de fallback.
 - Divergências mapeadas nesta conferência estão resumidas em `database/DIVERGENCIAS_CODIGO_SCHEMA.md`.
 
+## Regra obrigatória para migrations
+
+Sempre que uma migration alterar estrutura, contrato de leitura ou comportamento de recriação do banco, o espelhamento em `./database` deve ser feito na mesma entrega.
+
+Isso significa atualizar, quando aplicável:
+
+- `database/tabelas/` para que um banco recriado do zero já nasça no estado final correto;
+- `database/views/` e `database/views-dimensao/` quando a mudança afetar colunas, joins, chaves ou semântica exposta em view;
+- `database/indices/` quando a mudança exigir novo índice, remoção ou ajuste de índice;
+- `database/validacao/` quando a mudança alterar critério de conferência, integridade ou diagnóstico operacional;
+- `database/README.md` quando a estrutura documentada mudar;
+- `database/executar_database.bat` quando entrar nova migration ou quando a ordem de execução precisar mudar.
+
+Regra prática:
+
+- migration sem reflexo no baseline é considerada entrega incompleta;
+- recriar o banco com `database/executar_database.bat --recriar` deve levar ao mesmo estado estrutural esperado de um banco antigo que recebeu todas as migrations.
+
+Checklist mínimo por mudança estrutural:
+
+1. alterar a migration;
+2. refletir a mudança no script-base correspondente em `tabelas/views/indices/validacao`;
+3. incluir a migration nova em `database/executar_database.bat`;
+4. revisar este `README` se o catálogo ou a regra operacional mudou.
+
 Exemplo de pesquisa em `metadata`:
 
 ```sql
@@ -285,7 +310,7 @@ ORDER BY data_extracao DESC;
 | `finished_at` | `DATETIMEOFFSET` | Finalização do manifesto. |
 | `mobile_read_at` | `DATETIMEOFFSET` | Momento de leitura/atualização mobile. |
 | `data_extracao` | `DATETIME2` | Momento da gravação/atualização no banco. |
-| `chave_merge_hash` | `Coluna computada persistida` | Concatenação `sequence_code|pick_sequence_code|mdfe_number`, base da `UNIQUE`. |
+| `chave_merge_hash` | `Coluna computada persistida` | Concatenação `sequence_code|coalesce(pick_sequence_code, identificador_unico)|mdfe_number`, base da `UNIQUE`. |
 
 #### MDF-e, contrato e programação
 

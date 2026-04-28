@@ -50,10 +50,16 @@ class SegurancaServiceTest {
         try {
             final SegurancaService service = new SegurancaService();
             service.bootstrapAdmin("admin_teste", "Admin Teste", senha);
-            service.autenticarEAutorizar("admin_teste", senha, AcaoSeguranca.RUN_AJUDA, "teste automatizado");
+            final UsuarioSeguranca usuario = service.autenticarEAutorizar(
+                "admin_teste",
+                senha,
+                AcaoSeguranca.RUN_AJUDA,
+                "teste automatizado"
+            );
 
             final SegurancaService.ResumoSeguranca resumo = service.obterResumo();
             assertTrue(Files.exists(dbPath), "Banco SQLite de seguranca deve ser criado.");
+            assertEquals(PerfilAcesso.ADMIN, usuario.perfilAcesso(), "Autenticacao deve retornar contexto do usuario.");
             assertEquals(1L, resumo.usuariosAtivos(), "Bootstrap deve criar um usuario admin ativo.");
             assertTrue(resumo.eventosAuditoria() >= 2L, "Fluxo deve registrar auditoria de bootstrap e autenticacao.");
         } finally {

@@ -56,6 +56,8 @@ public class ValidacaoApiBanco24hUseCase {
         ConstantesEntidades.MANIFESTOS,
         ConstantesEntidades.COTACOES,
         ConstantesEntidades.FATURAS_POR_CLIENTE,
+        ConstantesEntidades.INVENTARIO,
+        ConstantesEntidades.SINISTROS,
         ConstantesEntidades.LOCALIZACAO_CARGAS,
         ConstantesEntidades.FRETES,
         ConstantesEntidades.CONTAS_A_PAGAR,
@@ -467,6 +469,8 @@ public class ValidacaoApiBanco24hUseCase {
             case ConstantesEntidades.MANIFESTOS -> ConstantesEntidades.MANIFESTOS;
             case ConstantesEntidades.COTACOES -> ConstantesEntidades.COTACOES;
             case ConstantesEntidades.FATURAS_POR_CLIENTE -> ConstantesEntidades.FATURAS_POR_CLIENTE;
+            case ConstantesEntidades.INVENTARIO -> ConstantesEntidades.INVENTARIO;
+            case ConstantesEntidades.SINISTROS -> ConstantesEntidades.SINISTROS;
             case ConstantesEntidades.LOCALIZACAO_CARGAS -> ConstantesEntidades.LOCALIZACAO_CARGAS;
             case ConstantesEntidades.FRETES -> ConstantesEntidades.FRETES;
             case ConstantesEntidades.CONTAS_A_PAGAR -> ConstantesEntidades.CONTAS_A_PAGAR;

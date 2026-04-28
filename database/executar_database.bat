@@ -4,6 +4,10 @@ SETLOCAL EnableExtensions DisableDelayedExpansion
 REM ================================================================
 REM Script : database/executar_database.bat
 REM Papel  : Executa scripts SQL Server do sistema ESL Cloud.
+REM Regra  : toda mudanca estrutural nova em migrations deve ser refletida
+REM          tambem nos scripts-base de database\tabelas, views, indices,
+REM          validacao e demais artefatos afetados para permitir recriacao
+REM          limpa e coerente do banco do zero.
 REM
 REM MODOS DE USO:
 REM
@@ -67,7 +71,7 @@ if not exist "config.bat" (
     echo   DB_USER e DB_PASSWORD apenas para autenticacao SQL
     echo   ^(deixe vazios para usar Windows Authentication^)
     echo.
-    pause
+    if /i not "%EXTRATOR_DB_SILENT%"=="1" pause
     exit /b 1
 )
 
@@ -77,12 +81,12 @@ call config.bat
 REM --- 3. Validar variaveis obrigatorias ---
 if "%DB_SERVER%"=="" (
     echo [ERRO] DB_SERVER nao definido no config.bat
-    pause
+    if /i not "%EXTRATOR_DB_SILENT%"=="1" pause
     exit /b 1
 )
 if "%DB_NAME%"=="" (
     echo [ERRO] DB_NAME nao definido no config.bat
-    pause
+    if /i not "%EXTRATOR_DB_SILENT%"=="1" pause
     exit /b 1
 )
 
@@ -101,7 +105,7 @@ if errorlevel 1 (
     echo do SQL Server ao PATH.
     echo Ex: C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn
     echo.
-    pause
+    if /i not "%EXTRATOR_DB_SILENT%"=="1" pause
     exit /b 1
 )
 
@@ -113,7 +117,7 @@ if "%DB_USER%"=="" (
 ) else (
     if "%DB_PASSWORD%"=="" (
         echo [ERRO] DB_USER definido mas DB_PASSWORD esta vazio no config.bat
-        pause
+        if /i not "%EXTRATOR_DB_SILENT%"=="1" pause
         exit /b 1
     )
     set "AUTH_CMD=-U %DB_USER%"
@@ -156,6 +160,7 @@ for %%F in (
     "migrations\008_criar_tabela_sys_replay_idempotency.sql"
     "migrations\009_criar_tabela_sys_reconciliation_quarantine.sql"
     "migrations\010_harden_coletas_sequence_code.sql"
+    "migrations\011_alinhar_chave_merge_manifestos_orfaos.sql"
 ) do (
     if not exist %%F (
         echo   [SKIP] Nao encontrada: %%~F
@@ -165,7 +170,7 @@ for %%F in (
         if errorlevel 1 (
             echo [ERRO] Falha critica na migration: %%~F
             set "SQLCMDPASSWORD="
-            pause
+            if /i not "%EXTRATOR_DB_SILENT%"=="1" pause
             exit /b 1
         )
     )
@@ -281,7 +286,7 @@ for %%F in (
     if not exist %%F (
         echo [ERRO] Script nao encontrado: %%~F
         set "SQLCMDPASSWORD="
-        pause
+        if /i not "%EXTRATOR_DB_SILENT%"=="1" pause
         exit /b 1
     )
     echo   [EXEC] %%~F
@@ -289,7 +294,7 @@ for %%F in (
     if errorlevel 1 (
         echo [ERRO] Falha em: %%~F
         set "SQLCMDPASSWORD="
-        pause
+        if /i not "%EXTRATOR_DB_SILENT%"=="1" pause
         exit /b 1
     )
 )
@@ -314,7 +319,7 @@ sqlcmd %SQLCMD_FLAGS% -S %DB_SERVER_TARGET% %AUTH_CMD% -d master -Q "IF DB_ID('%
 if errorlevel 1 (
     echo [ERRO] Falha ao recriar banco de dados: %DB_NAME%
     set "SQLCMDPASSWORD="
-    pause
+    if /i not "%EXTRATOR_DB_SILENT%"=="1" pause
     exit /b 1
 )
 echo [OK] Banco [%DB_NAME%] recriado.

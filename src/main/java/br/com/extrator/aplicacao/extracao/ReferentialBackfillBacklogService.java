@@ -16,8 +16,10 @@ import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import br.com.extrator.observabilidade.LogStoragePaths;
+
 final class ReferentialBackfillBacklogService {
-    static final String DEFAULT_STATE_FILE = "runtime/state/coletas_referential_backfill.properties";
+    static final Path DEFAULT_STATE_FILE = LogStoragePaths.RUNTIME_STATE_DIR.resolve("coletas_referential_backfill.properties");
 
     private static final String KEY_PENDING_START = "pending_start";
     private static final String KEY_PENDING_END = "pending_end";
@@ -29,7 +31,7 @@ final class ReferentialBackfillBacklogService {
     private final Logger logger;
 
     ReferentialBackfillBacklogService() {
-        this(Path.of(DEFAULT_STATE_FILE), Clock.systemDefaultZone(), LoggerFactory.getLogger(ReferentialBackfillBacklogService.class));
+        this(DEFAULT_STATE_FILE, Clock.systemDefaultZone(), LoggerFactory.getLogger(ReferentialBackfillBacklogService.class));
     }
 
     ReferentialBackfillBacklogService(final Path stateFile, final Clock clock, final Logger logger) {

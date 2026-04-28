@@ -32,7 +32,7 @@ public final class ConfigApi {
     }
 
     public static String obterTokenApiRest() {
-        return ConfigSource.obterConfiguracaoObrigatoria("API_REST_TOKEN");
+        return ConfigSource.obterConfiguracaoObrigatoria(new String[] { "API_REST_TOKEN", "API_REST" });
     }
 
     public static String obterTokenApiGraphQL() {

@@ -93,6 +93,8 @@ backups/
 *.bak
 *.backup
 *.dump
+*.pdf
+*.xlsx
 
 # IDE/editor
 .idea/

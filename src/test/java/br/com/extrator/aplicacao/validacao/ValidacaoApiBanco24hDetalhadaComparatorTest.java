@@ -138,6 +138,22 @@ class ValidacaoApiBanco24hDetalhadaComparatorTest {
             0,
             0
         )));
+        assertTrue(comparator.completudeDinamicaTolerada(resultado(
+            ConstantesEntidades.FATURAS_GRAPHQL,
+            331,
+            324,
+            7,
+            0,
+            0
+        )));
+        assertTrue(comparator.completudeDinamicaTolerada(resultado(
+            ConstantesEntidades.INVENTARIO,
+            1690,
+            1686,
+            5,
+            1,
+            16
+        )));
     }
 
     @Test
@@ -183,6 +199,44 @@ class ValidacaoApiBanco24hDetalhadaComparatorTest {
             161,
             26,
             61
+        )));
+        assertFalse(comparator.completudeDinamicaTolerada(resultado(
+            ConstantesEntidades.FATURAS_GRAPHQL,
+            331,
+            324,
+            16,
+            0,
+            0
+        )));
+        assertFalse(comparator.completudeDinamicaTolerada(resultado(
+            ConstantesEntidades.INVENTARIO,
+            1690,
+            1686,
+            5,
+            1,
+            31
+        )));
+    }
+
+    @Test
+    void naoDeveTolerarInventarioEFaturasGraphqlEmPeriodoFechado() {
+        comparator.definirPeriodoFechado(true);
+
+        assertFalse(comparator.completudeDinamicaTolerada(resultado(
+            ConstantesEntidades.FATURAS_GRAPHQL,
+            331,
+            324,
+            7,
+            0,
+            0
+        )));
+        assertFalse(comparator.completudeDinamicaTolerada(resultado(
+            ConstantesEntidades.INVENTARIO,
+            1690,
+            1686,
+            5,
+            1,
+            16
         )));
     }
 

@@ -399,6 +399,37 @@ class ValidacaoApiBanco24hDetalhadaMetadataHasherTest {
     }
 
     @Test
+    void deveDetectarMudancaEstavelEmSinistros() {
+        final String baseline = """
+            {
+              "sequence_code":9981,
+              "opening_at_date":"2026-04-22",
+              "occurrence_at_date":"2026-04-22",
+              "insurance_occurrence_number":4321,
+              "corporation_sequence_number":7788,
+              "occurrence_code":"A01",
+              "occurrence_description":"Avaria parcial"
+            }
+            """;
+        final String alterado = """
+            {
+              "sequence_code":9981,
+              "opening_at_date":"2026-04-22",
+              "occurrence_at_date":"2026-04-22",
+              "insurance_occurrence_number":4321,
+              "corporation_sequence_number":7788,
+              "occurrence_code":"A02",
+              "occurrence_description":"Extravio"
+            }
+            """;
+
+        assertNotEquals(
+            hasher.hashMetadata(ConstantesEntidades.SINISTROS, baseline),
+            hasher.hashMetadata(ConstantesEntidades.SINISTROS, alterado)
+        );
+    }
+
+    @Test
     void deveDetectarMudancaEstavelEmContasAPagar() {
         final String baseline = """
             {

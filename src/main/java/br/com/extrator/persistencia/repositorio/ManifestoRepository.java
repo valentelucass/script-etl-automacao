@@ -27,6 +27,7 @@ package br.com.extrator.persistencia.repositorio;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.time.Instant;
@@ -56,6 +57,7 @@ public class ManifestoRepository extends AbstractRepository<ManifestoEntity> {
     private static final Logger logger = LoggerFactory.getLogger(ManifestoRepository.class);
     private static final String NOME_TABELA = ConstantesEntidades.MANIFESTOS;
     private static final String NOME_TABELA_STAGING = "#stg_manifestos";
+    private static final String JSON_PATH_PICK_SEQUENCE_CODE = "$.mft_pfs_pck_sequence_code";
     private static final java.util.List<String> COLUNAS_PROMOCAO = java.util.List.of(
         "sequence_code", "identificador_unico", "status", "created_at", "departured_at", "closed_at", "finished_at",
         "mdfe_number", "mdfe_key", "mdfe_status", "distribution_pole", "classification", "vehicle_plate",
@@ -110,6 +112,8 @@ public class ManifestoRepository extends AbstractRepository<ManifestoEntity> {
 
     @Override
     protected int promoverStagingPorExecucao(final Connection conexao) throws SQLException {
+        reconciliarManifestosNormalizadosComColetaResolvida(conexao);
+        normalizarPickSequenceCodeOrfaoNoStaging(conexao);
         final String freshnessGuard = buildMonotonicUpdateGuard(
             "COALESCE(CAST(target.finished_at AS datetime2), CAST(target.closed_at AS datetime2), CAST(target.departured_at AS datetime2), CAST(target.created_at AS datetime2))",
             "COALESCE(CAST(source.finished_at AS datetime2), CAST(source.closed_at AS datetime2), CAST(source.departured_at AS datetime2), CAST(source.created_at AS datetime2))"
@@ -118,12 +122,108 @@ public class ManifestoRepository extends AbstractRepository<ManifestoEntity> {
             conexao,
             NOME_TABELA_STAGING,
             "target.sequence_code = source.sequence_code "
-                + "AND COALESCE(target.pick_sequence_code, -1) = COALESCE(source.pick_sequence_code, -1) "
+                + "AND COALESCE(CAST(target.pick_sequence_code AS VARCHAR(100)), target.identificador_unico) "
+                + "= COALESCE(CAST(source.pick_sequence_code AS VARCHAR(100)), source.identificador_unico) "
                 + "AND COALESCE(target.mdfe_number, -1) = COALESCE(source.mdfe_number, -1)",
             freshnessGuard,
             COLUNAS_PROMOCAO,
             COLUNAS_PROMOCAO_ATUALIZAVEIS
         );
+    }
+
+    private void reconciliarManifestosNormalizadosComColetaResolvida(final Connection conexao) throws SQLException {
+        final String sql = """
+            UPDATE target
+               SET pick_sequence_code = source.pick_sequence_code,
+                   data_extracao = CASE
+                       WHEN source.data_extracao IS NOT NULL
+                            AND (target.data_extracao IS NULL OR source.data_extracao > target.data_extracao)
+                           THEN source.data_extracao
+                       ELSE target.data_extracao
+                   END
+              FROM dbo.manifestos AS target
+              JOIN %s AS source
+                ON target.sequence_code = source.sequence_code
+               AND COALESCE(target.mdfe_number, -1) = COALESCE(source.mdfe_number, -1)
+               AND target.pick_sequence_code IS NULL
+               AND source.pick_sequence_code IS NOT NULL
+               AND (
+                    CASE
+                        WHEN ISJSON(target.metadata) = 1
+                            THEN TRY_CONVERT(BIGINT, JSON_VALUE(target.metadata, '%s'))
+                        ELSE NULL
+                    END
+               ) = source.pick_sequence_code
+             WHERE EXISTS (
+                       SELECT 1
+                         FROM dbo.coletas c
+                        WHERE c.sequence_code = source.pick_sequence_code
+                   )
+               AND NOT EXISTS (
+                       SELECT 1
+                         FROM dbo.manifestos resolved
+                        WHERE resolved.sequence_code = target.sequence_code
+                          AND COALESCE(resolved.pick_sequence_code, -1) = COALESCE(source.pick_sequence_code, -1)
+                          AND COALESCE(resolved.mdfe_number, -1) = COALESCE(source.mdfe_number, -1)
+                          AND resolved.id <> target.id
+                   );
+            """.formatted(validarNomeTabelaTemporaria(NOME_TABELA_STAGING), JSON_PATH_PICK_SEQUENCE_CODE);
+        try (PreparedStatement statement = conexao.prepareStatement(sql)) {
+            final int atualizados = statement.executeUpdate();
+            if (atualizados > 0) {
+                logger.info(
+                    "♻️ Manifestos previamente normalizados reconciliados com coletas resolvidas: {} registro(s)",
+                    atualizados
+                );
+            }
+        }
+    }
+
+    private void normalizarPickSequenceCodeOrfaoNoStaging(final Connection conexao) throws SQLException {
+        final String staging = validarNomeTabelaTemporaria(NOME_TABELA_STAGING);
+        final java.util.List<Long> amostra = new java.util.ArrayList<>();
+        final String sqlAmostra = """
+            SELECT DISTINCT TOP 10 pick_sequence_code
+              FROM %s s
+             WHERE s.pick_sequence_code IS NOT NULL
+               AND NOT EXISTS (
+                       SELECT 1
+                         FROM dbo.coletas c
+                        WHERE c.sequence_code = s.pick_sequence_code
+                   )
+             ORDER BY pick_sequence_code
+            """.formatted(staging);
+        try (PreparedStatement statement = conexao.prepareStatement(sqlAmostra);
+             ResultSet rs = statement.executeQuery()) {
+            while (rs.next()) {
+                final long pickSequenceCode = rs.getLong("pick_sequence_code");
+                if (!rs.wasNull()) {
+                    amostra.add(pickSequenceCode);
+                }
+            }
+        }
+
+        final String sqlUpdate = """
+            UPDATE s
+               SET pick_sequence_code = NULL
+              FROM %s s
+             WHERE s.pick_sequence_code IS NOT NULL
+               AND NOT EXISTS (
+                       SELECT 1
+                         FROM dbo.coletas c
+                        WHERE c.sequence_code = s.pick_sequence_code
+                   )
+            """.formatted(staging);
+        try (PreparedStatement statement = conexao.prepareStatement(sqlUpdate)) {
+            final int normalizados = statement.executeUpdate();
+            if (normalizados > 0) {
+                logger.warn(
+                    "⚠️ Manifestos com pick_sequence_code sem coleta local foram normalizados na staging: {} registro(s) | amostra_pick_sequence_code={}",
+                    normalizados,
+                    amostra
+                );
+            }
+        }
     }
     
     /**

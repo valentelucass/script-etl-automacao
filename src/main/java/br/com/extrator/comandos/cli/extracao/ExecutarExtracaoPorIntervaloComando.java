@@ -47,6 +47,7 @@ public class ExecutarExtracaoPorIntervaloComando implements Comando {
     private static final LoggerConsole log = LoggerConsole.getLogger(ExecutarExtracaoPorIntervaloComando.class);
     private static final String FLAG_SEM_FATURAS_GRAPHQL = "--sem-faturas-graphql";
     private static final String FLAG_MODO_LOOP_DAEMON = "--modo-loop-daemon";
+    private static final String FLAG_MODO_RAPIDO_24H = "--modo-rapido-24h";
 
     private final ExtracaoPorIntervaloUseCase extracaoPorIntervaloUseCase;
 
@@ -66,13 +67,14 @@ public class ExecutarExtracaoPorIntervaloComando implements Comando {
         }
 
         log.debug(
-            "Delegando extracao por intervalo para ExtracaoPorIntervaloUseCase | inicio={} | fim={} | api={} | entidade={} | incluir_faturas_graphql={} | modo_loop_daemon={}",
+            "Delegando extracao por intervalo para ExtracaoPorIntervaloUseCase | inicio={} | fim={} | api={} | entidade={} | incluir_faturas_graphql={} | modo_loop_daemon={} | modo_rapido_24h={}",
             parametros.request.dataInicio(),
             parametros.request.dataFim(),
             parametros.request.apiEspecifica(),
             parametros.request.entidadeEspecifica(),
             parametros.request.incluirFaturasGraphQL(),
-            parametros.request.modoLoopDaemon()
+            parametros.request.modoLoopDaemon(),
+            parametros.request.modoRapido24h()
         );
         extracaoPorIntervaloUseCase.executar(parametros.request);
     }
@@ -81,11 +83,14 @@ public class ExecutarExtracaoPorIntervaloComando implements Comando {
         final List<String> argumentosLimpos = new ArrayList<>();
         boolean incluirFaturasGraphQL = true;
         boolean modoLoopDaemon = false;
+        boolean modoRapido24h = false;
         for (final String arg : args) {
             if (arg != null && FLAG_SEM_FATURAS_GRAPHQL.equalsIgnoreCase(arg.trim())) {
                 incluirFaturasGraphQL = false;
             } else if (arg != null && FLAG_MODO_LOOP_DAEMON.equalsIgnoreCase(arg.trim())) {
                 modoLoopDaemon = true;
+            } else if (arg != null && FLAG_MODO_RAPIDO_24H.equalsIgnoreCase(arg.trim())) {
+                modoRapido24h = true;
             } else {
                 argumentosLimpos.add(arg);
             }
@@ -154,7 +159,8 @@ public class ExecutarExtracaoPorIntervaloComando implements Comando {
             apiEspecifica,
             entidadeEspecifica,
             incluirFaturasGraphQL,
-            modoLoopDaemon
+            modoLoopDaemon,
+            modoRapido24h
         );
         return new ParametrosParseados(request);
     }
@@ -162,13 +168,14 @@ public class ExecutarExtracaoPorIntervaloComando implements Comando {
     private void exibirUso() {
         log.error("ERRO: Argumentos insuficientes");
         log.console(
-            "Uso: --extracao-intervalo YYYY-MM-DD YYYY-MM-DD [api] [entidade] [--sem-faturas-graphql] [--modo-loop-daemon]"
+            "Uso: --extracao-intervalo YYYY-MM-DD YYYY-MM-DD [api] [entidade] [--sem-faturas-graphql] [--modo-loop-daemon] [--modo-rapido-24h]"
         );
         log.console("Exemplo: --extracao-intervalo 2024-11-01 2025-03-31");
         log.console("Exemplo: --extracao-intervalo 2024-11-01 2025-03-31 graphql");
         log.console("Exemplo: --extracao-intervalo 2024-11-01 2025-03-31 dataexport manifestos");
         log.console("Exemplo: --extracao-intervalo 2024-11-01 2025-03-31 inventario");
         log.console("Exemplo: --extracao-intervalo 2024-11-01 2025-03-31 --sem-faturas-graphql");
+        log.console("Exemplo rapido: --extracao-intervalo 2026-04-27 2026-04-28 --sem-faturas-graphql --modo-rapido-24h");
         log.console("Exemplo: --extracao-intervalo 2024-11-01 2025-03-31 --modo-loop-daemon");
     }
 

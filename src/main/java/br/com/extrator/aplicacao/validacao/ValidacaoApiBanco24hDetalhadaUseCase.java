@@ -349,6 +349,8 @@ public class ValidacaoApiBanco24hDetalhadaUseCase {
             ConstantesEntidades.LOCALIZACAO_CARGAS,
             ConstantesEntidades.CONTAS_A_PAGAR,
             ConstantesEntidades.FATURAS_POR_CLIENTE,
+            ConstantesEntidades.INVENTARIO,
+            ConstantesEntidades.SINISTROS,
             ConstantesEntidades.USUARIOS_SISTEMA
         ));
         if (incluirFaturasGraphQL) {

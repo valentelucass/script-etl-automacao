@@ -21,6 +21,7 @@ public final class OperationTimeoutGuard {
     private static final Logger logger = LoggerFactory.getLogger(OperationTimeoutGuard.class);
     private static final Duration TIMEOUT_PADRAO = Duration.ofMinutes(10);
     private static final String THREAD_PREFIX = "timeout-guard-";
+    private static final long MAX_GRACE_APOS_TIMEOUT_MS = 500L;
     private static final AtomicInteger THREAD_COUNTER = new AtomicInteger(0);
 
     private OperationTimeoutGuard() {
@@ -74,7 +75,12 @@ public final class OperationTimeoutGuard {
             pendingException = enriquecerComThreadLeakSeNecessario(
                 nomeOperacao,
                 pendingException,
-                encerrarExecutor(nomeOperacao, executor, workerThreadRef.get())
+                encerrarExecutor(
+                    nomeOperacao,
+                    executor,
+                    workerThreadRef.get(),
+                    pendingException instanceof ExecutionTimeoutException
+                )
             );
         }
 
@@ -95,8 +101,9 @@ public final class OperationTimeoutGuard {
 
     private static ThreadLeakDetector.LeakReport encerrarExecutor(final String nomeOperacao,
                                                                   final ExecutorService executor,
-                                                                  final Thread workerThread) {
-        final long graceMs = Math.max(0L, ConfigEtl.obterTimeoutThreadLeakGraceMs());
+                                                                  final Thread workerThread,
+                                                                  final boolean timeoutJaAtingido) {
+        final long graceMs = resolverGraceEncerramento(timeoutJaAtingido);
         boolean terminated = false;
         try {
             executor.shutdown();
@@ -132,6 +139,14 @@ public final class OperationTimeoutGuard {
         }
 
         return leakReport;
+    }
+
+    private static long resolverGraceEncerramento(final boolean timeoutJaAtingido) {
+        final long configuradoMs = Math.max(0L, ConfigEtl.obterTimeoutThreadLeakGraceMs());
+        if (!timeoutJaAtingido) {
+            return configuradoMs;
+        }
+        return Math.min(configuradoMs, MAX_GRACE_APOS_TIMEOUT_MS);
     }
 
     private static Exception enriquecerComThreadLeakSeNecessario(final String nomeOperacao,

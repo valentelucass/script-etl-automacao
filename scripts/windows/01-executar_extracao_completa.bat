@@ -3,6 +3,7 @@ setlocal EnableExtensions DisableDelayedExpansion
 set "SCRIPT_DIR=%~dp0"
 for %%I in ("%SCRIPT_DIR%.") do set "SCRIPT_DIR=%%~fI"
 for %%I in ("%SCRIPT_DIR%\..\..") do set "REPO_ROOT=%%~fI"
+set "JAVA_BASE_OPTS=--enable-native-access=ALL-UNNAMED -DETL_BASE_DIR=%REPO_ROOT% -Detl.base.dir=%REPO_ROOT%"
 if not defined JAR_PATH set "JAR_PATH=%REPO_ROOT%\target\extrator.jar"
 if not defined MVN_CMD set "MVN_CMD=%REPO_ROOT%\mvn.bat"
 REM ==[DOC-FILE]===============================================================
@@ -62,7 +63,7 @@ if /i "%PROD_MODE%"=="1" (
     if errorlevel 1 (
         echo ERRO: Compilacao falhou
         echo.
-        pause
+        if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
         exit /b 1
     )
 )
@@ -75,18 +76,25 @@ if not exist "%JAR_PATH%" (
         echo Execute primeiro: mvn package -DskipTests
     )
     echo.
-    pause
+    if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
     exit /b 1
 )
 
 REM Configurar JAVA_HOME automaticamente (Java 17+)
 if not defined JAVA_HOME (
-    REM Tenta encontrar JDK 17+ no Eclipse Adoptium
+    REM Tenta encontrar JDK moderno no Eclipse Adoptium
+    for /f "delims=" %%D in ('dir /b /ad /o-n "C:\Program Files\Eclipse Adoptium\jdk-25*" 2^>nul') do (
+        set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\%%D"
+        goto :javahomefound
+    )
+    for /f "delims=" %%D in ('dir /b /ad /o-n "C:\Program Files\Eclipse Adoptium\jdk-21*" 2^>nul') do (
+        set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\%%D"
+        goto :javahomefound
+    )
     for /f "delims=" %%D in ('dir /b /ad /o-n "C:\Program Files\Eclipse Adoptium\jdk-17*" 2^>nul') do (
         set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\%%D"
         goto :javahomefound
     )
-    REM Se nao encontrar, tenta qualquer JDK 17+ no Adoptium
     for /f "delims=" %%D in ('dir /b /ad /o-n "C:\Program Files\Eclipse Adoptium\jdk-*" 2^>nul') do (
         set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\%%D"
         goto :javahomefound
@@ -103,20 +111,14 @@ if defined JAVA_HOME (
 
 REM Carregar variaveis de ambiente do usuario
 echo Carregando variaveis de ambiente do usuario...
-for /f "delims=" %%A in ('powershell -NoProfile -Command "[System.Environment]::GetEnvironmentVariable('DB_URL', 'User')"') do set "DB_URL=%%A"
-for /f "delims=" %%A in ('powershell -NoProfile -Command "[System.Environment]::GetEnvironmentVariable('DB_USER', 'User')"') do set "DB_USER=%%A"
-for /f "delims=" %%A in ('powershell -NoProfile -Command "[System.Environment]::GetEnvironmentVariable('DB_PASSWORD', 'User')"') do set "DB_PASSWORD=%%A"
-for /f "delims=" %%A in ('powershell -NoProfile -Command "[System.Environment]::GetEnvironmentVariable('API_BASEURL', 'User')"') do set "API_BASEURL=%%A"
-for /f "delims=" %%A in ('powershell -NoProfile -Command "[System.Environment]::GetEnvironmentVariable('API_REST_TOKEN', 'User')"') do set "API_REST_TOKEN=%%A"
-for /f "delims=" %%A in ('powershell -NoProfile -Command "[System.Environment]::GetEnvironmentVariable('API_GRAPHQL_TOKEN', 'User')"') do set "API_GRAPHQL_TOKEN=%%A"
-for /f "delims=" %%A in ('powershell -NoProfile -Command "[System.Environment]::GetEnvironmentVariable('API_DATAEXPORT_TOKEN', 'User')"') do set "API_DATAEXPORT_TOKEN=%%A"
+for /f "tokens=1,* delims==" %%A in ('powershell -NoProfile -ExecutionPolicy Bypass -Command "$keys=@('DB_URL','DB_USER','DB_PASSWORD','API_BASEURL','API_REST_TOKEN','API_GRAPHQL_TOKEN','API_DATAEXPORT_TOKEN'); foreach ($key in $keys) { $value=[System.Environment]::GetEnvironmentVariable($key, 'User'); if ($null -ne $value -and $value -ne '') { Write-Output ($key + '=' + $value) } }"') do set "%%A=%%B"
 
 REM Verificar se as variaveis obrigatorias estao configuradas
 if not defined DB_URL (
     echo ERRO: Variavel de ambiente DB_URL nao encontrada!
     echo Configure esta variavel nas configuracoes do sistema.
     echo.
-    pause
+    if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
     exit /b 1
 )
 
@@ -124,7 +126,7 @@ if not defined DB_USER (
     echo ERRO: Variavel de ambiente DB_USER nao encontrada!
     echo Configure esta variavel nas configuracoes do sistema.
     echo.
-    pause
+    if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
     exit /b 1
 )
 
@@ -132,7 +134,7 @@ if not defined DB_PASSWORD (
     echo ERRO: Variavel de ambiente DB_PASSWORD nao encontrada!
     echo Configure esta variavel nas configuracoes do sistema.
     echo.
-    pause
+    if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
     exit /b 1
 )
 
@@ -147,18 +149,18 @@ if errorlevel 1 (
 )
 
 if defined FLAG_FATURAS_GRAPHQL (
-    echo Executando: java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --fluxo-completo %FLAG_FATURAS_GRAPHQL%
+    echo Executando: java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --fluxo-completo %FLAG_FATURAS_GRAPHQL%
 ) else (
-    echo Executando: java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --fluxo-completo
+    echo Executando: java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --fluxo-completo
 )
 echo.
 echo ATENCAO: Este processo pode demorar varios minutos...
 echo.
 
 if defined FLAG_FATURAS_GRAPHQL (
-    java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --fluxo-completo %FLAG_FATURAS_GRAPHQL%
+    java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --fluxo-completo %FLAG_FATURAS_GRAPHQL%
 ) else (
-    java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --fluxo-completo
+    java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --fluxo-completo
 )
 set "JAVA_EXIT_CODE=%ERRORLEVEL%"
 
@@ -185,7 +187,7 @@ echo Referencias desta rodada:
 echo   - passos de inventario e sinistros aparecerao como trilhas proprias nos logs
 echo   - destino BI: vw_inventario_powerbi e vw_sinistros_powerbi
 echo.
-pause
+if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" if /i not "%EXTRATOR_MENU_CHILD%"=="1" pause
 set "RET_CODE=%JAVA_EXIT_CODE%"
 endlocal & exit /b %RET_CODE%
 
@@ -193,11 +195,11 @@ endlocal & exit /b %RET_CODE%
 if /i "%EXTRATOR_SKIP_AUTH_CHECK%"=="1" exit /b 0
 echo.
 echo Autenticacao obrigatoria para executar esta acao.
-java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --auth-check %~1 "%~2"
+java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --auth-check %~1 "%~2"
 if errorlevel 1 (
     echo Acesso negado.
     echo.
-    pause
+    if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
     exit /b 1
 )
 exit /b 0

@@ -29,7 +29,12 @@ public class SqlServerExecutionLockManager implements ExecutionLockManager {
         try {
             final int resultado = adquirirLock(conexao, resourceName);
             if (resultado < 0) {
-                throw new SQLException("Nao foi possivel adquirir lock global de execucao '" + resourceName + "'. Codigo=" + resultado);
+                throw new SQLException(
+                    "Outra execucao do Extrator ESL aparenta estar em andamento e esta segurando o lock global '"
+                        + resourceName
+                        + "'. Aguarde a conclusao, pare o loop daemon pelo menu ou cancele a nova execucao. Codigo="
+                        + resultado
+                );
             }
             logger.info("Lock global de execucao adquirido: {}", resourceName);
             return () -> liberar(resourceName, conexao);

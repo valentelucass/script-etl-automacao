@@ -48,12 +48,16 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import br.com.extrator.suporte.mapeamento.MapperUtil;
 import br.com.extrator.suporte.console.LoggerConsole;
 import br.com.extrator.suporte.tempo.RelogioSistema;
 import br.com.extrator.suporte.validacao.ConstantesEntidades;
 
 class ValidacaoApiBanco24hDetalhadaRepository {
+    private static final String METADATA_PICK_SEQUENCE_CODE = "mft_pfs_pck_sequence_code";
+    private static final String METADATA_MDFE_NUMBER = "mft_mfs_number";
     private final LoggerConsole log;
     private final ValidacaoApiBanco24hDetalhadaMetadataHasher metadataHasher;
     private final JanelaAbertaCeilingProvider janelaAbertaCeilingProvider;
@@ -517,13 +521,7 @@ class ValidacaoApiBanco24hDetalhadaRepository {
         final String sql = switch (entidade) {
             case ConstantesEntidades.MANIFESTOS ->
                 """
-                SELECT CONCAT(
-                    CAST(sequence_code AS VARCHAR(50)),
-                    '|',
-                    COALESCE(CAST(pick_sequence_code AS VARCHAR(50)), '-1'),
-                    '|',
-                    COALESCE(CAST(mdfe_number AS VARCHAR(50)), '-1')
-                ) AS chave
+                SELECT sequence_code, pick_sequence_code, mdfe_number, metadata
                 FROM dbo.manifestos
                 WHERE %s
                   AND sequence_code IS NOT NULL
@@ -555,6 +553,20 @@ class ValidacaoApiBanco24hDetalhadaRepository {
                 FROM dbo.faturas_por_cliente
                 WHERE %s
                   AND unique_id IS NOT NULL
+                """.formatted(condicaoFiltroBanco(entidade));
+            case ConstantesEntidades.INVENTARIO ->
+                """
+                SELECT identificador_unico AS chave
+                FROM dbo.inventario
+                WHERE %s
+                  AND identificador_unico IS NOT NULL
+                """.formatted(condicaoFiltroBanco(entidade));
+            case ConstantesEntidades.SINISTROS ->
+                """
+                SELECT identificador_unico AS chave
+                FROM dbo.sinistros
+                WHERE %s
+                  AND identificador_unico IS NOT NULL
                 """.formatted(condicaoFiltroBanco(entidade));
             case ConstantesEntidades.FRETES ->
                 """
@@ -599,7 +611,9 @@ class ValidacaoApiBanco24hDetalhadaRepository {
             );
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    final String chave = rs.getString("chave");
+                    final String chave = ConstantesEntidades.MANIFESTOS.equals(entidade)
+                        ? resolverChaveManifesto(rs)
+                        : rs.getString("chave");
                     if (chave != null && !chave.isBlank()) {
                         chaves.add(chave.trim());
                     }
@@ -651,14 +665,7 @@ class ValidacaoApiBanco24hDetalhadaRepository {
         final String sql = switch (entidade) {
             case ConstantesEntidades.MANIFESTOS ->
                 """
-                SELECT CONCAT(
-                    CAST(sequence_code AS VARCHAR(50)),
-                    '|',
-                    COALESCE(CAST(pick_sequence_code AS VARCHAR(50)), '-1'),
-                    '|',
-                    COALESCE(CAST(mdfe_number AS VARCHAR(50)), '-1')
-                ) AS chave,
-                metadata
+                SELECT sequence_code, pick_sequence_code, mdfe_number, metadata
                 FROM dbo.manifestos
                 WHERE %s
                   AND sequence_code IS NOT NULL
@@ -690,6 +697,20 @@ class ValidacaoApiBanco24hDetalhadaRepository {
                 FROM dbo.faturas_por_cliente
                 WHERE %s
                   AND unique_id IS NOT NULL
+                """.formatted(condicaoFiltroBanco(entidade));
+            case ConstantesEntidades.INVENTARIO ->
+                """
+                SELECT identificador_unico AS chave, metadata
+                FROM dbo.inventario
+                WHERE %s
+                  AND identificador_unico IS NOT NULL
+                """.formatted(condicaoFiltroBanco(entidade));
+            case ConstantesEntidades.SINISTROS ->
+                """
+                SELECT identificador_unico AS chave, metadata
+                FROM dbo.sinistros
+                WHERE %s
+                  AND identificador_unico IS NOT NULL
                 """.formatted(condicaoFiltroBanco(entidade));
             case ConstantesEntidades.FRETES ->
                 """
@@ -734,7 +755,9 @@ class ValidacaoApiBanco24hDetalhadaRepository {
             );
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    final String chave = rs.getString("chave");
+                    final String chave = ConstantesEntidades.MANIFESTOS.equals(entidade)
+                        ? resolverChaveManifesto(rs)
+                        : rs.getString("chave");
                     if (chave == null || chave.isBlank()) {
                         continue;
                     }
@@ -781,14 +804,7 @@ class ValidacaoApiBanco24hDetalhadaRepository {
         final String sql = switch (entidade) {
             case ConstantesEntidades.MANIFESTOS ->
                 """
-                SELECT CONCAT(
-                    CAST(sequence_code AS VARCHAR(50)),
-                    '|',
-                    COALESCE(CAST(pick_sequence_code AS VARCHAR(50)), '-1'),
-                    '|',
-                    COALESCE(CAST(mdfe_number AS VARCHAR(50)), '-1')
-                ) AS chave,
-                metadata
+                SELECT sequence_code, pick_sequence_code, mdfe_number, metadata
                 FROM dbo.manifestos
                 WHERE %s
                   AND sequence_code IS NOT NULL
@@ -820,6 +836,20 @@ class ValidacaoApiBanco24hDetalhadaRepository {
                 FROM dbo.faturas_por_cliente
                 WHERE %s
                   AND unique_id IS NOT NULL
+                """.formatted(condicaoFiltroBanco(entidade));
+            case ConstantesEntidades.INVENTARIO ->
+                """
+                SELECT identificador_unico AS chave, metadata
+                FROM dbo.inventario
+                WHERE %s
+                  AND identificador_unico IS NOT NULL
+                """.formatted(condicaoFiltroBanco(entidade));
+            case ConstantesEntidades.SINISTROS ->
+                """
+                SELECT identificador_unico AS chave, metadata
+                FROM dbo.sinistros
+                WHERE %s
+                  AND identificador_unico IS NOT NULL
                 """.formatted(condicaoFiltroBanco(entidade));
             case ConstantesEntidades.FRETES ->
                 """
@@ -857,7 +887,9 @@ class ValidacaoApiBanco24hDetalhadaRepository {
             preencherParametrosFiltroBanco(stmt, entidade, janela, periodoInicio, periodoFim);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    final String chave = rs.getString("chave");
+                    final String chave = ConstantesEntidades.MANIFESTOS.equals(entidade)
+                        ? resolverChaveManifesto(rs)
+                        : rs.getString("chave");
                     if (chave == null || chave.isBlank()) {
                         continue;
                     }
@@ -875,6 +907,65 @@ class ValidacaoApiBanco24hDetalhadaRepository {
             }
         }
         return metadataPorChave;
+    }
+
+    static String montarChaveManifestoValidacao(final Long sequenceCode,
+                                                final Long pickSequenceCode,
+                                                final Integer mdfeNumber,
+                                                final String metadata) {
+        if (sequenceCode == null) {
+            return null;
+        }
+        final Long pickEfetivo = pickSequenceCode != null
+            ? pickSequenceCode
+            : extrairLongMetadata(metadata, METADATA_PICK_SEQUENCE_CODE).orElse(-1L);
+        final Long mdfeEfetivo = mdfeNumber != null
+            ? mdfeNumber.longValue()
+            : extrairLongMetadata(metadata, METADATA_MDFE_NUMBER).orElse(-1L);
+        return sequenceCode + "|" + pickEfetivo + "|" + mdfeEfetivo;
+    }
+
+    private String resolverChaveManifesto(final ResultSet rs) throws SQLException {
+        final Long sequenceCode = obterLongNullable(rs, "sequence_code");
+        final Long pickSequenceCode = obterLongNullable(rs, "pick_sequence_code");
+        final Integer mdfeNumber = obterIntegerNullable(rs, "mdfe_number");
+        final String metadata = rs.getString("metadata");
+        return montarChaveManifestoValidacao(sequenceCode, pickSequenceCode, mdfeNumber, metadata);
+    }
+
+    private static Optional<Long> extrairLongMetadata(final String metadata, final String campo) {
+        if (metadata == null || metadata.isBlank() || campo == null || campo.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            final JsonNode root = MapperUtil.sharedJson().readTree(metadata);
+            final JsonNode valor = root.path(campo);
+            if (valor.isMissingNode() || valor.isNull()) {
+                return Optional.empty();
+            }
+            if (valor.isIntegralNumber()) {
+                return Optional.of(valor.longValue());
+            }
+            if (valor.isTextual()) {
+                final String texto = valor.asText().trim();
+                if (!texto.isEmpty()) {
+                    return Optional.of(Long.parseLong(texto));
+                }
+            }
+        } catch (Exception ignored) {
+            return Optional.empty();
+        }
+        return Optional.empty();
+    }
+
+    private Long obterLongNullable(final ResultSet rs, final String coluna) throws SQLException {
+        final long valor = rs.getLong(coluna);
+        return rs.wasNull() ? null : valor;
+    }
+
+    private Integer obterIntegerNullable(final ResultSet rs, final String coluna) throws SQLException {
+        final int valor = rs.getInt(coluna);
+        return rs.wasNull() ? null : valor;
     }
 
     private boolean existeLogCompleto24hNaData(final Connection conexao, final LocalDate data) throws SQLException {
@@ -969,6 +1060,13 @@ class ValidacaoApiBanco24hDetalhadaRepository {
                     ? "(data_extracao >= ? AND data_extracao <= ?)"
                     : "((data_extracao >= ? AND data_extracao <= ?)"
                         + " OR (COALESCE(CAST(service_at AS DATE), CAST(predicted_delivery_at AS DATE)) BETWEEN ? AND ?))";
+            case ConstantesEntidades.INVENTARIO ->
+                "(("
+                    + "data_extracao >= ? AND data_extracao <= ?"
+                    + ") OR (COALESCE(CAST(started_at AS DATE), CAST(performance_finished_at AS DATE), CAST(predicted_delivery_at AS DATE)) BETWEEN ? AND ?))";
+            case ConstantesEntidades.SINISTROS ->
+                "((data_extracao >= ? AND data_extracao <= ?)"
+                    + " OR (COALESCE(opening_at_date, occurrence_at_date, expected_solution_date, finished_at_date) BETWEEN ? AND ?))";
             case ConstantesEntidades.CONTAS_A_PAGAR ->
                 filtroEstritoDataExtracao
                     ? "(data_extracao >= ? AND data_extracao <= ?)"

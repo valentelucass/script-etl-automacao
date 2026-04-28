@@ -207,6 +207,39 @@ final class ValidacaoApiBanco24hDetalhadaMetadataHasher {
                 "cnr_c_s_fit_sdr_ads_cty_name",
                 "cnr_crn_psn_nickname"
             );
+            case ConstantesEntidades.SINISTROS -> List.of(
+                "sequence_code",
+                "opening_at_date",
+                "occurrence_at_date",
+                "occurrence_at_time",
+                "expected_solution_date",
+                "insurance_claim_location",
+                "informed_by",
+                "finished_at_date",
+                "finished_at_time",
+                "invoices_count",
+                "corporation_sequence_number",
+                "insurance_occurrence_number",
+                "invoices_volumes",
+                "invoices_weight",
+                "invoices_value",
+                "payer_nickname",
+                "customer_debits_subtotal",
+                "customer_credit_entries_subtotal",
+                "responsible_credits_subtotal",
+                "responsible_debit_entries_subtotal",
+                "insurer_credits_subtotal",
+                "insurance_claim_total",
+                "branch_nickname",
+                "event_name",
+                "user_name",
+                "vehicle_plate",
+                "occurrence_description",
+                "occurrence_code",
+                "treatment_at",
+                "dealing_type",
+                "solution_type"
+            );
             case ConstantesEntidades.USUARIOS_SISTEMA -> List.of(
                 "id",
                 "name"

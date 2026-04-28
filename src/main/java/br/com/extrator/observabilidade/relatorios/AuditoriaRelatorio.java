@@ -29,7 +29,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -39,6 +38,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import br.com.extrator.observabilidade.LogStoragePaths;
 import br.com.extrator.observabilidade.modelos.ResultadoAuditoria;
 import br.com.extrator.observabilidade.modelos.ResultadoValidacaoEntidade;
 
@@ -56,7 +56,7 @@ public class AuditoriaRelatorio {
             return;
         }
 
-        final Path diretorio = Paths.get("runtime/reports");
+        final Path diretorio = LogStoragePaths.RUNTIME_REPORTS_DIR;
         final String timestamp = NOME_ARQUIVO_FMT.format(Instant.now());
         final Path arquivo = diretorio.resolve("auditoria_dados_" + timestamp + ".md");
 

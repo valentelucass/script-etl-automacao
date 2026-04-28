@@ -3,6 +3,7 @@ setlocal EnableDelayedExpansion
 set "SCRIPT_DIR=%~dp0"
 for %%I in ("%SCRIPT_DIR%.") do set "SCRIPT_DIR=%%~fI"
 for %%I in ("%SCRIPT_DIR%\..\..") do set "REPO_ROOT=%%~fI"
+set "JAVA_BASE_OPTS=--enable-native-access=ALL-UNNAMED -DETL_BASE_DIR=%REPO_ROOT% -Detl.base.dir=%REPO_ROOT%"
 if not defined JAR_PATH set "JAR_PATH=%REPO_ROOT%\target\extrator.jar"
 if not defined MVN_CMD set "MVN_CMD=%REPO_ROOT%\mvn.bat"
 set "EXPORT_DIR=%REPO_ROOT%\runtime\exports"
@@ -115,7 +116,7 @@ if "%OPCAO%"=="1" (
     echo.
     echo Exportando TODAS as tabelas...
     echo.
-    java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --exportar-csv
+    java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --exportar-csv
     goto :END
 )
 
@@ -136,7 +137,6 @@ if "%OPCAO%"=="2" (
     echo   9. inventario            ^(Inventario / vw_inventario_powerbi^)
     echo  10. sinistros             ^(Sinistros / vw_sinistros_powerbi^)
     echo  11. dim_usuarios          ^(Usuarios do Sistema - Dimensao^)
-    echo  12. page_audit            ^(Auditoria de Paginas^)
     echo   0. Voltar ao menu anterior
     echo.
     set /p TABELA_NUM="Digite o numero da tabela: "
@@ -159,7 +159,6 @@ if "%OPCAO%"=="2" (
     if "!TABELA_NUM!"=="9" set "TABELA=inventario"
     if "!TABELA_NUM!"=="10" set "TABELA=sinistros"
     if "!TABELA_NUM!"=="11" set "TABELA=dim_usuarios"
-    if "!TABELA_NUM!"=="12" set "TABELA=page_audit"
     
     if not defined TABELA (
         echo ERRO: Numero invalido!
@@ -170,7 +169,7 @@ if "%OPCAO%"=="2" (
     echo.
     echo Exportando tabela: !TABELA!
     echo.
-    java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --exportar-csv "!TABELA!"
+    java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --exportar-csv "!TABELA!"
     goto :END
 )
 
@@ -235,7 +234,6 @@ echo   - localizacao_cargas.csv              (Localizacao da Carga)
 echo   - inventario.csv                      (Inventario / vw_inventario_powerbi)
 echo   - sinistros.csv                       (Sinistros / vw_sinistros_powerbi)
 echo   - dim_usuarios.csv                    (Usuarios do Sistema - Dimensao)
-echo   - page_audit.csv                      (Auditoria de Paginas)
 echo.
 echo Verifique a pasta 'runtime\exports' para os arquivos gerados.
 echo.
@@ -247,7 +245,7 @@ exit /b 0
 if /i "%EXTRATOR_SKIP_AUTH_CHECK%"=="1" exit /b 0
 echo.
 echo Autenticacao obrigatoria para executar esta acao.
-java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --auth-check %~1 "%~2"
+java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --auth-check %~1 "%~2"
 if errorlevel 1 (
     echo Acesso negado.
     echo.

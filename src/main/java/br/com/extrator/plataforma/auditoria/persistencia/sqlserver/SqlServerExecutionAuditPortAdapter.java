@@ -20,6 +20,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import br.com.extrator.aplicacao.portas.ExecutionAuditPort;
+import br.com.extrator.observabilidade.LogStoragePaths;
+import br.com.extrator.observabilidade.ProjectPaths;
 import br.com.extrator.plataforma.auditoria.dominio.ExecutionAuditRecord;
 import br.com.extrator.suporte.banco.GerenciadorConexao;
 import br.com.extrator.suporte.configuracao.ConfigEtl;
@@ -366,9 +368,11 @@ public final class SqlServerExecutionAuditPortAdapter implements ExecutionAuditP
     private Path resolverArquivoFallback() {
         final String override = System.getProperty("etl.audit.fallback.file");
         if (override != null && !override.isBlank()) {
-            return Path.of(override).toAbsolutePath().normalize();
+            return ProjectPaths.resolveFlexible(override);
         }
-        return Path.of("runtime", "state", "audit", "sys_execution_audit_fallback.jsonl")
+        return LogStoragePaths.RUNTIME_STATE_DIR
+            .resolve("audit")
+            .resolve("sys_execution_audit_fallback.jsonl")
             .toAbsolutePath()
             .normalize();
     }

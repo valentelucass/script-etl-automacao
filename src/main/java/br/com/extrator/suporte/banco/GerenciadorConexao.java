@@ -69,13 +69,6 @@ public final class GerenciadorConexao {
         private static final HikariDataSource INSTANCE = criarDataSource();
     }
 
-    // Configurações padrão do pool (podem ser sobrescritas via config)
-    private static final int POOL_MAX_SIZE_DEFAULT = 10;
-    private static final int POOL_MIN_IDLE_DEFAULT = 2;
-    private static final long POOL_IDLE_TIMEOUT_DEFAULT = 600_000L;      // 10 minutos
-    private static final long POOL_CONNECTION_TIMEOUT_DEFAULT = 30_000L; // 30 segundos
-    private static final long POOL_MAX_LIFETIME_DEFAULT = 1_800_000L;    // 30 minutos
-
     private GerenciadorConexao() {
         // Impede instanciação
     }
@@ -109,18 +102,12 @@ public final class GerenciadorConexao {
         config.setPoolName("ESL-Cloud-Pool");
 
         // Configurações do pool
-        config.setMaximumPoolSize(obterConfigInt("DB_POOL_MAX_SIZE", "db.pool.maximum_size", POOL_MAX_SIZE_DEFAULT));
-        config.setMinimumIdle(obterConfigInt(
-            new String[] { "DB_POOL_MIN_IDLE", "DB_POOL_MIN_SIZE" },
-            "db.pool.minimum_idle",
-            POOL_MIN_IDLE_DEFAULT
-        ));
-        config.setIdleTimeout(obterConfigLong("DB_POOL_IDLE_TIMEOUT", "db.pool.idle_timeout_ms", POOL_IDLE_TIMEOUT_DEFAULT));
-        config.setConnectionTimeout(obterConfigLong("DB_POOL_CONN_TIMEOUT", "db.pool.connection_timeout_ms", POOL_CONNECTION_TIMEOUT_DEFAULT));
-        config.setMaxLifetime(obterConfigLong("DB_POOL_MAX_LIFETIME", "db.pool.max_lifetime_ms", POOL_MAX_LIFETIME_DEFAULT));
-        // Permite inicializacao do pool mesmo com banco temporariamente indisponivel.
-        // Evita erro definitivo de classe quando ha oscilacao de conectividade.
-        config.setInitializationFailTimeout(-1L);
+        config.setMaximumPoolSize(ConfigBanco.obterPoolMaximumSize());
+        config.setMinimumIdle(ConfigBanco.obterPoolMinimumIdle());
+        config.setIdleTimeout(ConfigBanco.obterPoolIdleTimeoutMs());
+        config.setConnectionTimeout(ConfigBanco.obterPoolConnectionTimeoutMs());
+        config.setMaxLifetime(ConfigBanco.obterPoolMaxLifetimeMs());
+        config.setInitializationFailTimeout(ConfigBanco.obterPoolInitializationFailTimeoutMs());
 
         // Configurações de performance para SQL Server
         config.addDataSourceProperty("cachePrepStmts", "true");
@@ -131,10 +118,15 @@ public final class GerenciadorConexao {
         config.setConnectionTestQuery("SELECT 1");
 
         final HikariDataSource ds = new HikariDataSource(config);
-        dataSource = ds;
-        
-        logger.info("[OK] Pool HikariCP inicializado: maxSize={}, minIdle={}", 
-            config.getMaximumPoolSize(), config.getMinimumIdle());
+        try (Connection ignored = ds.getConnection()) {
+            dataSource = ds;
+            logger.info("[OK] Pool HikariCP inicializado e conexao inicial validada: maxSize={}, minIdle={}",
+                config.getMaximumPoolSize(), config.getMinimumIdle());
+        } catch (final SQLException e) {
+            ds.close();
+            logger.error("Falha ao validar conexao inicial do pool HikariCP: {}", extrairMensagemMaisInterna(e));
+            throw new IllegalStateException("Falha ao validar conexao inicial do pool HikariCP", e);
+        }
         
         // Hook para fechar o pool no shutdown da JVM.
         // Em casos onde o pool é inicializado dentro de um shutdown hook, a JVM já está
@@ -198,7 +190,7 @@ public final class GerenciadorConexao {
             }
         } catch (final SQLException e) {
             return false;
-        } catch (final RuntimeException e) {
+        } catch (final RuntimeException | ExceptionInInitializerError | NoClassDefFoundError e) {
             return false;
         }
     }
@@ -249,72 +241,6 @@ public final class GerenciadorConexao {
             }
         }
         return url;
-    }
-
-    /**
-     * Obtém configuração int com fallback.
-     */
-    private static int obterConfigInt(final String envVar, final String propKey, final int defaultValue) {
-        return obterConfigInt(new String[] { envVar }, propKey, defaultValue);
-    }
-
-    private static int obterConfigInt(final String[] envVars, final String propKey, final int defaultValue) {
-        if (envVars != null) {
-            for (int i = 0; i < envVars.length; i++) {
-                final String envVar = envVars[i];
-                if (envVar == null || envVar.isBlank()) {
-                    continue;
-                }
-
-                final String envValue = System.getenv(envVar);
-                if (envValue != null && !envValue.isEmpty()) {
-                    try {
-                        if (i > 0) {
-                            logger.warn("Usando alias de variavel '{}'. Prefira '{}'.", envVar, envVars[0]);
-                        }
-                        return Integer.parseInt(envValue);
-                    } catch (final NumberFormatException e) {
-                        logger.warn("Valor inválido para {}: '{}', usando padrão: {}", envVar, envValue, defaultValue);
-                    }
-                }
-            }
-        }
-
-        try {
-            final String propValue = ConfigBanco.obterPropriedade(propKey);
-            if (propValue != null && !propValue.isEmpty()) {
-                return Integer.parseInt(propValue);
-            }
-        } catch (final Exception e) {
-            // Ignora e usa padrão
-        }
-
-        return defaultValue;
-    }
-
-    /**
-     * Obtém configuração long com fallback.
-     */
-    private static long obterConfigLong(final String envVar, final String propKey, final long defaultValue) {
-        final String envValue = System.getenv(envVar);
-        if (envValue != null && !envValue.isEmpty()) {
-            try {
-                return Long.parseLong(envValue);
-            } catch (final NumberFormatException e) {
-                logger.warn("Valor inválido para {}: '{}', usando padrão: {}", envVar, envValue, defaultValue);
-            }
-        }
-        
-        try {
-            final String propValue = ConfigBanco.obterPropriedade(propKey);
-            if (propValue != null && !propValue.isEmpty()) {
-                return Long.parseLong(propValue);
-            }
-        } catch (final Exception e) {
-            // Ignora e usa padrão
-        }
-        
-        return defaultValue;
     }
 
     private static String extrairMensagemMaisInterna(final Throwable throwable) {

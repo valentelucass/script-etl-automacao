@@ -41,6 +41,7 @@ public enum AcaoSeguranca {
     RUN_TESTAR_API(EnumSet.of(PerfilAcesso.ADMIN, PerfilAcesso.OPERADOR), "Testar API especifica"),
     RUN_VALIDAR_CONFIG(EnumSet.of(PerfilAcesso.ADMIN, PerfilAcesso.OPERADOR), "Validar configuracoes"),
     RUN_RELATORIO_VALIDACAO(EnumSet.of(PerfilAcesso.ADMIN, PerfilAcesso.OPERADOR), "Executar relatorio completo"),
+    RUN_BATERIA_EXTREMA(EnumSet.of(PerfilAcesso.ADMIN, PerfilAcesso.OPERADOR), "Executar bateria extrema e relatorio de saude do ETL"),
     RUN_EXPORTAR_CSV(EnumSet.of(PerfilAcesso.ADMIN, PerfilAcesso.OPERADOR), "Exportar CSV"),
     RUN_AUDITORIA_API(EnumSet.of(PerfilAcesso.ADMIN, PerfilAcesso.OPERADOR), "Auditar estrutura das APIs"),
     RUN_AJUDA(EnumSet.of(PerfilAcesso.ADMIN, PerfilAcesso.OPERADOR, PerfilAcesso.VISUALIZADOR), "Visualizar ajuda"),

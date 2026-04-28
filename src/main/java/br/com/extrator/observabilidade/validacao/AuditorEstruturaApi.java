@@ -42,6 +42,7 @@ import org.slf4j.LoggerFactory;
 import br.com.extrator.integracao.ClienteApiDataExport;
 import br.com.extrator.integracao.ClienteApiGraphQL;
 import br.com.extrator.integracao.ResultadoExtracao;
+import br.com.extrator.observabilidade.LogStoragePaths;
 import br.com.extrator.suporte.banco.GerenciadorConexao;
 import br.com.extrator.suporte.tempo.RelogioSistema;
 import br.com.extrator.suporte.validacao.ConstantesEntidades;
@@ -51,7 +52,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -91,7 +91,7 @@ public class AuditorEstruturaApi {
         final ClienteApiGraphQL clienteGraphQL = new ClienteApiGraphQL();
 
         final String ts = RelogioSistema.agora().format(NOME_ARQUIVO_FMT);
-        final Path dir = Paths.get("runtime/reports");
+        final Path dir = LogStoragePaths.RUNTIME_REPORTS_DIR;
         final Path csv = dir.resolve("auditoria_api_" + ts + ".csv");
 
         try {

@@ -3,6 +3,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 set "SCRIPT_DIR=%~dp0"
 for %%I in ("%SCRIPT_DIR%.") do set "SCRIPT_DIR=%%~fI"
 for %%I in ("%SCRIPT_DIR%\..\..") do set "REPO_ROOT=%%~fI"
+set "JAVA_BASE_OPTS=--enable-native-access=ALL-UNNAMED -DETL_BASE_DIR=%REPO_ROOT% -Detl.base.dir=%REPO_ROOT%"
 if not defined JAR_PATH set "JAR_PATH=%REPO_ROOT%\target\extrator.jar"
 if not defined MVN_CMD set "MVN_CMD=%REPO_ROOT%\mvn.bat"
 REM ==[DOC-FILE]===============================================================
@@ -98,7 +99,7 @@ if "%OP%"=="0" goto :END
 
 if "%OP%"=="1" (
     echo.
-    java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --auth-bootstrap
+    java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --auth-bootstrap
     echo.
     pause
     goto :MENU
@@ -106,7 +107,7 @@ if "%OP%"=="1" (
 
 if "%OP%"=="2" (
     echo.
-    java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --auth-create-user
+    java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --auth-create-user
     echo.
     pause
     goto :MENU
@@ -114,7 +115,7 @@ if "%OP%"=="2" (
 
 if "%OP%"=="3" (
     echo.
-    java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --auth-reset-password
+    java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --auth-reset-password
     echo.
     pause
     goto :MENU
@@ -122,7 +123,7 @@ if "%OP%"=="3" (
 
 if "%OP%"=="4" (
     echo.
-    java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --auth-disable-user
+    java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --auth-disable-user
     echo.
     pause
     goto :MENU
@@ -130,7 +131,7 @@ if "%OP%"=="4" (
 
 if "%OP%"=="5" (
     echo.
-    java --enable-native-access=ALL-UNNAMED -jar "%JAR_PATH%" --auth-info
+    java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --auth-info
     echo.
     pause
     goto :MENU

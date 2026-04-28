@@ -59,28 +59,7 @@ final class FaturaGraphQLSaveSupport {
                                                  final Set<Integer> idsBancos,
                                                  final Map<Long, Integer> faturaIdParaBancoId) {
         for (final CreditCustomerBillingNodeDTO dto : dtos) {
-            if (dto.getId() == null) {
-                continue;
-            }
-
-            final FaturaGraphQLEntity entity = faturasUnicas.get(dto.getId());
-            if (entity == null) {
-                continue;
-            }
-
-            if (dto.getTicketAccountId() != null) {
-                idsBancos.add(dto.getTicketAccountId());
-                faturaIdParaBancoId.put(dto.getId(), dto.getTicketAccountId());
-            }
-
-            if (dto.getInstallments() != null && !dto.getInstallments().isEmpty()) {
-                final var parcela = dto.getInstallments().get(0);
-                if (parcela.getPaymentMethod() != null
-                    && !parcela.getPaymentMethod().trim().isEmpty()
-                    && (entity.getMetodoPagamento() == null || entity.getMetodoPagamento().trim().isEmpty())) {
-                    entity.setMetodoPagamento(parcela.getPaymentMethod().trim());
-                }
-            }
+            aplicarDadosDisponiveis(dto, faturasUnicas, idsBancos, faturaIdParaBancoId);
         }
     }
 
@@ -90,9 +69,14 @@ final class FaturaGraphQLSaveSupport {
         for (final Map.Entry<Long, FaturaGraphQLEntity> entry : faturasUnicas.entrySet()) {
             final Long faturaId = entry.getKey();
             final FaturaGraphQLEntity entity = entry.getValue();
-            final boolean precisaNfse = entity.getNfseNumero() == null || entity.getNfseNumero().trim().isEmpty();
-            final boolean precisaBancoId = !faturaIdParaBancoId.containsKey(faturaId);
-            if (precisaNfse || precisaBancoId) {
+            final boolean precisaNfse = !temTexto(entity.getNfseNumero());
+            final boolean precisaMetodoPagamento = !temTexto(entity.getMetodoPagamento());
+            final boolean possuiDadosBancariosDiretos =
+                temTexto(entity.getBancoNome())
+                    || temTexto(entity.getCarteiraBanco())
+                    || temTexto(entity.getInstrucaoBoleto());
+            final boolean precisaReferenciaBancaria = !possuiDadosBancariosDiretos && !faturaIdParaBancoId.containsKey(faturaId);
+            if (precisaNfse || precisaMetodoPagamento || precisaReferenciaBancaria) {
                 faturasParaEnriquecer.add(faturaId);
             }
         }
@@ -143,5 +127,37 @@ final class FaturaGraphQLSaveSupport {
                 entity.setInstrucaoBoleto(infoBanco.getCustomInstruction().trim());
             }
         }
+    }
+
+    void aplicarDadosDisponiveis(final CreditCustomerBillingNodeDTO dto,
+                                 final Map<Long, FaturaGraphQLEntity> faturasUnicas,
+                                 final Set<Integer> idsBancos,
+                                 final Map<Long, Integer> faturaIdParaBancoId) {
+        if (dto == null || dto.getId() == null) {
+            return;
+        }
+
+        final FaturaGraphQLEntity entity = faturasUnicas.get(dto.getId());
+        if (entity == null) {
+            return;
+        }
+
+        if (dto.getTicketAccountId() != null) {
+            idsBancos.add(dto.getTicketAccountId());
+            faturaIdParaBancoId.put(dto.getId(), dto.getTicketAccountId());
+        }
+
+        if (dto.getInstallments() == null || dto.getInstallments().isEmpty()) {
+            return;
+        }
+
+        final var parcela = dto.getInstallments().get(0);
+        if (temTexto(parcela.getPaymentMethod()) && !temTexto(entity.getMetodoPagamento())) {
+            entity.setMetodoPagamento(parcela.getPaymentMethod().trim());
+        }
+    }
+
+    private boolean temTexto(final String value) {
+        return value != null && !value.trim().isEmpty();
     }
 }

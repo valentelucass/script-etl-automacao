@@ -110,10 +110,11 @@ BEGIN
         metadata NVARCHAR(MAX),
 
         -- Coluna computada para deduplicação (alinhada com lógica de MERGE)
-        -- Permite múltiplos MDF-es e coletas para o mesmo sequence_code
+        -- Quando pick_sequence_code é nulo, usa identificador_unico para preservar
+        -- manifestos órfãos distintos sem relaxar a FK seletiva.
         chave_merge_hash AS (
             CAST(sequence_code AS VARCHAR(20)) + '|' +
-            ISNULL(CAST(pick_sequence_code AS VARCHAR(20)), '-1') + '|' +
+            ISNULL(CAST(pick_sequence_code AS VARCHAR(20)), ISNULL(identificador_unico, '-1')) + '|' +
             ISNULL(CAST(mdfe_number AS VARCHAR(20)), '-1')
         ) PERSISTED,
 

@@ -60,6 +60,7 @@ import br.com.extrator.aplicacao.pipeline.PipelineReport;
 import br.com.extrator.aplicacao.pipeline.PipelineStep;
 import br.com.extrator.aplicacao.pipeline.runtime.StepExecutionResult;
 import br.com.extrator.aplicacao.pipeline.runtime.StepStatus;
+import br.com.extrator.observabilidade.LogStoragePaths;
 import br.com.extrator.plataforma.auditoria.aplicacao.ExecutionWindowPlanner;
 import br.com.extrator.plataforma.auditoria.dominio.ExecutionPlanContext;
 import br.com.extrator.plataforma.auditoria.dominio.ExecutionAuditRecord;
@@ -76,7 +77,7 @@ import br.com.extrator.suporte.validacao.ConstantesEntidades;
 public class FluxoCompletoUseCase {
     private static final String EXECUTION_LOCK_RESOURCE = "etl-global-execution";
     private static final LoggerConsole log = LoggerConsole.getLogger(FluxoCompletoUseCase.class);
-    private static final String ARQUIVO_ULTIMO_RUN = "runtime/state/last_run.properties";
+    private static final Path ARQUIVO_ULTIMO_RUN = LogStoragePaths.RUNTIME_STATE_DIR.resolve("last_run.properties");
     private static final String PROPRIEDADE_ULTIMO_RUN = "last_successful_run";
     private final PreBackfillReferencialColetasUseCase preBackfillReferencialColetasUseCase;
     private final ExecutionLockManager executionLockManager;
@@ -200,23 +201,23 @@ public class FluxoCompletoUseCase {
         }
 
         log.console("\n" + "=".repeat(60));
-        log.info("RESUMO DA EXECUCAO DOS RUNNERS");
+        infoConsole("RESUMO DA EXECUCAO DOS RUNNERS");
         log.console("=".repeat(60));
-        log.info("Runners bem-sucedidos: {}", totalSucessos);
+        infoConsole("Runners bem-sucedidos: {}", totalSucessos);
         if (totalFalhas > 0) {
-            log.warn("Runners com falha: {} - {}", totalFalhas, String.join(", ", runnersFalhados));
+            warnConsole("Runners com falha: {} - {}", totalFalhas, String.join(", ", runnersFalhados));
         }
         if (qualidadeDadosAprovada) {
-            log.info("Data quality checks aprovados");
+            infoConsole("Data quality checks aprovados");
         } else {
-            log.warn("Data quality checks reprovados: {} falhas", qualidadeChecksFalhas);
+            warnConsole("Data quality checks reprovados: {} falhas", qualidadeChecksFalhas);
         }
         log.console("=".repeat(60) + "\n");
 
         executarPosHidratacaoReferencialColetas(dataInicioColetas, dataFim, modoLoopDaemon, totalFalhas > 0);
 
         log.console("\n" + "=".repeat(60));
-        log.info("INICIANDO VALIDACAO AUTORIZATIVA DO RUN");
+        infoConsole("INICIANDO VALIDACAO AUTORIZATIVA DO RUN");
         log.console("=".repeat(60));
 
         if (totalFalhas > 0) {
@@ -268,7 +269,7 @@ public class FluxoCompletoUseCase {
 
             log.console("\n" + "=".repeat(60));
             if (validacaoFinalCompleta) {
-                log.info("EXTRACAO COMPLETA E VALIDADA");
+                infoConsole("EXTRACAO COMPLETA E VALIDADA");
             } else {
                 final List<String> motivos = new ArrayList<>();
                 if (!resultadoIntegridade.isValido()) {
@@ -279,9 +280,9 @@ public class FluxoCompletoUseCase {
                 }
                 detalheFalhaValidacao = String.join(" | ", motivos);
                 if (modoLoopDaemon) {
-                    log.warn("EXTRACAO CONCLUIDA COM ALERTA DE INTEGRIDADE (modo loop daemon)");
+                    warnConsole("EXTRACAO CONCLUIDA COM ALERTA DE INTEGRIDADE (modo loop daemon)");
                 } else {
-                    log.error("EXTRACAO COM PROBLEMAS - Verificar logs");
+                    errorConsole("EXTRACAO COM PROBLEMAS - Verificar logs");
                 }
             }
             log.console("=".repeat(60));
@@ -331,14 +332,14 @@ public class FluxoCompletoUseCase {
 
         if (totalFalhas == 0 && validacaoFinalCompleta) {
             BannerUtil.exibirBannerSucesso();
-            log.info("RESUMO DA EXTRACAO");
-            log.info(
+            infoConsole("RESUMO DA EXTRACAO");
+            infoConsole(
                 "Inicio: {} | Fim: {} | Duracao: {} minutos",
                 FormatadorData.formatBR(inicioExecucao),
                 FormatadorData.formatBR(fimExecucao),
                 duracaoMinutos
             );
-            log.info("Todas as APIs foram processadas com sucesso.");
+            infoConsole("Todas as APIs foram processadas com sucesso.");
             atualizarWatermarksConfirmados(executionAuditPort, planosExecucao);
             gravarDataExecucao();
             return;
@@ -346,34 +347,34 @@ public class FluxoCompletoUseCase {
 
         if (modoLoopDaemon && falhaSomenteValidacao) {
             BannerUtil.exibirBannerSucesso();
-            log.warn("RESUMO DA EXTRACAO (com alerta de integridade no loop)");
-            log.info(
+            warnConsole("RESUMO DA EXTRACAO (com alerta de integridade no loop)");
+            infoConsole(
                 "Inicio: {} | Fim: {} | Duracao: {} minutos",
                 FormatadorData.formatBR(inicioExecucao),
                 FormatadorData.formatBR(fimExecucao),
                 duracaoMinutos
             );
-            log.warn(
+            warnConsole(
                 "Validacao final reprovada: {}",
                 detalheFalhaValidacao != null ? detalheFalhaValidacao : "divergencia de integridade"
             );
-            log.info("Timestamp nao gravado devido a alerta de integridade (modo loop daemon)");
+            infoConsole("Timestamp nao gravado devido a alerta de integridade (modo loop daemon)");
             return;
         }
 
         BannerUtil.exibirBannerErro();
-        log.warn("RESUMO DA EXTRACAO (com falhas)");
-        log.info(
+        warnConsole("RESUMO DA EXTRACAO (com falhas)");
+        infoConsole(
             "Inicio: {} | Fim: {} | Duracao: {} minutos",
             FormatadorData.formatBR(inicioExecucao),
             FormatadorData.formatBR(fimExecucao),
             duracaoMinutos
         );
         if (totalFalhas > 0) {
-            log.warn("Execucao com falhas parciais: runners falhados: {}", String.join(", ", runnersFalhados));
+            warnConsole("Execucao com falhas parciais: runners falhados: {}", String.join(", ", runnersFalhados));
         }
         if (!validacaoFinalCompleta) {
-            log.error(
+            errorConsole(
                 "Validacao final reprovada: {}",
                 detalheFalhaValidacao != null ? detalheFalhaValidacao : "divergencia de integridade"
             );
@@ -402,10 +403,9 @@ public class FluxoCompletoUseCase {
         try {
             final Properties props = new Properties();
             props.setProperty(PROPRIEDADE_ULTIMO_RUN, RelogioSistema.agora().toString());
-            final Path arquivoUltimoRun = Path.of(ARQUIVO_ULTIMO_RUN);
-            Files.createDirectories(arquivoUltimoRun.getParent());
+            Files.createDirectories(ARQUIVO_ULTIMO_RUN.getParent());
 
-            try (FileOutputStream fos = new FileOutputStream(arquivoUltimoRun.toFile())) {
+            try (FileOutputStream fos = new FileOutputStream(ARQUIVO_ULTIMO_RUN.toFile())) {
                 props.store(fos, "Ultima execucao bem-sucedida do sistema de extracao");
             }
 
@@ -495,7 +495,7 @@ public class FluxoCompletoUseCase {
         }
 
         log.console("\n" + "=".repeat(60));
-        log.info(
+        infoConsole(
             "PRE-BACKFILL REFERENCIAL DE COLETAS | periodo={} a {} | dias_retroativos={}",
             FormatadorData.formatBR(backfillInicio),
             FormatadorData.formatBR(backfillFim),
@@ -505,9 +505,9 @@ public class FluxoCompletoUseCase {
 
         try {
             preBackfillReferencialColetasUseCase.executar(backfillInicio, backfillFim);
-            log.info("Pre-backfill referencial de coletas concluido.");
+            infoConsole("Pre-backfill referencial de coletas concluido.");
         } catch (final Exception e) {
-            log.warn(
+            warnConsole(
                 "Pre-backfill referencial de coletas falhou: {}. Fluxo principal seguira normalmente.",
                 e.getMessage()
             );
@@ -531,7 +531,7 @@ public class FluxoCompletoUseCase {
         }
 
         log.console("\n" + "=".repeat(60));
-        log.info(
+        infoConsole(
             "POS-HIDRATACAO REFERENCIAL DE COLETAS | periodo={} a {} | lookahead_dias={}",
             FormatadorData.formatBR(dataInicio),
             FormatadorData.formatBR(dataFim),
@@ -541,9 +541,9 @@ public class FluxoCompletoUseCase {
 
         try {
             preBackfillReferencialColetasUseCase.executarPosExtracao(dataInicio, dataFim);
-            log.info("Pos-hidratacao referencial de coletas concluida.");
+            infoConsole("Pos-hidratacao referencial de coletas concluida.");
         } catch (final Exception e) {
-            log.warn(
+            warnConsole(
                 "Pos-hidratacao referencial de coletas falhou: {}. Validacao final seguira normalmente.",
                 e.getMessage()
             );
@@ -557,7 +557,7 @@ public class FluxoCompletoUseCase {
         }
 
         log.console("\n" + "=".repeat(60));
-        log.info("PLANO DE JANELAS DO CICLO");
+        infoConsole("PLANO DE JANELAS DO CICLO");
         log.console("=".repeat(60));
         for (final String entidade : List.of(
             ConstantesEntidades.USUARIOS_SISTEMA,
@@ -569,7 +569,7 @@ public class FluxoCompletoUseCase {
             if (plano == null) {
                 continue;
             }
-            log.info(
+            infoConsole(
                 "PLANO_EXECUCAO | entidade={} | consulta={}..{} | confirmacao={}..{}",
                 entidade,
                 FormatadorData.formatBR(plano.consultaDataInicio()),
@@ -579,6 +579,21 @@ public class FluxoCompletoUseCase {
             );
         }
         log.console("=".repeat(60) + "\n");
+    }
+
+    private void infoConsole(final String message, final Object... args) {
+        log.info(message, args);
+        log.console(message, args);
+    }
+
+    private void warnConsole(final String message, final Object... args) {
+        log.warn(message, args);
+        log.console("[AVISO] " + message, args);
+    }
+
+    private void errorConsole(final String message, final Object... args) {
+        log.error(message, args);
+        log.console("[ERRO] " + message, args);
     }
 
     private void atualizarWatermarksConfirmados(final ExecutionAuditPort executionAuditPort,
