@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import br.com.extrator.aplicacao.extracao.ExecutionLockBusyException;
 import br.com.extrator.aplicacao.extracao.ExecutionLockManager;
 import br.com.extrator.suporte.configuracao.ConfigEtl;
 
@@ -29,12 +30,7 @@ public class SqlServerExecutionLockManager implements ExecutionLockManager {
         try {
             final int resultado = adquirirLock(conexao, resourceName);
             if (resultado < 0) {
-                throw new SQLException(
-                    "Outra execucao do Extrator ESL aparenta estar em andamento e esta segurando o lock global '"
-                        + resourceName
-                        + "'. Aguarde a conclusao, pare o loop daemon pelo menu ou cancele a nova execucao. Codigo="
-                        + resultado
-                );
+                throw new ExecutionLockBusyException(resourceName, resultado);
             }
             logger.info("Lock global de execucao adquirido: {}", resourceName);
             return () -> liberar(resourceName, conexao);

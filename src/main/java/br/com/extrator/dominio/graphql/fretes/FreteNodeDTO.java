@@ -78,6 +78,9 @@ public class FreteNodeDTO {
     @JsonProperty("status")
     private String status;
 
+    @JsonProperty("courtesy")
+    private Boolean courtesy;
+
     @JsonProperty("modal")
     private String modal;
 
@@ -338,6 +341,14 @@ public class FreteNodeDTO {
 
     public void setStatus(final String status) {
         this.status = status;
+    }
+
+    public Boolean getCourtesy() {
+        return courtesy;
+    }
+
+    public void setCourtesy(final Boolean courtesy) {
+        this.courtesy = courtesy;
     }
 
     public String getModal() {

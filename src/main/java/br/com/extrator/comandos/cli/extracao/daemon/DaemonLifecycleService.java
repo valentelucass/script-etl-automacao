@@ -38,7 +38,9 @@ Atributos-chave:
 
 package br.com.extrator.comandos.cli.extracao.daemon;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.ProcessBuilder.Redirect;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
@@ -55,6 +57,7 @@ import java.util.Map;
 import java.util.OptionalLong;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,6 +128,9 @@ public final class DaemonLifecycleService {
         for (final ProcessHandle processo : localizarProcessosDaemonAtivos()) {
             processos.putIfAbsent(processo.pid(), processo);
         }
+        for (final ProcessHandle processo : localizarProcessosIsoladosDoDaemonAtivos()) {
+            processos.putIfAbsent(processo.pid(), processo);
+        }
         return new ArrayList<>(processos.values());
     }
 
@@ -193,10 +199,34 @@ public final class DaemonLifecycleService {
     }
 
     private List<ProcessHandle> localizarProcessosDaemonAtivos() {
-        return ProcessHandle.allProcesses()
+        final Map<Long, ProcessHandle> processos = new LinkedHashMap<>();
+        ProcessHandle.allProcesses()
             .filter(ProcessHandle::isAlive)
             .filter(this::ehProcessoLoopDaemon)
-            .toList();
+            .forEach(processo -> processos.putIfAbsent(processo.pid(), processo));
+        adicionarProcessosPorPid(processos, localizarPidsWindowsDaemon(false));
+        return new ArrayList<>(processos.values());
+    }
+
+    private List<ProcessHandle> localizarProcessosIsoladosDoDaemonAtivos() {
+        final Map<Long, ProcessHandle> processos = new LinkedHashMap<>();
+        ProcessHandle.allProcesses()
+            .filter(ProcessHandle::isAlive)
+            .filter(this::ehProcessoIsoladoDoDaemon)
+            .forEach(processo -> processos.putIfAbsent(processo.pid(), processo));
+        adicionarProcessosPorPid(processos, localizarPidsWindowsDaemon(true));
+        return new ArrayList<>(processos.values());
+    }
+
+    private void adicionarProcessosPorPid(final Map<Long, ProcessHandle> processos, final List<Long> pids) {
+        for (final Long pid : pids) {
+            if (pid == null) {
+                continue;
+            }
+            ProcessHandle.of(pid)
+                .filter(ProcessHandle::isAlive)
+                .ifPresent(processo -> processos.putIfAbsent(processo.pid(), processo));
+        }
     }
 
     private boolean ehProcessoLoopDaemon(final ProcessHandle processo) {
@@ -217,14 +247,145 @@ public final class DaemonLifecycleService {
         return ehComandoLoopDaemon(comando.toString());
     }
 
-    private boolean ehComandoLoopDaemon(final String comandoCompleto) {
+    private boolean ehProcessoIsoladoDoDaemon(final ProcessHandle processo) {
+        final ProcessHandle.Info info = processo.info();
+        final StringBuilder comando = new StringBuilder();
+        info.commandLine().ifPresent(comando::append);
+        if (comando.length() == 0) {
+            info.command().ifPresent(comando::append);
+            info.arguments().ifPresent(args -> {
+                for (final String arg : args) {
+                    comando.append(' ').append(arg);
+                }
+            });
+        }
+        if (comando.length() == 0) {
+            return false;
+        }
+        return ehComandoStepIsoladoDoDaemon(comando.toString());
+    }
+
+    static boolean ehComandoLoopDaemon(final String comandoCompleto) {
         final String normalizado = comandoCompleto.toLowerCase(Locale.ROOT).replace('\\', '/');
-        if (!normalizado.contains(FLAG_LOOP_DAEMON_RUN)) {
+        if (!FLAG_LOOP_DAEMON_RUN.equals(extrairFlagExecucao(normalizado))) {
             return false;
         }
         return normalizado.contains("extrator-daemon-runtime")
             || normalizado.contains("/target/extrator.jar")
             || normalizado.contains(" br.com.extrator.bootstrap.main ");
+    }
+
+    static boolean ehComandoStepIsoladoDoDaemon(final String comandoCompleto) {
+        final String normalizado = comandoCompleto.toLowerCase(Locale.ROOT).replace('\\', '/');
+        return "--executar-step-isolado".equals(extrairFlagExecucao(normalizado))
+            && normalizado.contains("-detl.parent.command=" + FLAG_LOOP_DAEMON_RUN);
+    }
+
+    private List<Long> localizarPidsWindowsDaemon(final boolean somenteStepsIsolados) {
+        if (!System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win")) {
+            return List.of();
+        }
+
+        final String script = criarScriptPowerShellLocalizarPids(somenteStepsIsolados);
+        final ProcessBuilder builder = new ProcessBuilder(
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            script
+        );
+        final List<Long> pids = new ArrayList<>();
+        try {
+            final Process process = builder.start();
+            try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8)
+            )) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    try {
+                        pids.add(Long.parseLong(line.trim()));
+                    } catch (final NumberFormatException ignored) {
+                        // ignora saidas nao numericas
+                    }
+                }
+            }
+            if (!process.waitFor(5, TimeUnit.SECONDS)) {
+                process.destroyForcibly();
+            }
+        } catch (final IOException e) {
+            logger.debug("Falha ao consultar processos Java via PowerShell: {}", e.getMessage());
+        } catch (final InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        return List.copyOf(pids);
+    }
+
+    private String criarScriptPowerShellLocalizarPids(final boolean somenteStepsIsolados) {
+        final String modo = somenteStepsIsolados ? "step" : "daemon";
+        return "$ErrorActionPreference='SilentlyContinue';"
+            + "$modo='" + modo + "';"
+            + "function Get-Flag([string]$cmd){"
+            + " if([string]::IsNullOrWhiteSpace($cmd)){return ''}"
+            + " foreach($m in [regex]::Matches($cmd,'\"[^\"]*\"|[^\\s]+')){"
+            + "  $t=$m.Value.Trim('\"').ToLowerInvariant().Replace('\\','/');"
+            + "  if($t.StartsWith('-d')){continue}"
+            + "  if($t -eq '--loop-daemon-run' -or $t -eq '--executar-step-isolado'){return $t}"
+            + " }"
+            + " return ''"
+            + "};"
+            + "Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('java.exe','javaw.exe') } | ForEach-Object {"
+            + " $cmd=[string]$_.CommandLine;"
+            + " $n=$cmd.ToLowerInvariant().Replace('\\','/');"
+            + " if(-not ($n.Contains('extrator-daemon-runtime') -or $n.Contains('/target/extrator.jar') -or $n.Contains('br.com.extrator.bootstrap.main'))){return}"
+            + " $flag=Get-Flag $cmd;"
+            + " if($modo -eq 'daemon' -and $flag -eq '--loop-daemon-run'){ [string]$_.ProcessId }"
+            + " elseif($modo -eq 'step' -and $flag -eq '--executar-step-isolado' -and $n.Contains('-detl.parent.command=--loop-daemon-run')){ [string]$_.ProcessId }"
+            + "}";
+    }
+
+    private static String extrairFlagExecucao(final String comandoCompleto) {
+        if (comandoCompleto == null || comandoCompleto.isBlank()) {
+            return "";
+        }
+        for (final String token : tokenizarComando(comandoCompleto)) {
+            final String normalizado = token.trim().toLowerCase(Locale.ROOT).replace('\\', '/');
+            if (normalizado.isBlank() || normalizado.startsWith("-d")) {
+                continue;
+            }
+            if (normalizado.equals(FLAG_LOOP_DAEMON_RUN) || normalizado.equals("--executar-step-isolado")) {
+                return normalizado;
+            }
+        }
+        return "";
+    }
+
+    private static List<String> tokenizarComando(final String comandoCompleto) {
+        final List<String> tokens = new ArrayList<>();
+        final StringBuilder atual = new StringBuilder();
+        boolean entreAspas = false;
+        for (int i = 0; i < comandoCompleto.length(); i++) {
+            final char c = comandoCompleto.charAt(i);
+            if (c == '"') {
+                entreAspas = !entreAspas;
+                continue;
+            }
+            if (Character.isWhitespace(c) && !entreAspas) {
+                adicionarToken(tokens, atual);
+                continue;
+            }
+            atual.append(c);
+        }
+        adicionarToken(tokens, atual);
+        return tokens;
+    }
+
+    private static void adicionarToken(final List<String> tokens, final StringBuilder atual) {
+        if (atual.length() == 0) {
+            return;
+        }
+        tokens.add(atual.toString());
+        atual.setLength(0);
     }
 
     private boolean ehPidPersistidoDeDaemonAtivo(final long pid) {

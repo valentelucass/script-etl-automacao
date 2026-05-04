@@ -249,10 +249,11 @@ if /i "%EXTRATOR_NONINTERACTIVE%"=="1" (
 echo.
 echo O que deseja fazer agora?
 echo   1. Cancelar agora ^(recomendado^)
-echo   2. Continuar mesmo assim
+echo   2. Parar loop daemon e revalidar
+echo   3. Continuar mesmo assim
 echo.
 set "SAFETY_OP="
-set /p "SAFETY_OP=Escolha uma opcao [1-2]: " || exit /b 1
+set /p "SAFETY_OP=Escolha uma opcao [1-3]: " || exit /b 1
 set "SAFETY_OP=%SAFETY_OP: =%"
 
 if "%SAFETY_OP%"=="1" (
@@ -260,9 +261,34 @@ if "%SAFETY_OP%"=="1" (
   echo Execucao cancelada antes de iniciar: %SAFETY_CONTEXT%.
   exit /b 1
 )
-if "%SAFETY_OP%"=="2" goto :EXECUTION_SAFETY_FORCE_CONTINUE
+if "%SAFETY_OP%"=="2" goto :EXECUTION_SAFETY_STOP_DAEMON
+if "%SAFETY_OP%"=="3" goto :EXECUTION_SAFETY_FORCE_CONTINUE
 
 echo Opcao invalida.
+goto :EXECUTION_SAFETY_CHOICE
+
+:EXECUTION_SAFETY_STOP_DAEMON
+echo.
+echo Solicitando parada do loop daemon e de steps isolados vinculados...
+java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --loop-daemon-stop
+set "SAFETY_STOP_EXIT=!ERRORLEVEL!"
+if not "!SAFETY_STOP_EXIT!"=="0" (
+  echo.
+  echo [AVISO] Comando de parada retornou codigo !SAFETY_STOP_EXIT!.
+)
+
+echo.
+echo Revalidando execucoes ativas...
+timeout /t 3 /nobreak >nul 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%\verificar_execucao_ativa.ps1" -RepoRoot "%REPO_ROOT%"
+set "SAFETY_EXIT=%ERRORLEVEL%"
+if "%SAFETY_EXIT%"=="0" (
+  echo [OK] Nenhuma execucao ativa restante. Continuando: %SAFETY_CONTEXT%.
+  exit /b 0
+)
+
+echo.
+echo Ainda existe execucao ativa. Escolha novamente.
 goto :EXECUTION_SAFETY_CHOICE
 
 :EXECUTION_SAFETY_FORCE_CONTINUE

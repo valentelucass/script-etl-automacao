@@ -358,6 +358,10 @@ public final class LoopReconciliationService {
             return new ReconciliationSummary(false, 0, 0, List.of(), List.of(), false, false);
         }
 
+        public static ReconciliationSummary semAcao() {
+            return new ReconciliationSummary(true, 0, 0, List.of(), List.of(), false, false);
+        }
+
         public boolean isAtivo() {
             return ativo;
         }

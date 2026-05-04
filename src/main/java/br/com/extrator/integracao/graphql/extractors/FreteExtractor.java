@@ -40,6 +40,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +71,7 @@ import br.com.extrator.suporte.validacao.ConstantesEntidades;
  */
 public class FreteExtractor implements EntityExtractor<FreteNodeDTO> {
     private static final Logger logger = LoggerFactory.getLogger(FreteExtractor.class);
+    private static final int MAX_DIAS_POR_REQUISICAO = 30;
     private static final DateTimeFormatter[] FORMATOS_BR_DATA_HORA = {
         DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"),
         DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
@@ -80,7 +82,15 @@ public class FreteExtractor implements EntityExtractor<FreteNodeDTO> {
         ResultadoExtracao<FreteIndicadorDTO> buscar(LocalDate dataInicio, LocalDate dataFim);
     }
 
-    private final ClienteApiGraphQL apiClient;
+    @FunctionalInterface
+    interface FreteApiProvider {
+        ResultadoExtracao<FreteNodeDTO> buscar(LocalDate dataInicio, LocalDate dataFim);
+    }
+
+    record PeriodoConsulta(LocalDate dataInicio, LocalDate dataFim) {
+    }
+
+    private final FreteApiProvider freteApiProvider;
     private final FreteIndicadoresProvider freteIndicadoresProvider;
     private final FreteRepository repository;
     private final FreteMapper mapper;
@@ -98,7 +108,15 @@ public class FreteExtractor implements EntityExtractor<FreteNodeDTO> {
                           final FreteRepository repository,
                           final FreteMapper mapper,
                           final FreteIndicadoresProvider freteIndicadoresProvider) {
-        this.apiClient = apiClient;
+        this(apiClient == null ? null : apiClient::buscarFretes, repository, mapper, freteIndicadoresProvider, true);
+    }
+
+    FreteExtractor(final FreteApiProvider freteApiProvider,
+                   final FreteRepository repository,
+                   final FreteMapper mapper,
+                   final FreteIndicadoresProvider freteIndicadoresProvider,
+                   final boolean usarProviderDireto) {
+        this.freteApiProvider = freteApiProvider;
         this.freteIndicadoresProvider = freteIndicadoresProvider;
         this.repository = repository;
         this.mapper = mapper;
@@ -106,8 +124,18 @@ public class FreteExtractor implements EntityExtractor<FreteNodeDTO> {
     
     @Override
     public ResultadoExtracao<FreteNodeDTO> extract(final LocalDate dataInicio, final LocalDate dataFim) {
-        final ResultadoExtracao<FreteNodeDTO> resultado = apiClient.buscarFretes(dataInicio, dataFim);
-        registrarUltimaExtracao(dataInicio, dataFim, resultado != null && resultado.isCompleto());
+        final LocalDate dataInicioConsulta = calcularDataInicioConsulta(dataInicio);
+        if (dataInicioConsulta != null && !dataInicioConsulta.equals(dataInicio)) {
+            logger.info(
+                "Expandindo janela de fretes para Performance: {} a {} consultado como {} a {}",
+                dataInicio,
+                dataFim,
+                dataInicioConsulta,
+                dataFim
+            );
+        }
+        final ResultadoExtracao<FreteNodeDTO> resultado = buscarFretesComLimiteDeJanela(dataInicioConsulta, dataFim);
+        registrarUltimaExtracao(dataInicioConsulta, dataFim, resultado != null && resultado.isCompleto());
         return resultado;
     }
     
@@ -200,6 +228,115 @@ public class FreteExtractor implements EntityExtractor<FreteNodeDTO> {
                                           final LocalDate dataFim,
                                           final boolean completa) {
         registrarUltimaExtracao(dataInicio, dataFim, completa);
+    }
+
+    static LocalDate calcularDataInicioConsulta(final LocalDate dataInicio) {
+        return calcularDataInicioConsulta(dataInicio, ConfigEtl.obterFretesPerformanceLookbackDiasEfetivo());
+    }
+
+    static LocalDate calcularDataInicioConsulta(final LocalDate dataInicio, final int lookbackDias) {
+        if (dataInicio == null) {
+            return null;
+        }
+        if (lookbackDias <= 0) {
+            return dataInicio;
+        }
+        return dataInicio.minusDays(lookbackDias);
+    }
+
+    static List<PeriodoConsulta> dividirJanelaEmBlocos(final LocalDate dataInicio, final LocalDate dataFim) {
+        if (dataInicio == null || dataFim == null || dataFim.isBefore(dataInicio)) {
+            return List.of(new PeriodoConsulta(dataInicio, dataFim));
+        }
+
+        final List<PeriodoConsulta> blocos = new ArrayList<>();
+        LocalDate inicioBloco = dataInicio;
+        while (!inicioBloco.isAfter(dataFim)) {
+            final LocalDate fimMaximo = inicioBloco.plusDays(MAX_DIAS_POR_REQUISICAO - 1L);
+            final LocalDate fimBloco = fimMaximo.isAfter(dataFim) ? dataFim : fimMaximo;
+            blocos.add(new PeriodoConsulta(inicioBloco, fimBloco));
+            inicioBloco = fimBloco.plusDays(1);
+        }
+        return List.copyOf(blocos);
+    }
+
+    private ResultadoExtracao<FreteNodeDTO> buscarFretesComLimiteDeJanela(final LocalDate dataInicio,
+                                                                          final LocalDate dataFim) {
+        if (freteApiProvider == null) {
+            throw new IllegalStateException("Cliente GraphQL de fretes nao configurado.");
+        }
+
+        final List<PeriodoConsulta> blocos = dividirJanelaEmBlocos(dataInicio, dataFim);
+        if (blocos.size() == 1) {
+            final PeriodoConsulta periodo = blocos.get(0);
+            return freteApiProvider.buscar(periodo.dataInicio(), periodo.dataFim());
+        }
+
+        logger.info(
+            "Dividindo consulta GraphQL de fretes em {} bloco(s) de ate {} dias: {} a {}",
+            blocos.size(),
+            MAX_DIAS_POR_REQUISICAO,
+            dataInicio,
+            dataFim
+        );
+
+        final List<FreteNodeDTO> dados = new ArrayList<>();
+        int paginasProcessadas = 0;
+        int registrosExtraidos = 0;
+        boolean completo = true;
+        String motivoInterrupcao = null;
+
+        for (final PeriodoConsulta bloco : blocos) {
+            logger.info(
+                "Consultando bloco GraphQL de fretes: {} a {}",
+                bloco.dataInicio(),
+                bloco.dataFim()
+            );
+            final ResultadoExtracao<FreteNodeDTO> resultadoBloco =
+                freteApiProvider.buscar(bloco.dataInicio(), bloco.dataFim());
+            if (resultadoBloco == null) {
+                completo = false;
+                motivoInterrupcao = selecionarMotivoInterrupcao(
+                    motivoInterrupcao,
+                    ResultadoExtracao.MotivoInterrupcao.ERRO_API.getCodigo()
+                );
+                continue;
+            }
+            dados.addAll(resultadoBloco.getDados());
+            paginasProcessadas += resultadoBloco.getPaginasProcessadas();
+            registrosExtraidos += resultadoBloco.getRegistrosExtraidos();
+            if (!resultadoBloco.isCompleto()) {
+                completo = false;
+                motivoInterrupcao = selecionarMotivoInterrupcao(
+                    motivoInterrupcao,
+                    resultadoBloco.getMotivoInterrupcao()
+                );
+            }
+        }
+
+        return completo
+            ? ResultadoExtracao.completo(dados, paginasProcessadas, registrosExtraidos)
+            : ResultadoExtracao.incompleto(
+                dados,
+                motivoInterrupcao == null
+                    ? ResultadoExtracao.MotivoInterrupcao.ERRO_API.getCodigo()
+                    : motivoInterrupcao,
+                paginasProcessadas,
+                registrosExtraidos
+            );
+    }
+
+    private String selecionarMotivoInterrupcao(final String atual, final String candidato) {
+        if (candidato == null || candidato.isBlank()) {
+            return atual;
+        }
+        if (ResultadoExtracao.MotivoInterrupcao.ERRO_API.getCodigo().equals(candidato)
+            || ResultadoExtracao.MotivoInterrupcao.CIRCUIT_BREAKER.getCodigo().equals(candidato)
+            || ResultadoExtracao.MotivoInterrupcao.LACUNA_PAGINACAO_422.getCodigo().equals(candidato)
+            || ResultadoExtracao.MotivoInterrupcao.PAGINA_VAZIA_INESPERADA.getCodigo().equals(candidato)) {
+            return candidato;
+        }
+        return (atual == null || atual.isBlank()) ? candidato : atual;
     }
 
     private void registrarUltimaExtracao(final LocalDate dataInicio,

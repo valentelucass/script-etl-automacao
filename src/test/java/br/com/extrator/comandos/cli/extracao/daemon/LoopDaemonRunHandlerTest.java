@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import br.com.extrator.aplicacao.extracao.ExecutionLockBusyException;
 import br.com.extrator.comandos.cli.extracao.reconciliacao.LoopReconciliationService;
 import br.com.extrator.comandos.cli.extracao.reconciliacao.LoopReconciliationService.ReconciliationSummary;
 
@@ -185,6 +186,53 @@ class LoopDaemonRunHandlerTest {
             assertEquals("WAITING_MANUAL_INTERVENTION", estado.getProperty("status"));
             assertEquals("3", estado.getProperty("consecutive_alert_cycles"));
             assertEquals("3", estado.getProperty("consecutive_non_success_cycles"));
+        } finally {
+            if (propriedadeAnterior == null) {
+                System.clearProperty("loop.daemon.max_consecutive_alert_cycles");
+            } else {
+                System.setProperty("loop.daemon.max_consecutive_alert_cycles", propriedadeAnterior);
+            }
+        }
+    }
+
+    @Test
+    void lockOcupadoNaoDeveContarComoFalhaDegradanteDoDaemon() throws Exception {
+        final DaemonStateStore stateStore = novoStore();
+        final DaemonHistoryWriter historyWriter = novoHistoryWriter();
+        final AtomicInteger reconciliacoes = new AtomicInteger();
+
+        final String propriedadeAnterior = System.getProperty("loop.daemon.max_consecutive_alert_cycles");
+        try {
+            System.setProperty("loop.daemon.max_consecutive_alert_cycles", "1");
+            final LoopDaemonRunHandler handler = new LoopDaemonRunHandler(
+                stateStore,
+                historyWriter,
+                incluirFaturas -> {
+                    throw new ExecutionLockBusyException("etl-global-execution", -1);
+                },
+                (inicio, fimExtracao, sucesso, incluirFaturas, detalheFalha) -> {
+                    reconciliacoes.incrementAndGet();
+                    return null;
+                },
+                (proximoCiclo, store) -> LoopDaemonRunHandler.WaitResult.STOP_REQUESTED,
+                cicloLog -> () -> { },
+                () -> 8642L,
+                30L,
+                false,
+                incluirFaturas -> java.time.Duration.ofSeconds(30)
+            );
+
+            handler.executar(false);
+
+            final var estado = stateStore.loadState();
+            final Path logCiclo = localizarPrimeiroLogCiclo(tempDir.resolve("daemon").resolve("ciclos"));
+            final String conteudo = Files.readString(logCiclo, StandardCharsets.UTF_8);
+
+            assertEquals("STOPPED", estado.getProperty("status"));
+            assertEquals("0", estado.getProperty("consecutive_alert_cycles"));
+            assertEquals("0", estado.getProperty("consecutive_non_success_cycles"));
+            assertEquals(0, reconciliacoes.get(), "Reconciliacao nao deve rodar enquanto o lock global esta ocupado");
+            assertTrue(conteudo.contains("Ciclo pulado porque outra execucao esta segurando o lock global"));
         } finally {
             if (propriedadeAnterior == null) {
                 System.clearProperty("loop.daemon.max_consecutive_alert_cycles");

@@ -83,6 +83,18 @@ function Mask-CommandLine {
     return $masked
 }
 
+function Get-CommandTokens {
+    param([string] $CommandLine)
+
+    if ([string]::IsNullOrWhiteSpace($CommandLine)) {
+        return @()
+    }
+
+    return [regex]::Matches($CommandLine, '"[^"]*"|[^\s]+') | ForEach-Object {
+        $_.Value.Trim('"')
+    }
+}
+
 function Add-Conflict {
     param(
         [hashtable] $Conflicts,
@@ -123,7 +135,7 @@ function Add-Conflict {
 }
 
 function Find-FirstExecutionFlag {
-    param([string] $NormalizedCommandLine)
+    param([string] $CommandLine)
 
     $flags = @(
         '--loop-daemon-run',
@@ -137,18 +149,25 @@ function Find-FirstExecutionFlag {
         '--recovery'
     )
 
-    foreach ($flag in $flags) {
-        if ($NormalizedCommandLine.Contains($flag)) {
-            return $flag
+    foreach ($token in Get-CommandTokens $CommandLine) {
+        $normalizedToken = Normalize-Text $token
+        if ($normalizedToken.StartsWith('-d')) {
+            continue
+        }
+        foreach ($flag in $flags) {
+            if ($normalizedToken.Equals($flag, [System.StringComparison]::OrdinalIgnoreCase)) {
+                return $flag
+            }
         }
     }
     return ''
 }
 
 function Test-SkipCommand {
-    param([string] $NormalizedCommandLine)
+    param([string] $CommandLine)
 
-    foreach ($flag in @(
+    $flag = Find-FirstExecutionFlag $CommandLine
+    foreach ($skipFlag in @(
         '--auth-check',
         '--auth-bootstrap',
         '--loop-daemon-start',
@@ -157,7 +176,7 @@ function Test-SkipCommand {
         '--ajuda',
         '--help'
     )) {
-        if ($NormalizedCommandLine.Contains($flag)) {
+        if ($flag.Equals($skipFlag, [System.StringComparison]::OrdinalIgnoreCase)) {
             return $true
         }
     }
@@ -197,8 +216,7 @@ foreach ($candidatePid in ($candidateDaemonPids | Select-Object -Unique)) {
         continue
     }
     $commandLine = Get-ProcessCommandLine $candidatePid
-    $normalized = Normalize-Text $commandLine
-    $isLoopDaemon = $normalized.Contains('--loop-daemon-run')
+    $isLoopDaemon = (Find-FirstExecutionFlag $commandLine) -eq '--loop-daemon-run'
     $persistedAsActiveDaemon = -not [string]::IsNullOrWhiteSpace($daemonStatus) -and
         -not $daemonStatus.Equals('STOPPED', [System.StringComparison]::OrdinalIgnoreCase)
 
@@ -221,11 +239,11 @@ foreach ($processInfo in Get-JavaProcessInfos) {
     if (-not $looksLikeExtrator) {
         continue
     }
-    if (Test-SkipCommand $normalized) {
+    if (Test-SkipCommand $commandLine) {
         continue
     }
 
-    $flag = Find-FirstExecutionFlag $normalized
+    $flag = Find-FirstExecutionFlag $commandLine
     if ([string]::IsNullOrWhiteSpace($flag)) {
         continue
     }

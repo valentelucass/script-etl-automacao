@@ -63,7 +63,7 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
     private static final String NOME_TABELA_QUARENTENA = "dbo.sys_reconciliation_quarantine";
     private static final String ENTIDADE_QUARENTENA = "fretes";
     private static final List<String> COLUNAS_MERGE = List.of(
-        "id", "servico_em", "criado_em", "status", "modal", "tipo_frete", "valor_total", "valor_notas", "peso_notas",
+        "id", "servico_em", "criado_em", "status", "cortesia", "modal", "tipo_frete", "valor_total", "valor_notas", "peso_notas",
         "id_corporacao", "id_cidade_destino", "data_previsao_entrega", "service_date", "finished_at",
         "fit_dpn_performance_finished_at", "corporation_sequence_number", "pagador_id", "pagador_nome",
         "remetente_id", "remetente_nome", "origem_cidade", "origem_uf", "destinatario_id", "destinatario_nome",
@@ -629,7 +629,7 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
         final String sql = String.format("""
             MERGE %s WITH (HOLDLOCK) AS target
             USING (VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?,
@@ -642,7 +642,7 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                 ?, ?, ?, ?, ?, ?, ?,
                 ?, ?
             ))
-                AS source (id, servico_em, criado_em, status, modal, tipo_frete, valor_total, valor_notas, peso_notas, id_corporacao, id_cidade_destino, data_previsao_entrega, service_date,
+                AS source (id, servico_em, criado_em, status, cortesia, modal, tipo_frete, valor_total, valor_notas, peso_notas, id_corporacao, id_cidade_destino, data_previsao_entrega, service_date,
                            finished_at, fit_dpn_performance_finished_at, corporation_sequence_number,
                            pagador_id, pagador_nome, remetente_id, remetente_nome, origem_cidade, origem_uf, destinatario_id, destinatario_nome, destino_cidade, destino_uf,
                            filial_nome, numero_nota_fiscal, tabela_preco_nome, classificacao_nome, centro_custo_nome, usuario_nome, reference_number, chave_cte, numero_cte, serie_cte, invoices_total_volumes,
@@ -661,6 +661,7 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                     servico_em = source.servico_em,
                     criado_em = source.criado_em,
                     status = source.status,
+                    cortesia = source.cortesia,
                     modal = source.modal,
                     tipo_frete = source.tipo_frete,
                     valor_total = source.valor_total,
@@ -752,7 +753,7 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                     metadata = source.metadata,
                     data_extracao = source.data_extracao
             WHEN NOT MATCHED THEN
-                INSERT (id, servico_em, criado_em, status, modal, tipo_frete, valor_total, valor_notas, peso_notas, id_corporacao, id_cidade_destino, data_previsao_entrega, service_date,
+                INSERT (id, servico_em, criado_em, status, cortesia, modal, tipo_frete, valor_total, valor_notas, peso_notas, id_corporacao, id_cidade_destino, data_previsao_entrega, service_date,
                         finished_at, fit_dpn_performance_finished_at, corporation_sequence_number,
                         pagador_id, pagador_nome, remetente_id, remetente_nome, origem_cidade, origem_uf, destinatario_id, destinatario_nome, destino_cidade, destino_uf,
                            filial_nome, numero_nota_fiscal, tabela_preco_nome, classificacao_nome, centro_custo_nome, usuario_nome, reference_number, chave_cte, numero_cte, serie_cte, invoices_total_volumes,
@@ -765,7 +766,7 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
                         filial_apelido, cte_id, cte_emission_type, cte_created_at,
                         fiscal_calculation_basis, fiscal_tax_rate, fiscal_pis_rate, fiscal_cofins_rate, fiscal_has_difal, fiscal_difal_origin, fiscal_difal_destination,
                         metadata, data_extracao)
-                VALUES (source.id, source.servico_em, source.criado_em, source.status, source.modal, source.tipo_frete, source.valor_total, source.valor_notas, source.peso_notas, source.id_corporacao, source.id_cidade_destino, source.data_previsao_entrega, source.service_date,
+                VALUES (source.id, source.servico_em, source.criado_em, source.status, source.cortesia, source.modal, source.tipo_frete, source.valor_total, source.valor_notas, source.peso_notas, source.id_corporacao, source.id_cidade_destino, source.data_previsao_entrega, source.service_date,
                         source.finished_at, source.fit_dpn_performance_finished_at, source.corporation_sequence_number,
                         source.pagador_id, source.pagador_nome, source.remetente_id, source.remetente_nome, source.origem_cidade, source.origem_uf, source.destinatario_id, source.destinatario_nome, source.destino_cidade, source.destino_uf,
                         source.filial_nome, source.numero_nota_fiscal, source.tabela_preco_nome, source.classificacao_nome, source.centro_custo_nome, source.usuario_nome, source.reference_number, source.chave_cte, source.numero_cte, source.serie_cte, source.invoices_total_volumes,
@@ -787,6 +788,11 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
             statement.setObject(paramIndex++, frete.getServicoEm(), Types.TIMESTAMP_WITH_TIMEZONE);
             statement.setObject(paramIndex++, frete.getCriadoEm(), Types.TIMESTAMP_WITH_TIMEZONE);
             statement.setString(paramIndex++, frete.getStatus());
+            if (frete.getCortesia() != null) {
+                statement.setObject(paramIndex++, frete.getCortesia(), Types.BOOLEAN);
+            } else {
+                statement.setNull(paramIndex++, Types.BOOLEAN);
+            }
             statement.setString(paramIndex++, frete.getModal());
             statement.setString(paramIndex++, frete.getTipoFrete());
             statement.setBigDecimal(paramIndex++, frete.getValorTotal());

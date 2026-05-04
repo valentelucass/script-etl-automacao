@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -263,32 +261,39 @@ public class ValidacaoEtlResilienciaUseCase {
     }
 
     private ScenarioResult executarHttpHalfOpen() throws Exception {
-        final AtomicInteger conexoesAceitas = new AtomicInteger();
+        final AtomicInteger requisicoesRecebidas = new AtomicInteger();
         final CountDownLatch conexaoAceita = new CountDownLatch(1);
-        final List<Socket> socketsAbertos = Collections.synchronizedList(new ArrayList<>());
         final long inicio = System.nanoTime();
-
-        try (ServerSocket serverSocket = new ServerSocket(0)) {
-            final Thread acceptThread = new Thread(() -> {
-                while (!serverSocket.isClosed()) {
-                    try {
-                        final Socket socket = serverSocket.accept();
-                        conexoesAceitas.incrementAndGet();
-                        socketsAbertos.add(socket);
-                        conexaoAceita.countDown();
-                    } catch (final IOException ignored) {
-                        return;
-                    }
+        final HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        final ExecutorService executor = Executors.newFixedThreadPool(2);
+        server.setExecutor(executor);
+        server.createContext("/graphql", exchange -> {
+            requisicoesRecebidas.incrementAndGet();
+            conexaoAceita.countDown();
+            try {
+                Thread.sleep(500L);
+                final byte[] corpo = "{\"ok\":true}".getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().add("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, corpo.length);
+                try (OutputStream outputStream = exchange.getResponseBody()) {
+                    outputStream.write(corpo);
                 }
-            }, "chaos-half-open-accept");
-            acceptThread.setDaemon(true);
-            acceptThread.start();
+            } catch (final InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (final IOException ignored) {
+                // O cliente deve abandonar a resposta ao atingir o timeout.
+            } finally {
+                exchange.close();
+            }
+        });
+        server.start();
 
+        try {
             final HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(100))
                 .build();
             final HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://127.0.0.1:" + serverSocket.getLocalPort() + "/graphql"))
+                .uri(URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/graphql"))
                 .timeout(Duration.ofMillis(150))
                 .POST(HttpRequest.BodyPublishers.ofString("{\"query\":\"{ ping }\"}"))
                 .build();
@@ -302,7 +307,7 @@ public class ValidacaoEtlResilienciaUseCase {
             }
 
             final long duracaoMs = Duration.ofNanos(System.nanoTime() - inicio).toMillis();
-            final boolean registrouConexao = conexoesAceitas.get() >= 1 || conexaoAceita.await(300, TimeUnit.MILLISECONDS);
+            final boolean registrouConexao = requisicoesRecebidas.get() >= 1 || conexaoAceita.await(300, TimeUnit.MILLISECONDS);
             final Throwable causaRaiz = rootCause(erroCapturado);
             final boolean passou = erroCapturado != null
                 && causaRaiz instanceof HttpTimeoutException
@@ -315,14 +320,14 @@ public class ValidacaoEtlResilienciaUseCase {
                 duracaoMs,
                 0,
                 passou ? 1 : 0,
-                Math.max(0, conexoesAceitas.get() - 1),
+                Math.max(0, requisicoesRecebidas.get() - 1),
                 mapOfFailures(causaRaiz),
                 0L,
                 0L,
                 true,
                 true,
                 List.of(
-                    "conexoes_aceitas=" + conexoesAceitas.get(),
+                    "requisicoes_recebidas=" + requisicoesRecebidas.get(),
                     "conexao_registrada=" + registrouConexao,
                     "erro=" + (causaRaiz == null ? "sem_erro" : causaRaiz.getClass().getSimpleName()),
                     "duracao_ms=" + duracaoMs
@@ -331,13 +336,8 @@ public class ValidacaoEtlResilienciaUseCase {
                 List.of()
             );
         } finally {
-            for (final Socket socket : socketsAbertos) {
-                try {
-                    socket.close();
-                } catch (final IOException ignored) {
-                    // no-op
-                }
-            }
+            server.stop(0);
+            executor.shutdownNow();
         }
     }
 

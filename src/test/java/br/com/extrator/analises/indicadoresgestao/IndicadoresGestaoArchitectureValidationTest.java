@@ -28,6 +28,7 @@ class IndicadoresGestaoArchitectureValidationTest {
               "serviceAt": "2026-03-01T08:00:00-03:00",
               "createdAt": "2026-03-01T07:00:00-03:00",
               "status": "finished",
+              "courtesy": true,
               "corporationId": 385129,
               "destinationCityId": 9988,
               "deliveryPredictionDate": "2026-03-05",
@@ -45,10 +46,12 @@ class IndicadoresGestaoArchitectureValidationTest {
         assertEquals(LocalDate.of(2026, 3, 1), entity.getServiceDate());
         assertEquals(OffsetDateTime.parse("2026-03-03T23:02:00-03:00"), entity.getFinishedAt());
         assertEquals(332352L, entity.getCorporationSequenceNumber());
+        assertEquals(Boolean.TRUE, entity.getCortesia());
 
         final JsonNode metadata = MapperUtil.sharedJson().readTree(entity.getMetadata());
         assertEquals("2026-03-03T23:02:00-03:00", metadata.get("finishedAt").asText());
         assertEquals(332352L, metadata.get("corporationSequenceNumber").asLong());
+        assertEquals(true, metadata.get("courtesy").asBoolean());
     }
 
     @Test

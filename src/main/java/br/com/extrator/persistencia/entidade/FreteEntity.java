@@ -67,6 +67,7 @@ public class FreteEntity {
     private OffsetDateTime servicoEm;
     private OffsetDateTime criadoEm;
     private String status;
+    private Boolean cortesia;
     private String modal;
     private String tipoFrete;
     private Long accountingCreditId;
@@ -208,6 +209,14 @@ public class FreteEntity {
 
     public void setStatus(final String status) {
         this.status = status;
+    }
+
+    public Boolean getCortesia() {
+        return cortesia;
+    }
+
+    public void setCortesia(final Boolean cortesia) {
+        this.cortesia = cortesia;
     }
 
     public String getModal() {

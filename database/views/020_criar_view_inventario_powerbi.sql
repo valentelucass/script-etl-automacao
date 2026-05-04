@@ -24,6 +24,7 @@ SELECT
         WHEN 'CheckIn::Order::Unloading' THEN 'Descarregamento'
         WHEN 'CheckIn::Order::Picking' THEN 'Picking'
         WHEN 'CheckIn::Order::Receipt' THEN 'Recebimento'
+        WHEN 'CheckIn::Order::Return' THEN 'Retorno'
         ELSE i.type
     END AS [Tipo],
     i.started_at AS [Data/Hora início],

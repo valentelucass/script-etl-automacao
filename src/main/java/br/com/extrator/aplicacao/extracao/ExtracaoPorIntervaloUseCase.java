@@ -56,6 +56,7 @@ import br.com.extrator.suporte.console.BannerUtil;
 import br.com.extrator.suporte.console.LoggerConsole;
 import br.com.extrator.suporte.formatacao.FormatadorData;
 import br.com.extrator.suporte.configuracao.ScopedSystemPropertyOverride;
+import br.com.extrator.suporte.observabilidade.ExecutionContext;
 
 public class ExtracaoPorIntervaloUseCase {
     private static final String EXECUTION_LOCK_RESOURCE = "etl-global-execution";
@@ -68,6 +69,8 @@ public class ExtracaoPorIntervaloUseCase {
         "ETL_REFERENCIAL_COLETAS_BACKFILL_DIAS";
     private static final String PROP_LOOKAHEAD_DIAS_COLETAS =
         "ETL_REFERENCIAL_COLETAS_LOOKAHEAD_DIAS";
+    private static final String PROP_LOOKBACK_MODO_FRETES =
+        "ETL_FRETES_PERFORMANCE_LOOKBACK_MODO";
     private static final long TIMEOUT_FRETES_INTERVALO_MS = 10_800_000L;
     private static final LoggerConsole log = LoggerConsole.getLogger(ExtracaoPorIntervaloUseCase.class);
     private static final int TAMANHO_BLOCO_DIAS = 30;
@@ -105,6 +108,7 @@ public class ExtracaoPorIntervaloUseCase {
         final boolean modoRapido24h = request.modoRapido24h();
         final Map<String, String> overridesTemporarios = new LinkedHashMap<>();
         overridesTemporarios.put(PROP_PRUNE_AUSENTES_FRETES, Boolean.TRUE.toString());
+        overridesTemporarios.put(PROP_LOOKBACK_MODO_FRETES, resolverModoLookbackFretes(request));
         overridesTemporarios.put(PROP_TIMEOUT_FRETES, resolverTimeoutMinimo(PROP_TIMEOUT_FRETES, TIMEOUT_FRETES_INTERVALO_MS));
         overridesTemporarios.put(
             PROP_TIMEOUT_COLETAS,
@@ -379,6 +383,16 @@ public class ExtracaoPorIntervaloUseCase {
             }
         }
         return Long.toString(timeoutMinimoMs);
+    }
+
+    private String resolverModoLookbackFretes(final ExtracaoPorIntervaloRequest request) {
+        if (request != null && request.modoLoopDaemon()) {
+            return "reconciliacao";
+        }
+        if ("--recovery".equalsIgnoreCase(ExecutionContext.currentCommand())) {
+            return "backfill";
+        }
+        return "intervalo";
     }
 
     private String resolverInteiroMinimo(final String propriedade, final int valorMinimo) {

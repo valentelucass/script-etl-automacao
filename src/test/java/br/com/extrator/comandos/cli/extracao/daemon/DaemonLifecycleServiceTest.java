@@ -60,6 +60,35 @@ class DaemonLifecycleServiceTest {
     }
 
     @Test
+    void naoDeveConfundirStepIsoladoComDaemonPorParentCommand() {
+        final String comandoStep =
+            "\"C:\\Program Files\\Eclipse Adoptium\\jdk-25.0.2.10-hotspot\\bin\\java.exe\" "
+                + "-Detl.parent.command=--loop-daemon-run "
+                + "-jar C:\\repo\\logs\\daemon\\runtime\\extrator-daemon-runtime-1.jar "
+                + "--executar-step-isolado graphql 2026-04-24 2026-04-30 all";
+
+        assertFalse(
+            DaemonLifecycleService.ehComandoLoopDaemon(comandoStep),
+            "Step isolado herdado do daemon nao deve ser classificado como daemon"
+        );
+        assertTrue(
+            DaemonLifecycleService.ehComandoStepIsoladoDoDaemon(comandoStep),
+            "Step isolado herdado do daemon deve ser alvo da parada do loop"
+        );
+    }
+
+    @Test
+    void deveReconhecerComandoRealDoLoopDaemon() {
+        final String comandoDaemon =
+            "\"C:\\Program Files\\Eclipse Adoptium\\jdk-25.0.2.10-hotspot\\bin\\java.exe\" "
+                + "-jar C:\\repo\\logs\\daemon\\runtime\\extrator-daemon-runtime-1.jar "
+                + "--loop-daemon-run --sem-faturas-graphql";
+
+        assertTrue(DaemonLifecycleService.ehComandoLoopDaemon(comandoDaemon));
+        assertFalse(DaemonLifecycleService.ehComandoStepIsoladoDoDaemon(comandoDaemon));
+    }
+
+    @Test
     void devePropagarSystemPropertiesDeConfiguracaoParaProcessoFilho() throws Exception {
         final String chaveApi = "API_THROTTLING_MINIMO_MS";
         final String chaveEtl = "ETL_GRAPHQL_TIMEOUT_ENTIDADE_USUARIOS_SISTEMA_MS";

@@ -25,6 +25,11 @@ import br.com.extrator.suporte.validacao.ConstantesEntidades;
 
 public final class ConfigEtl {
     private static final Logger logger = LoggerFactory.getLogger(ConfigEtl.class);
+    private static final int FRETES_LOOKBACK_MAX_DIAS = 30;
+    private static final String FRETES_LOOKBACK_MODO_NORMAL = "normal";
+    private static final String FRETES_LOOKBACK_MODO_RECONCILIACAO = "reconciliacao";
+    private static final String FRETES_LOOKBACK_MODO_BACKFILL = "backfill";
+    private static final String FRETES_LOOKBACK_MODO_INTERVALO = "intervalo";
 
     private ConfigEtl() {
     }
@@ -233,14 +238,112 @@ public final class ConfigEtl {
     }
 
     public static boolean isPruneAusentesFretesAtivo() {
-        String valor = System.getProperty("ETL_FRETES_PRUNE_AUSENTES");
-        if (valor == null || valor.isBlank()) {
-            valor = System.getProperty("etl.fretes.prune.ausentes");
-        }
-        if (valor == null || valor.isBlank()) {
-            valor = System.getenv("ETL_FRETES_PRUNE_AUSENTES");
-        }
+        final String valor = ConfigSource.obterConfiguracao(
+            "ETL_FRETES_PRUNE_AUSENTES",
+            "etl.fretes.prune.ausentes"
+        );
         return valor != null && Boolean.parseBoolean(valor.trim().toLowerCase(Locale.ROOT));
+    }
+
+    public static int obterFretesPerformanceLookbackDias() {
+        return obterFretesPerformanceLookbackDiasReconciliacao();
+    }
+
+    public static int obterFretesPerformanceLookbackDiasEfetivo() {
+        return switch (obterFretesPerformanceLookbackModo()) {
+            case FRETES_LOOKBACK_MODO_RECONCILIACAO -> obterFretesPerformanceLookbackDiasReconciliacao();
+            case FRETES_LOOKBACK_MODO_BACKFILL -> obterFretesPerformanceLookbackDiasBackfill();
+            case FRETES_LOOKBACK_MODO_INTERVALO -> obterFretesPerformanceLookbackDiasIntervalo();
+            default -> obterFretesPerformanceLookbackDiasNormal();
+        };
+    }
+
+    public static String obterFretesPerformanceLookbackModo() {
+        final String valor = ConfigSource.obterConfiguracao(
+            "ETL_FRETES_PERFORMANCE_LOOKBACK_MODO",
+            "etl.fretes.performance.lookback.modo"
+        );
+        if (valor == null || valor.isBlank()) {
+            return FRETES_LOOKBACK_MODO_NORMAL;
+        }
+        final String normalizado = valor.trim().toLowerCase(Locale.ROOT);
+        return switch (normalizado) {
+            case FRETES_LOOKBACK_MODO_NORMAL,
+                FRETES_LOOKBACK_MODO_RECONCILIACAO,
+                FRETES_LOOKBACK_MODO_BACKFILL,
+                FRETES_LOOKBACK_MODO_INTERVALO -> normalizado;
+            default -> {
+                logger.warn(
+                    "Modo de lookback de fretes invalido '{}'. Usando normal sem lookback implicito.",
+                    valor
+                );
+                yield FRETES_LOOKBACK_MODO_NORMAL;
+            }
+        };
+    }
+
+    public static int obterFretesPerformanceLookbackDiasNormal() {
+        return obterFretesLookbackDias(
+            ConfigSource.obterConfiguracao(
+                "ETL_FRETES_PERFORMANCE_LOOKBACK_NORMAL_DIAS",
+                "etl.fretes.performance.lookback.normal.dias"
+            ),
+            0,
+            "etl.fretes.performance.lookback.normal.dias"
+        );
+    }
+
+    public static int obterFretesPerformanceLookbackDiasReconciliacao() {
+        String valor = ConfigSource.obterConfiguracao(
+            "ETL_FRETES_PERFORMANCE_LOOKBACK_RECONCILIACAO_DIAS",
+            "etl.fretes.performance.lookback.reconciliacao.dias"
+        );
+        if (valor == null || valor.isBlank()) {
+            valor = ConfigSource.obterConfiguracao(
+                "ETL_FRETES_PERFORMANCE_LOOKBACK_DIAS",
+                "etl.fretes.performance.lookback.dias"
+            );
+        }
+        return obterFretesLookbackDias(
+            valor,
+            30,
+            "etl.fretes.performance.lookback.reconciliacao.dias"
+        );
+    }
+
+    public static int obterFretesPerformanceLookbackDiasBackfill() {
+        return obterFretesLookbackDias(
+            ConfigSource.obterConfiguracao(
+                "ETL_FRETES_PERFORMANCE_LOOKBACK_BACKFILL_DIAS",
+                "etl.fretes.performance.lookback.backfill.dias"
+            ),
+            0,
+            "etl.fretes.performance.lookback.backfill.dias"
+        );
+    }
+
+    public static int obterFretesPerformanceLookbackDiasIntervalo() {
+        return obterFretesLookbackDias(
+            ConfigSource.obterConfiguracao(
+                "ETL_FRETES_PERFORMANCE_LOOKBACK_INTERVALO_DIAS",
+                "etl.fretes.performance.lookback.intervalo.dias"
+            ),
+            0,
+            "etl.fretes.performance.lookback.intervalo.dias"
+        );
+    }
+
+    private static int obterFretesLookbackDias(final String valor,
+                                               final int valorPadrao,
+                                               final String chaveLog) {
+        return ConfigValueParser.parseInt(
+            valor,
+            valorPadrao,
+            value -> value >= 0 && value <= FRETES_LOOKBACK_MAX_DIAS,
+            logger,
+            chaveLog,
+            "0 a " + FRETES_LOOKBACK_MAX_DIAS + " dias"
+        );
     }
 
     public static boolean isFretePruneGuardrailAtivo() {

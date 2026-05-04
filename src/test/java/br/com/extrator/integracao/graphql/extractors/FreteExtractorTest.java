@@ -10,6 +10,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,106 @@ class FreteExtractorTest {
     @AfterEach
     void limparFlagDePrune() {
         System.clearProperty("ETL_FRETES_PRUNE_AUSENTES");
+        System.clearProperty("ETL_FRETES_PERFORMANCE_LOOKBACK_MODO");
+        System.clearProperty("ETL_FRETES_PERFORMANCE_LOOKBACK_NORMAL_DIAS");
+        System.clearProperty("ETL_FRETES_PERFORMANCE_LOOKBACK_RECONCILIACAO_DIAS");
+        System.clearProperty("ETL_FRETES_PERFORMANCE_LOOKBACK_BACKFILL_DIAS");
+        System.clearProperty("ETL_FRETES_PERFORMANCE_LOOKBACK_INTERVALO_DIAS");
+        System.clearProperty("ETL_FRETES_PERFORMANCE_LOOKBACK_DIAS");
+        System.clearProperty("etl.fretes.performance.lookback.modo");
+        System.clearProperty("etl.fretes.performance.lookback.normal.dias");
+        System.clearProperty("etl.fretes.performance.lookback.reconciliacao.dias");
+        System.clearProperty("etl.fretes.performance.lookback.backfill.dias");
+        System.clearProperty("etl.fretes.performance.lookback.intervalo.dias");
+        System.clearProperty("etl.fretes.performance.lookback.dias");
         System.clearProperty("api.dataexport.timezone");
+    }
+
+    @Test
+    void fluxoNormalNaoDeveExpandirJanelaMesmoComChaveLegadaConfigurada() {
+        System.setProperty("etl.fretes.performance.lookback.modo", "normal");
+        System.setProperty("etl.fretes.performance.lookback.dias", "30");
+
+        assertEquals(
+            LocalDate.of(2026, 3, 1),
+            FreteExtractor.calcularDataInicioConsulta(LocalDate.of(2026, 3, 1))
+        );
+    }
+
+    @Test
+    void reconciliacaoPodeUsarLookbackLegadoDePerformance() {
+        System.setProperty("etl.fretes.performance.lookback.modo", "reconciliacao");
+        System.setProperty("etl.fretes.performance.lookback.dias", "30");
+
+        assertEquals(
+            LocalDate.of(2026, 1, 30),
+            FreteExtractor.calcularDataInicioConsulta(LocalDate.of(2026, 3, 1))
+        );
+    }
+
+    @Test
+    void deveDividirConsultaDeFretesEmBlocosDeNoMaximoTrintaDias() {
+        final List<String> janelasChamadas = new ArrayList<>();
+        final FreteExtractor extractor = new FreteExtractor(
+            (dataInicio, dataFim) -> {
+                janelasChamadas.add(dataInicio + ".." + dataFim);
+                return ResultadoExtracao.completo(List.of(), 1, 0);
+            },
+            new FakeFreteRepository(),
+            new FreteMapper(),
+            null,
+            true
+        );
+
+        final ResultadoExtracao<FreteNodeDTO> resultado = extractor.extract(
+            LocalDate.of(2026, 3, 1),
+            LocalDate.of(2026, 4, 5)
+        );
+
+        assertTrue(resultado.isCompleto());
+        assertEquals(2, resultado.getPaginasProcessadas());
+        assertEquals(
+            List.of("2026-03-01..2026-03-30", "2026-03-31..2026-04-05"),
+            janelasChamadas
+        );
+    }
+
+    @Test
+    void dataExport6389DeveUsarMesmaJanelaEfetivaDaExtracaoNormal() throws SQLException {
+        System.setProperty("etl.fretes.performance.lookback.modo", "normal");
+        System.setProperty("etl.fretes.performance.lookback.dias", "30");
+        System.setProperty("api.dataexport.timezone", "America/Sao_Paulo");
+        final FakeFreteRepository repository = new FakeFreteRepository();
+        final AtomicReference<LocalDate> inicioIndicadores = new AtomicReference<>();
+        final AtomicReference<LocalDate> fimIndicadores = new AtomicReference<>();
+        final FreteExtractor extractor = new FreteExtractor(
+            (dataInicio, dataFim) -> ResultadoExtracao.completo(
+                List.of(criarFrete(47882015L, 456L, "2026-04-24T20:11:00-03:00")),
+                1,
+                1
+            ),
+            repository,
+            new FreteMapper(),
+            (dataInicio, dataFim) -> {
+                inicioIndicadores.set(dataInicio);
+                fimIndicadores.set(dataFim);
+                return ResultadoExtracao.completo(
+                    List.of(criarIndicador(456L, "04/24/2026 18:15:00")),
+                    1,
+                    1
+                );
+            },
+            true
+        );
+
+        final ResultadoExtracao<FreteNodeDTO> resultado = extractor.extract(
+            LocalDate.of(2026, 4, 24),
+            LocalDate.of(2026, 4, 30)
+        );
+        extractor.saveWithMetrics(resultado.getDados());
+
+        assertEquals(LocalDate.of(2026, 4, 24), inicioIndicadores.get());
+        assertEquals(LocalDate.of(2026, 4, 30), fimIndicadores.get());
     }
 
     @Test

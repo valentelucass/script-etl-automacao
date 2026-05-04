@@ -26,6 +26,9 @@ class IndicadoresGestaoViewSqlTest {
         assertContem(sql, "[Peso Real]");
         assertContem(sql, "[Peso Cubado]");
         assertContem(sql, "[Total M3]");
+        assertContem(sql, "[Cortesia]");
+        assertContem(sql, "[Cortesia Flag]");
+        assertContem(sql, "NULLIF(LTRIM(RTRIM(f.nfse_series)), '')");
         assertContem(sql, "LEFT JOIN dbo.localizacao_cargas");
     }
 
@@ -44,6 +47,8 @@ class IndicadoresGestaoViewSqlTest {
         assertContem(sql, "[Filial da Ordem de Conferência]");
         assertContem(sql, "[Filial Emissora do Frete]");
         assertContem(sql, "[Data de Finalização]");
+        assertContem(sql, "CheckIn::Order::Return");
+        assertContem(sql, "'Retorno'");
         assertContem(sql, "LEFT JOIN dbo.fretes");
     }
 

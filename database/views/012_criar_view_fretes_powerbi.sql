@@ -18,25 +18,53 @@ SELECT
     f.cte_id AS [CT-e ID],
     f.cte_created_at AS [CT-e Criado em],
     CASE 
-        WHEN f.cte_id IS NOT NULL OR f.chave_cte IS NOT NULL OR f.numero_cte IS NOT NULL OR f.serie_cte IS NOT NULL THEN 'CT-e'
-        WHEN f.nfse_number IS NOT NULL OR f.nfse_series IS NOT NULL OR f.nfse_xml_document IS NOT NULL OR f.nfse_integration_id IS NOT NULL THEN 'NFS-e'
+        WHEN f.cte_id IS NOT NULL
+          OR NULLIF(LTRIM(RTRIM(f.chave_cte)), '') IS NOT NULL
+          OR f.numero_cte IS NOT NULL
+          OR f.serie_cte IS NOT NULL THEN 'CT-e'
+        WHEN f.nfse_number IS NOT NULL
+          OR NULLIF(LTRIM(RTRIM(f.nfse_series)), '') IS NOT NULL
+          OR NULLIF(LTRIM(RTRIM(f.nfse_xml_document)), '') IS NOT NULL
+          OR NULLIF(LTRIM(RTRIM(f.nfse_integration_id)), '') IS NOT NULL THEN 'NFS-e'
         ELSE 'Pendente/Não Emitido'
     END AS [Documento Oficial/Tipo],
     CASE 
-        WHEN f.cte_id IS NOT NULL OR f.chave_cte IS NOT NULL THEN f.chave_cte
+        WHEN f.cte_id IS NOT NULL
+          OR NULLIF(LTRIM(RTRIM(f.chave_cte)), '') IS NOT NULL THEN f.chave_cte
         ELSE NULL
     END AS [Documento Oficial/Chave],
     CASE 
-        WHEN f.cte_id IS NOT NULL OR f.chave_cte IS NOT NULL THEN CONVERT(NVARCHAR(50), f.numero_cte)
-        ELSE CONVERT(NVARCHAR(50), f.nfse_number)
+        WHEN f.cte_id IS NOT NULL
+          OR NULLIF(LTRIM(RTRIM(f.chave_cte)), '') IS NOT NULL
+          OR f.numero_cte IS NOT NULL
+          OR f.serie_cte IS NOT NULL THEN CONVERT(NVARCHAR(50), f.numero_cte)
+        WHEN f.nfse_number IS NOT NULL
+          OR NULLIF(LTRIM(RTRIM(f.nfse_series)), '') IS NOT NULL
+          OR NULLIF(LTRIM(RTRIM(f.nfse_xml_document)), '') IS NOT NULL
+          OR NULLIF(LTRIM(RTRIM(f.nfse_integration_id)), '') IS NOT NULL THEN CONVERT(NVARCHAR(50), f.nfse_number)
+        ELSE NULL
     END AS [Documento Oficial/Número],
     CASE 
-        WHEN f.cte_id IS NOT NULL OR f.chave_cte IS NOT NULL THEN CONVERT(NVARCHAR(50), f.serie_cte)
-        ELSE f.nfse_series
+        WHEN f.cte_id IS NOT NULL
+          OR NULLIF(LTRIM(RTRIM(f.chave_cte)), '') IS NOT NULL
+          OR f.numero_cte IS NOT NULL
+          OR f.serie_cte IS NOT NULL THEN CONVERT(NVARCHAR(50), f.serie_cte)
+        WHEN f.nfse_number IS NOT NULL
+          OR NULLIF(LTRIM(RTRIM(f.nfse_series)), '') IS NOT NULL
+          OR NULLIF(LTRIM(RTRIM(f.nfse_xml_document)), '') IS NOT NULL
+          OR NULLIF(LTRIM(RTRIM(f.nfse_integration_id)), '') IS NOT NULL THEN f.nfse_series
+        ELSE NULL
     END AS [Documento Oficial/Série],
     CASE 
-        WHEN f.cte_id IS NOT NULL OR f.chave_cte IS NOT NULL THEN NULL
-        ELSE f.nfse_xml_document
+        WHEN f.cte_id IS NOT NULL
+          OR NULLIF(LTRIM(RTRIM(f.chave_cte)), '') IS NOT NULL
+          OR f.numero_cte IS NOT NULL
+          OR f.serie_cte IS NOT NULL THEN NULL
+        WHEN f.nfse_number IS NOT NULL
+          OR NULLIF(LTRIM(RTRIM(f.nfse_series)), '') IS NOT NULL
+          OR NULLIF(LTRIM(RTRIM(f.nfse_xml_document)), '') IS NOT NULL
+          OR NULLIF(LTRIM(RTRIM(f.nfse_integration_id)), '') IS NOT NULL THEN f.nfse_xml_document
+        ELSE NULL
     END AS [Documento Oficial/XML],
     f.servico_em AS [Data frete],
     f.criado_em AS [Criado em],
@@ -80,8 +108,8 @@ SELECT
     f.id_corporacao AS [Corp ID],
     f.id_cidade_destino AS [Cidade Destino ID],
     indicador_base.previsao_entrega_oficial AS [Previsão de Entrega],
-    indicador_base.data_finalizacao_oficial AS [Data de Finalização],
-    indicador_base.data_finalizacao_oficial AS [Finalização da Performance],
+    f.finished_at AS [Data de Finalização],
+    indicador_base.finalizacao_performance_oficial AS [Finalização da Performance],
     indicador_perf.performance_diferenca_dias AS [Performance Diferença de Dias],
     CASE
         WHEN indicador_perf.performance_diferenca_dias IS NULL THEN NULL
@@ -118,6 +146,11 @@ SELECT
         WHEN 'occurrence_treatment' THEN 'tratamento de ocorrência'
         ELSE f.status
     END AS [Status],
+    CASE WHEN f.cortesia = 1 THEN 'Sim'
+         WHEN f.cortesia = 0 THEN 'Não'
+         ELSE NULL
+    END AS [Cortesia],
+    f.cortesia AS [Cortesia Flag],
     REPLACE(f.tipo_frete, 'Freight::', '') AS [Tipo Frete],
     f.service_type AS [Service Type],
     CASE WHEN f.insurance_enabled = 1 THEN 'Com seguro'
@@ -193,18 +226,18 @@ LEFT JOIN dbo.localizacao_cargas AS lc
 OUTER APPLY (
     SELECT
         COALESCE(CAST(f.data_previsao_entrega AS DATE), CAST(lc.predicted_delivery_at AS DATE)) AS previsao_entrega_oficial,
-        COALESCE(f.fit_dpn_performance_finished_at, f.finished_at) AS data_finalizacao_oficial,
+        f.fit_dpn_performance_finished_at AS finalizacao_performance_oficial,
         COALESCE(NULLIF(LTRIM(RTRIM(lc.destination_branch_nickname)), ''), f.filial_nome) AS filial_responsavel_destino
 ) AS indicador_base
 OUTER APPLY (
     SELECT
         CASE
             WHEN indicador_base.previsao_entrega_oficial IS NULL
-              OR indicador_base.data_finalizacao_oficial IS NULL THEN NULL
+              OR indicador_base.finalizacao_performance_oficial IS NULL THEN NULL
             ELSE DATEDIFF(
                 DAY,
                 indicador_base.previsao_entrega_oficial,
-                CAST(indicador_base.data_finalizacao_oficial AS DATE)
+                CAST(indicador_base.finalizacao_performance_oficial AS DATE)
             )
         END AS performance_diferenca_dias
 ) AS indicador_perf;

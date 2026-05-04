@@ -13,6 +13,7 @@ BEGIN
         servico_em DATETIMEOFFSET,
         criado_em DATETIMEOFFSET,
         status NVARCHAR(50),
+        cortesia BIT,
         modal NVARCHAR(50),
         tipo_frete NVARCHAR(100),
         accounting_credit_id BIGINT,
@@ -50,7 +51,7 @@ BEGIN
         invoices_total_volumes INT,
         taxed_weight DECIMAL(18, 3),
         real_weight DECIMAL(18, 3),
-        total_cubic_volume DECIMAL(18, 3),
+        total_cubic_volume DECIMAL(18, 6),
         subtotal DECIMAL(18, 2),
 
         -- CT-e (chave, número, série)
@@ -100,7 +101,7 @@ BEGIN
         fiscal_pis_value DECIMAL(18, 2),
         fiscal_cofins_value DECIMAL(18, 2),
 
-        cubages_cubed_weight DECIMAL(18, 3),
+        cubages_cubed_weight DECIMAL(18, 6),
         freight_weight_subtotal DECIMAL(18, 2),
         ad_valorem_subtotal DECIMAL(18, 2),
         toll_subtotal DECIMAL(18, 2),

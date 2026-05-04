@@ -138,6 +138,7 @@ public final class GraphQLQueries {
                     modal
                     modalCte
                     status
+                    courtesy
                     type
                     serviceDate
                     serviceType

@@ -13,6 +13,8 @@ class ConfigApiTest {
     @AfterEach
     void limparOverrides() {
         System.clearProperty("api.dataexport.timezone");
+        System.clearProperty("api.dataexport.max.paginas.template.6389");
+        System.clearProperty("api.dataexport.max.registros.template.6389");
         System.clearProperty("etl.integridade.modo");
     }
 
@@ -58,5 +60,11 @@ class ConfigApiTest {
         System.setProperty("api.dataexport.timezone", "America/Sao_Paulo");
 
         assertEquals(ZoneId.of("America/Sao_Paulo"), ConfigApi.obterZoneIdDataExport());
+    }
+
+    @Test
+    void deveTerLimitesEspecificosParaTemplate6389() {
+        assertEquals(500, ConfigApi.obterLimitePaginasApiDataExportPorTemplate(6389));
+        assertEquals(50_000, ConfigApi.obterMaxRegistrosDataExportPorTemplate(6389));
     }
 }

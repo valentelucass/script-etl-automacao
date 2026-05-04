@@ -78,6 +78,7 @@ public class FreteMapper {
         // 1. Mapeamento dos campos essenciais
         entity.setId(dto.getId());
         entity.setStatus(dto.getStatus());
+        entity.setCortesia(dto.getCourtesy());
         entity.setModal(dto.getModal());
         entity.setTipoFrete(dto.getType());
         entity.setAccountingCreditId(dto.getAccountingCreditId());

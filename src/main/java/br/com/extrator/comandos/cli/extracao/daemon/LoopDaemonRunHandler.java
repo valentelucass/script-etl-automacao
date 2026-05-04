@@ -34,10 +34,12 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
 
+import br.com.extrator.aplicacao.extracao.ExecutionLockBusyException;
 import br.com.extrator.aplicacao.extracao.FluxoCompletoUseCase;
 import br.com.extrator.comandos.cli.extracao.reconciliacao.LoopReconciliationService;
 import br.com.extrator.comandos.cli.extracao.reconciliacao.LoopReconciliationService.ReconciliationSummary;
@@ -170,6 +172,7 @@ public final class LoopDaemonRunHandler implements LoopDaemonModeHandler {
 
             boolean sucesso = true;
             boolean cicloComAlertaIntegridade = false;
+            boolean cicloPuladoPorLock = false;
             String detalhe = "Ciclo concluido com sucesso.";
             try {
                 try (AutoCloseable ignored = teeFactory.abrir(cicloLog)) {
@@ -178,7 +181,15 @@ public final class LoopDaemonRunHandler implements LoopDaemonModeHandler {
             } catch (final Error e) {
                 throw e;
             } catch (final Exception e) {
-                if (LoopDaemonHandlerSupport.ehFalhaIntegridadeOperacional(e)) {
+                if (ehFalhaLockOcupado(e)) {
+                    sucesso = true;
+                    cicloPuladoPorLock = true;
+                    detalhe = "Ciclo pulado porque outra execucao esta segurando o lock global [cycle_id="
+                        + cycleId
+                        + "]: "
+                        + historyWriter.summarizeMessage(e.getMessage());
+                    System.err.println("AVISO LOOP: Lock global ocupado por outra execucao. O loop tentara novamente no proximo ciclo.");
+                } else if (LoopDaemonHandlerSupport.ehFalhaIntegridadeOperacional(e)) {
                     sucesso = true;
                     cicloComAlertaIntegridade = true;
                     detalhe = "Ciclo concluido com alerta de integridade [cycle_id=" + cycleId + "]: "
@@ -195,17 +206,21 @@ public final class LoopDaemonRunHandler implements LoopDaemonModeHandler {
             }
 
             final LocalDateTime fimExtracao = LocalDateTime.now();
-            final ReconciliationSummary resumoReconciliacao = processarReconciliacao(
-                inicio,
-                fimExtracao,
-                sucesso,
-                incluirFaturasGraphQL,
-                sucesso ? null : detalhe
-            );
+            final ReconciliationSummary resumoReconciliacao = cicloPuladoPorLock
+                ? ReconciliationSummary.semAcao()
+                : processarReconciliacao(
+                    inicio,
+                    fimExtracao,
+                    sucesso,
+                    incluirFaturasGraphQL,
+                    sucesso ? null : detalhe
+                );
             historyWriter.registerReconciliationHistory(inicio, fimExtracao, sucesso, resumoReconciliacao, cicloLog);
 
             final LocalDateTime fim = LocalDateTime.now();
-            final String detalheCiclo = adicionarDetalheReconciliacao(detalhe, resumoReconciliacao);
+            final String detalheCiclo = cicloPuladoPorLock
+                ? adicionarDetalheReconciliacaoIgnorada(detalhe)
+                : adicionarDetalheReconciliacao(detalhe, resumoReconciliacao);
             final CycleSummary resumoCiclo = historyWriter.buildCycleSummary(
                 inicio,
                 fim,
@@ -220,17 +235,24 @@ public final class LoopDaemonRunHandler implements LoopDaemonModeHandler {
             final LocalDateTime proximo = fim.plusMinutes(intervaloMinutos);
             final boolean falhaReconciliacao = houveFalhaReconciliacao(resumoReconciliacao);
             final boolean cicloSaudavel = sucesso && !cicloComAlertaIntegridade && !falhaReconciliacao;
-            final int consecutiveAlertCycles = cicloComAlertaIntegridade
-                ? stateStore.readConsecutiveAlertCycles() + 1
-                : 0;
-            final int consecutiveNonSuccessCycles = cicloSaudavel
-                ? 0
-                : stateStore.readConsecutiveNonSuccessCycles() + 1;
-            final boolean waitingManualIntervention = consecutiveAlertCycles >= limiteAlertasConsecutivos
-                || consecutiveNonSuccessCycles >= limiteAlertasConsecutivos;
-            final String statusDaemon = waitingManualIntervention
-                ? "WAITING_MANUAL_INTERVENTION"
-                : determinarStatusDaemon(sucesso, cicloComAlertaIntegridade, resumoReconciliacao);
+            final int consecutiveAlertCycles = cicloPuladoPorLock
+                ? stateStore.readConsecutiveAlertCycles()
+                : cicloComAlertaIntegridade
+                    ? stateStore.readConsecutiveAlertCycles() + 1
+                    : 0;
+            final int consecutiveNonSuccessCycles = cicloPuladoPorLock
+                ? stateStore.readConsecutiveNonSuccessCycles()
+                : cicloSaudavel
+                    ? 0
+                    : stateStore.readConsecutiveNonSuccessCycles() + 1;
+            final boolean waitingManualIntervention = !cicloPuladoPorLock
+                && (consecutiveAlertCycles >= limiteAlertasConsecutivos
+                    || consecutiveNonSuccessCycles >= limiteAlertasConsecutivos);
+            final String statusDaemon = cicloPuladoPorLock
+                ? "WAITING_NEXT_CYCLE"
+                : waitingManualIntervention
+                    ? "WAITING_MANUAL_INTERVENTION"
+                    : determinarStatusDaemon(sucesso, cicloComAlertaIntegridade, resumoReconciliacao);
             final String detalheOperacional = adicionarContadoresOperacionais(
                 resumoCiclo.getDetalhe(),
                 consecutiveAlertCycles,
@@ -289,6 +311,22 @@ public final class LoopDaemonRunHandler implements LoopDaemonModeHandler {
             : "WAITING_NEXT_CYCLE_WITH_ERROR";
     }
 
+    private static boolean ehFalhaLockOcupado(final Throwable erro) {
+        Throwable atual = erro;
+        while (atual != null) {
+            if (atual instanceof ExecutionLockBusyException) {
+                return true;
+            }
+            final String mensagem = atual.getMessage();
+            if (mensagem != null
+                && mensagem.toLowerCase(Locale.ROOT).contains("segurando o lock global")) {
+                return true;
+            }
+            atual = atual.getCause();
+        }
+        return false;
+    }
+
     private ReconciliationSummary processarReconciliacao(final LocalDateTime inicio,
                                                          final LocalDateTime fimExtracao,
                                                          final boolean cicloSucesso,
@@ -332,6 +370,11 @@ public final class LoopDaemonRunHandler implements LoopDaemonModeHandler {
         }
         detalhe.append("]");
         return detalhe.toString();
+    }
+
+    private String adicionarDetalheReconciliacaoIgnorada(final String detalheBase) {
+        return (detalheBase == null ? "Sem detalhes." : detalheBase)
+            + " | reconciliacao[ignorada=true, motivo=lock_global_ocupado]";
     }
 
     private String adicionarContadoresOperacionais(final String detalheBase,
