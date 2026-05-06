@@ -70,6 +70,8 @@ ORDER BY data_extracao DESC;
 | `dbo.inventario` | Negócio | Data Export | 1 linha por ordem/minuta consolidada por chave técnica | `identificador_unico` |
 | `dbo.sinistros` | Negócio | Data Export | 1 linha por sinistro + NF consolidada por chave técnica | `identificador_unico` |
 | `dbo.faturas_graphql` | Negócio | GraphQL `creditCustomerBilling` | 1 linha por billing | `id` |
+| `dbo.raster_viagens` | Negócio | Raster `getEventoFimViagem` | 1 linha por viagem/SM | `cod_solicitacao` |
+| `dbo.raster_viagem_paradas` | Negócio | Raster `getEventoFimViagem.ColetasEntregas` | 1 linha por parada da viagem | `cod_solicitacao`, `ordem` |
 | `dbo.dim_usuarios` | Referência | GraphQL `individual` | 1 linha por usuário | `user_id` |
 | `dbo.dim_usuarios_historico` | Auditoria | Snapshot de usuários | 1 linha por mudança de estado | `id` |
 | `dbo.log_extracoes` | Auditoria | Runtime ETL | 1 linha por execução de entidade | `id` |
@@ -98,6 +100,7 @@ ORDER BY data_extracao DESC;
 - `dbo.faturas_graphql.document = dbo.faturas_por_cliente.fit_ant_document`
 - `dbo.fretes.nfse_number` e `dbo.fretes.nfse_series` alimentam `dbo.faturas_por_cliente.numero_nfse` e `dbo.faturas_por_cliente.serie_nfse`
 - `dbo.coletas.cancellation_user_id` e `dbo.coletas.destroy_user_id` podem ser ligados a `dbo.dim_usuarios.user_id`
+- `dbo.raster_viagem_paradas.cod_solicitacao = dbo.raster_viagens.cod_solicitacao`
 - `dbo.dim_usuarios_historico.user_id = dbo.dim_usuarios.user_id`
 - `dbo.page_audit.execution_uuid` conversa com `dbo.sys_execution_audit.execution_uuid`
 - `dbo.sys_execution_audit.entidade = dbo.sys_execution_watermark.entidade`
@@ -623,6 +626,80 @@ ORDER BY data_extracao DESC;
 | `metodo_pagamento` | `VARCHAR(50)` | Método de pagamento da primeira parcela. |
 | `metadata` | `NVARCHAR(MAX)` | JSON bruto do billing GraphQL. |
 | `data_extracao` | `DATETIME2` | Momento da gravação/atualização no banco. |
+
+### `dbo.raster_viagens`
+
+- Fonte: Raster `getEventoFimViagem`
+- Grão: 1 linha por viagem/SM
+- Chaves: PK `cod_solicitacao`
+- Observação importante: a Raster entra como domínio separado das tabelas ESL. A view `dbo.vw_raster_sm_transit_time` deriva as colunas operacionais da planilha a partir desta tabela e de `dbo.raster_viagem_paradas`.
+
+| Coluna | Tipo | Descrição |
+| --- | --- | --- |
+| `cod_solicitacao` | `BIGINT` | Código da solicitação/SM na Raster. |
+| `sequencial` | `BIGINT` | Sequencial adicional recebido da Raster, quando disponível. |
+| `cod_filial` | `INT` | Código da filial informado pela Raster. |
+| `status_viagem` | `NVARCHAR(10)` | Status da viagem consultado no endpoint. |
+| `placa_veiculo` | `NVARCHAR(20)` | Placa principal da viagem. |
+| `placa_carreta1` | `NVARCHAR(20)` | Placa da primeira carreta. |
+| `placa_carreta2` | `NVARCHAR(20)` | Placa da segunda carreta. |
+| `placa_carreta3` | `NVARCHAR(20)` | Placa da terceira carreta. |
+| `cpf_motorista1` | `NVARCHAR(20)` | CPF do motorista principal. |
+| `cpf_motorista2` | `NVARCHAR(20)` | CPF do segundo motorista. |
+| `cnpj_cliente_orig` | `NVARCHAR(20)` | CNPJ do cliente de origem. |
+| `cnpj_cliente_dest` | `NVARCHAR(20)` | CNPJ do cliente de destino. |
+| `cod_ibge_cidade_orig` | `BIGINT` | Código IBGE da cidade de origem. |
+| `cod_ibge_cidade_dest` | `BIGINT` | Código IBGE da cidade de destino. |
+| `data_hora_prev_ini` | `DATETIMEOFFSET(3)` | Data/hora prevista de início da viagem. |
+| `data_hora_prev_fim` | `DATETIMEOFFSET(3)` | Data/hora prevista de fim da viagem. |
+| `data_hora_real_ini` | `DATETIMEOFFSET(3)` | Data/hora real de início da viagem. |
+| `data_hora_real_fim` | `DATETIMEOFFSET(3)` | Data/hora real de fim da viagem. |
+| `data_hora_identificou_fim_viagem` | `DATETIMEOFFSET(3)` | Momento em que a Raster identificou o fim da viagem. |
+| `tempo_total_viagem_min` | `INT` | Tempo total da viagem em minutos. |
+| `dentro_prazo_raster` | `NVARCHAR(5)` | Indicador de cumprimento do prazo pela Raster. |
+| `percentual_atraso_raster` | `DECIMAL(10,2)` | Percentual de atraso calculado pela Raster. |
+| `rodou_fora_horario` | `NVARCHAR(5)` | Indicador de operação fora do horário. |
+| `velocidade_media` | `DECIMAL(10,2)` | Velocidade média da viagem. |
+| `eventos_velocidade` | `INT` | Quantidade de eventos de velocidade. |
+| `desvios_de_rota` | `INT` | Quantidade de desvios de rota. |
+| `cod_rota` | `BIGINT` | Código da rota Raster. |
+| `rota_descricao` | `NVARCHAR(500)` | Descrição textual da rota. |
+| `link_timeline` | `NVARCHAR(1000)` | Link da timeline Raster. |
+| `metadata` | `NVARCHAR(MAX)` | JSON bruto da viagem. |
+| `data_extracao` | `DATETIME2(3)` | Momento da gravação/atualização no banco. |
+
+### `dbo.raster_viagem_paradas`
+
+- Fonte: Raster `getEventoFimViagem.ColetasEntregas`
+- Grão: 1 linha por parada da viagem
+- Chaves: PK composta `cod_solicitacao`, `ordem`; FK `cod_solicitacao` para `dbo.raster_viagens`
+- Observação importante: documentos, pernoites, temperaturas e demais arrays ainda ficam preservados em `metadata` na v1.
+
+| Coluna | Tipo | Descrição |
+| --- | --- | --- |
+| `cod_solicitacao` | `BIGINT` | Código da solicitação/SM da viagem. |
+| `ordem` | `INT` | Ordem da parada dentro da viagem. |
+| `tipo` | `NVARCHAR(5)` | Tipo da parada, conforme payload Raster. |
+| `cod_ibge_cidade` | `BIGINT` | Código IBGE da cidade da parada. |
+| `cnpj_cliente` | `NVARCHAR(20)` | CNPJ do cliente da parada. |
+| `codigo_cliente` | `NVARCHAR(50)` | Código do cliente na Raster. |
+| `data_hora_prev_chegada` | `DATETIMEOFFSET(3)` | Data/hora prevista de chegada na parada. |
+| `data_hora_prev_saida` | `DATETIMEOFFSET(3)` | Data/hora prevista de saída da parada. |
+| `data_hora_real_chegada` | `DATETIMEOFFSET(3)` | Data/hora real de chegada na parada. |
+| `data_hora_real_saida` | `DATETIMEOFFSET(3)` | Data/hora real de saída da parada. |
+| `latitude` | `DECIMAL(18,8)` | Latitude planejada/associada à parada. |
+| `longitude` | `DECIMAL(18,8)` | Longitude planejada/associada à parada. |
+| `dentro_prazo_raster` | `NVARCHAR(5)` | Indicador de cumprimento do prazo na parada. |
+| `diferenca_tempo_raster` | `NVARCHAR(80)` | Diferença de tempo textual retornada pela Raster. |
+| `km_percorrido_entrega` | `DECIMAL(18,3)` | Quilometragem percorrida até a entrega. |
+| `km_restante_entrega` | `DECIMAL(18,3)` | Quilometragem restante até a entrega. |
+| `chegou_na_entrega` | `NVARCHAR(5)` | Indicador de chegada na entrega. |
+| `data_hora_ultima_posicao` | `DATETIMEOFFSET(3)` | Data/hora da última posição associada. |
+| `latitude_ultima_posicao` | `DECIMAL(18,8)` | Latitude da última posição. |
+| `longitude_ultima_posicao` | `DECIMAL(18,8)` | Longitude da última posição. |
+| `referencia_ultima_posicao` | `NVARCHAR(500)` | Referência textual da última posição. |
+| `metadata` | `NVARCHAR(MAX)` | JSON bruto da parada. |
+| `data_extracao` | `DATETIME2(3)` | Momento da gravação/atualização no banco. |
 
 ### `dbo.dim_usuarios`
 

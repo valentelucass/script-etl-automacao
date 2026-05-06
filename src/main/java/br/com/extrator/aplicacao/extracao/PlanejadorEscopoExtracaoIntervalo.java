@@ -37,6 +37,7 @@ import br.com.extrator.aplicacao.contexto.AplicacaoContexto;
 import br.com.extrator.aplicacao.pipeline.DataExportPipelineStep;
 import br.com.extrator.aplicacao.pipeline.GraphQLPipelineStep;
 import br.com.extrator.aplicacao.pipeline.PipelineStep;
+import br.com.extrator.aplicacao.pipeline.RasterPipelineStep;
 import br.com.extrator.aplicacao.portas.DataExportGateway;
 import br.com.extrator.aplicacao.portas.GraphQLGateway;
 import br.com.extrator.suporte.validacao.ConstantesEntidades;
@@ -70,6 +71,8 @@ final class PlanejadorEscopoExtracaoIntervalo {
                 entidadesParaValidar.add(ConstantesEntidades.FATURAS_POR_CLIENTE);
                 entidadesParaValidar.add(ConstantesEntidades.INVENTARIO);
                 entidadesParaValidar.add(ConstantesEntidades.SINISTROS);
+            } else if (ConstantesEntidades.RASTER.equalsIgnoreCase(apiEspecifica)) {
+                entidadesParaValidar.add(ConstantesEntidades.RASTER_VIAGENS);
             }
             return entidadesParaValidar;
         }
@@ -103,6 +106,9 @@ final class PlanejadorEscopoExtracaoIntervalo {
         if (apiEspecifica == null || apiEspecifica.isBlank()) {
             adicionarStepsGraphQLGranulares(steps, graphQLGateway, incluirFaturasGraphQL);
             adicionarStepsDataExportGranulares(steps, dataExportGateway);
+            if (AplicacaoContexto.rasterHabilitadoParaExecucao()) {
+                steps.add(new RasterPipelineStep(AplicacaoContexto.rasterGateway(), ConstantesEntidades.RASTER_VIAGENS));
+            }
             return steps;
         }
 
@@ -121,6 +127,14 @@ final class PlanejadorEscopoExtracaoIntervalo {
                 return steps;
             }
             steps.add(new DataExportPipelineStep(dataExportGateway, entidadeNormalizada));
+            return steps;
+        }
+
+        if (ConstantesEntidades.RASTER.equalsIgnoreCase(apiEspecifica)) {
+            steps.add(new RasterPipelineStep(
+                AplicacaoContexto.rasterGateway(),
+                entidadeNormalizada == null ? ConstantesEntidades.RASTER_VIAGENS : entidadeNormalizada
+            ));
         }
 
         return steps;
@@ -144,6 +158,7 @@ final class PlanejadorEscopoExtracaoIntervalo {
         final boolean apiTodas = apiEspecifica == null || apiEspecifica.isBlank();
         final boolean apiGraphQL = "graphql".equalsIgnoreCase(apiEspecifica);
         final boolean apiDataExport = "dataexport".equalsIgnoreCase(apiEspecifica);
+        final boolean apiRaster = ConstantesEntidades.RASTER.equalsIgnoreCase(apiEspecifica);
 
         if (apiTodas || apiGraphQL) {
             entidades.add(ConstantesEntidades.COLETAS);
@@ -161,6 +176,10 @@ final class PlanejadorEscopoExtracaoIntervalo {
             entidades.add(ConstantesEntidades.SINISTROS);
         }
 
+        if (apiRaster) {
+            entidades.add(ConstantesEntidades.RASTER_VIAGENS);
+        }
+
         return entidades;
     }
 
@@ -174,6 +193,9 @@ final class PlanejadorEscopoExtracaoIntervalo {
         if (entidadeEspecifica != null && !entidadeEspecifica.isBlank()) {
             final String entidadeNormalizada = normalizarEntidade(entidadeEspecifica);
             if (entidadeNormalizada != null) {
+                if (ConstantesEntidades.RASTER_VIAGENS.equals(entidadeNormalizada)) {
+                    return entidades;
+                }
                 entidades.add(entidadeNormalizada);
                 if (ConstantesEntidades.COLETAS.equals(entidadeNormalizada)) {
                     entidades.add(ConstantesEntidades.USUARIOS_SISTEMA);
@@ -267,6 +289,11 @@ final class PlanejadorEscopoExtracaoIntervalo {
         }
         if (ConstantesEntidades.SINISTROS.equals(valor) || "sinistro".equals(valor)) {
             return ConstantesEntidades.SINISTROS;
+        }
+        if (ConstantesEntidades.RASTER.equals(valor)
+            || ConstantesEntidades.RASTER_VIAGENS.equals(valor)
+            || "viagens_raster".equals(valor)) {
+            return ConstantesEntidades.RASTER_VIAGENS;
         }
 
         return valor;

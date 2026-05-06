@@ -117,7 +117,7 @@ public class ExecutarExtracaoPorIntervaloComando implements Comando {
         String entidadeEspecifica = null;
         if (argsSemFlags.length >= 4) {
             final String arg3 = argsSemFlags[3].trim().toLowerCase(Locale.ROOT);
-            if ("graphql".equals(arg3) || "dataexport".equals(arg3)) {
+            if ("graphql".equals(arg3) || "dataexport".equals(arg3) || ConstantesEntidades.RASTER.equals(arg3)) {
                 apiEspecifica = arg3;
                 if (argsSemFlags.length >= 5) {
                     entidadeEspecifica = argsSemFlags[4].trim();
@@ -173,6 +173,7 @@ public class ExecutarExtracaoPorIntervaloComando implements Comando {
         log.console("Exemplo: --extracao-intervalo 2024-11-01 2025-03-31");
         log.console("Exemplo: --extracao-intervalo 2024-11-01 2025-03-31 graphql");
         log.console("Exemplo: --extracao-intervalo 2024-11-01 2025-03-31 dataexport manifestos");
+        log.console("Exemplo: --extracao-intervalo 2024-11-01 2025-03-31 raster");
         log.console("Exemplo: --extracao-intervalo 2024-11-01 2025-03-31 inventario");
         log.console("Exemplo: --extracao-intervalo 2024-11-01 2025-03-31 --sem-faturas-graphql");
         log.console("Exemplo rapido: --extracao-intervalo 2026-04-27 2026-04-28 --sem-faturas-graphql --modo-rapido-24h");
@@ -200,6 +201,12 @@ public class ExecutarExtracaoPorIntervaloComando implements Comando {
             || "sinistro".equals(entidadeLower)) {
             log.info("API inferida: DataExport (baseado na entidade: {})", entidadeEspecifica);
             return "dataexport";
+        }
+        if (entidadeLower.equals(ConstantesEntidades.RASTER)
+            || entidadeLower.equals(ConstantesEntidades.RASTER_VIAGENS)
+            || "viagens_raster".equals(entidadeLower)) {
+            log.info("API inferida: Raster (baseado na entidade: {})", entidadeEspecifica);
+            return ConstantesEntidades.RASTER;
         }
         return null;
     }

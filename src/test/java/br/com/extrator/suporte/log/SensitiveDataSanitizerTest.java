@@ -61,4 +61,17 @@ class SensitiveDataSanitizerTest {
         assertTrue(sanitized.contains("***"));
         assertFalse(sanitized.contains("YWxhZGRpbjpvcGVuc2VzYW1l"));
     }
+
+    @Test
+    void deveMascararLoginCpfECnpj() {
+        final String original = "{\"Login\":\"60960473162\",\"CPFMotorista1\":\"12345678901\",\"CNPJClienteOrig\":\"12345678000199\"}";
+        final String sanitized = SensitiveDataSanitizer.sanitize(original);
+
+        assertTrue(sanitized.contains("\"Login\":\"***\""));
+        assertTrue(sanitized.contains("\"CPFMotorista1\":\"***\""));
+        assertTrue(sanitized.contains("\"CNPJClienteOrig\":\"***\""));
+        assertFalse(sanitized.contains("60960473162"));
+        assertFalse(sanitized.contains("12345678901"));
+        assertFalse(sanitized.contains("12345678000199"));
+    }
 }

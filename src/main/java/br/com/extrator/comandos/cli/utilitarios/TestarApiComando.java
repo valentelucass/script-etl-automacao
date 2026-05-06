@@ -42,8 +42,8 @@ public class TestarApiComando implements Comando {
         if (args.length < 2) {
             System.err.println("ERRO: Tipo de API nao especificado.");
             System.err.println("Uso: --testar-api <tipo> [entidade] [--sem-faturas-graphql]");
-            System.err.println("Tipos validos: graphql, dataexport");
-            throw new IllegalArgumentException("Tipo de API nao especificado. Tipos validos: graphql, dataexport");
+            System.err.println("Tipos validos: graphql, dataexport, raster");
+            throw new IllegalArgumentException("Tipo de API nao especificado. Tipos validos: graphql, dataexport, raster");
         }
 
         final String tipoApi = args[1];

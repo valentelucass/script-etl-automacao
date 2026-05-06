@@ -163,6 +163,7 @@ for %%F in (
     "migrations\011_alinhar_chave_merge_manifestos_orfaos.sql"
     "migrations\012_adicionar_frete_cortesia.sql"
     "migrations\013_ajustar_precisao_cubagem_fretes.sql"
+    "migrations\014_criar_tabelas_raster.sql"
 ) do (
     if not exist %%F (
         echo   [SKIP] Nao encontrada: %%~F
@@ -207,6 +208,7 @@ for %%F in (
     "views\018_criar_view_manifestos_powerbi.sql"
     "views\020_criar_view_inventario_powerbi.sql"
     "views\021_criar_view_sinistros_powerbi.sql"
+    "views\022_criar_view_raster_sm_transit_time.sql"
     "views\019_criar_view_bi_monitoramento.sql"
     "views-dimensao\019_criar_view_dim_filiais.sql"
     "views-dimensao\020_criar_view_dim_clientes.sql"
@@ -284,6 +286,8 @@ for %%F in (
     "tabelas\021_criar_tabela_sinistros.sql"
     "tabelas\022_criar_tabela_sys_replay_idempotency.sql"
     "tabelas\023_criar_tabela_sys_reconciliation_quarantine.sql"
+    "tabelas\024_criar_tabela_raster_viagens.sql"
+    "tabelas\025_criar_tabela_raster_viagem_paradas.sql"
 ) do (
     if not exist %%F (
         echo [ERRO] Script nao encontrado: %%~F

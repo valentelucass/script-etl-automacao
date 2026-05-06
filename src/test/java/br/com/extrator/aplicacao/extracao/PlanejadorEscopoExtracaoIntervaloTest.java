@@ -14,21 +14,32 @@ import br.com.extrator.aplicacao.pipeline.PipelineStep;
 import br.com.extrator.aplicacao.pipeline.runtime.StepExecutionResult;
 import br.com.extrator.aplicacao.portas.DataExportGateway;
 import br.com.extrator.aplicacao.portas.GraphQLGateway;
+import br.com.extrator.aplicacao.portas.RasterGateway;
 
 class PlanejadorEscopoExtracaoIntervaloTest {
 
     private Object gatewayGraphqlAnterior;
     private Object gatewayDataExportAnterior;
+    private Object gatewayRasterAnterior;
+    private Object rasterHabilitadoAnterior;
+    private String rasterEnabledAnterior;
 
     @BeforeEach
     void prepararContexto() throws Exception {
         gatewayGraphqlAnterior = lerCampoContexto("graphQLGateway");
         gatewayDataExportAnterior = lerCampoContexto("dataExportGateway");
+        gatewayRasterAnterior = lerCampoContexto("rasterGateway");
+        rasterHabilitadoAnterior = lerCampoContexto("rasterHabilitadoParaExecucao");
+        rasterEnabledAnterior = System.getProperty("RASTER_ENABLED");
+        System.setProperty("RASTER_ENABLED", "false");
         AplicacaoContexto.registrar((GraphQLGateway) (dataInicio, dataFim, entidade) ->
             StepExecutionResult.builder("graphql:" + entidade, entidade).build()
         );
         AplicacaoContexto.registrar((DataExportGateway) (dataInicio, dataFim, entidade) ->
             StepExecutionResult.builder("dataexport:" + entidade, entidade).build()
+        );
+        AplicacaoContexto.registrar((RasterGateway) (dataInicio, dataFim, entidade) ->
+            StepExecutionResult.builder("raster:" + entidade, entidade).build()
         );
     }
 
@@ -36,6 +47,13 @@ class PlanejadorEscopoExtracaoIntervaloTest {
     void restaurarContexto() throws Exception {
         escreverCampoContexto("graphQLGateway", gatewayGraphqlAnterior);
         escreverCampoContexto("dataExportGateway", gatewayDataExportAnterior);
+        escreverCampoContexto("rasterGateway", gatewayRasterAnterior);
+        escreverCampoContexto("rasterHabilitadoParaExecucao", rasterHabilitadoAnterior);
+        if (rasterEnabledAnterior == null) {
+            System.clearProperty("RASTER_ENABLED");
+        } else {
+            System.setProperty("RASTER_ENABLED", rasterEnabledAnterior);
+        }
     }
 
     @Test
@@ -82,6 +100,18 @@ class PlanejadorEscopoExtracaoIntervaloTest {
             ),
             steps
         );
+    }
+
+    @Test
+    void deveCriarStepRasterQuandoApiRasterForInformada() {
+        final PlanejadorEscopoExtracaoIntervalo planejador = new PlanejadorEscopoExtracaoIntervalo();
+
+        final List<String> steps = planejador.criarSteps("raster", null, false)
+            .stream()
+            .map(PipelineStep::obterNomeEtapa)
+            .toList();
+
+        assertEquals(List.of("raster:raster_viagens"), steps);
     }
 
     private Object lerCampoContexto(final String nomeCampo) throws Exception {

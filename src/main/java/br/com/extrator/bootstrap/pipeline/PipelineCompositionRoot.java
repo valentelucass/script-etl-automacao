@@ -41,6 +41,7 @@ import br.com.extrator.aplicacao.pipeline.ExtractorRegistry;
 import br.com.extrator.aplicacao.pipeline.GraphQLPipelineStep;
 import br.com.extrator.aplicacao.pipeline.PipelineOrchestrator;
 import br.com.extrator.aplicacao.pipeline.PipelineStep;
+import br.com.extrator.aplicacao.pipeline.RasterPipelineStep;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -70,6 +71,7 @@ import br.com.extrator.aplicacao.politicas.RetryPolicy;
 import br.com.extrator.aplicacao.portas.ClockPort;
 import br.com.extrator.aplicacao.portas.ConfigPort;
 import br.com.extrator.aplicacao.portas.ExtractionLoggerPort;
+import br.com.extrator.suporte.configuracao.ConfigRaster;
 import br.com.extrator.suporte.validacao.ConstantesEntidades;
 
 public final class PipelineCompositionRoot {
@@ -107,11 +109,14 @@ public final class PipelineCompositionRoot {
         final PipelineCompositionRoot root = criarPadrao();
         final GraphQLGatewayAdapter graphQLGateway = new GraphQLGatewayAdapter();
         final DataExportGatewayAdapter dataExportGateway = new DataExportGatewayAdapter();
+        final RasterGatewayAdapter rasterGateway = new RasterGatewayAdapter();
 
         AplicacaoContexto.registrar((br.com.extrator.aplicacao.portas.PipelineOrchestratorFactory) root::criarOrquestrador);
         AplicacaoContexto.registrar((br.com.extrator.aplicacao.portas.PipelineStepsFactory) root::criarStepsFluxoCompleto);
         AplicacaoContexto.registrar((br.com.extrator.aplicacao.portas.GraphQLGateway) graphQLGateway);
         AplicacaoContexto.registrar((br.com.extrator.aplicacao.portas.DataExportGateway) dataExportGateway);
+        AplicacaoContexto.registrar((br.com.extrator.aplicacao.portas.RasterGateway) rasterGateway);
+        AplicacaoContexto.registrarRasterHabilitadoParaExecucao(ConfigRaster.isHabilitadoParaExecucao());
         AplicacaoContexto.registrar(new ExtractionLogQueryAdapter());
         AplicacaoContexto.registrar(new SqlServerExecutionAuditPortAdapter());
         AplicacaoContexto.registrar(new CompletudePortAdapter());
@@ -158,6 +163,9 @@ public final class PipelineCompositionRoot {
         if (incluirFaturasGraphQL) {
             ordem.add(ConstantesEntidades.FATURAS_GRAPHQL);
         }
+        if (ConfigRaster.isHabilitadoParaExecucao()) {
+            ordem.add(ConstantesEntidades.RASTER_VIAGENS);
+        }
         if (incluirDataQuality) {
             ordem.add("quality");
         }
@@ -171,6 +179,10 @@ public final class PipelineCompositionRoot {
         final ExtractorRegistry registry = new ExtractorRegistry();
         registry.registrar("graphql", () -> new GraphQLPipelineStep(new GraphQLGatewayAdapter(), "graphql"));
         registry.registrar("dataexport", () -> new DataExportPipelineStep(new DataExportGatewayAdapter(), "dataexport"));
+        registry.registrar(
+            ConstantesEntidades.RASTER_VIAGENS,
+            () -> new RasterPipelineStep(new RasterGatewayAdapter(), ConstantesEntidades.RASTER_VIAGENS)
+        );
 
         if (incluirFaturasGraphQL) {
             registry.registrar(
@@ -242,6 +254,10 @@ public final class PipelineCompositionRoot {
         porEntidade.put(
             ConstantesEntidades.FATURAS_GRAPHQL,
             parseFailureMode(config.obterTexto("etl.failure.faturas_graphql", "ABORT_PIPELINE"), FailureMode.ABORT_PIPELINE)
+        );
+        porEntidade.put(
+            ConstantesEntidades.RASTER_VIAGENS,
+            parseFailureMode(config.obterTexto("etl.failure.raster", "DEGRADE"), FailureMode.DEGRADE)
         );
         porEntidade.put(
             "quality",

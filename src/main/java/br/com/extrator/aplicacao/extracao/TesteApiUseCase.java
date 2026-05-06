@@ -45,6 +45,7 @@ import br.com.extrator.aplicacao.contexto.AplicacaoContexto;
 import br.com.extrator.aplicacao.pipeline.DataExportPipelineStep;
 import br.com.extrator.aplicacao.pipeline.GraphQLPipelineStep;
 import br.com.extrator.aplicacao.pipeline.PipelineOrchestrator;
+import br.com.extrator.aplicacao.pipeline.RasterPipelineStep;
 import br.com.extrator.aplicacao.portas.ExtractionLogQueryPort;
 import br.com.extrator.aplicacao.pipeline.PipelineReport;
 import br.com.extrator.aplicacao.pipeline.PipelineStep;
@@ -52,6 +53,7 @@ import br.com.extrator.aplicacao.pipeline.runtime.StepExecutionResult;
 import br.com.extrator.aplicacao.pipeline.runtime.StepStatus;
 import br.com.extrator.suporte.console.BannerUtil;
 import br.com.extrator.suporte.banco.SqlServerExecutionLockManager;
+import br.com.extrator.suporte.configuracao.ConfigRaster;
 import br.com.extrator.suporte.tempo.RelogioSistema;
 import br.com.extrator.suporte.validacao.ConstantesEntidades;
 
@@ -131,9 +133,10 @@ public class TesteApiUseCase {
         switch (tipoApi == null ? "" : tipoApi.toLowerCase()) {
             case "graphql" -> BannerUtil.exibirBannerApiGraphQL();
             case "dataexport" -> BannerUtil.exibirBannerApiDataExport();
+            case "raster" -> System.out.println("TESTE DA API RASTER");
             default -> {
                 System.err.println("ERRO: Tipo de API invalido: " + tipoApi);
-                System.err.println("Tipos validos: graphql, dataexport");
+                System.err.println("Tipos validos: graphql, dataexport, raster");
                 throw new IllegalArgumentException("Tipo de API invalido: " + tipoApi);
             }
         }
@@ -154,9 +157,10 @@ public class TesteApiUseCase {
                 somenteFaturasGraphQL
             );
             case "dataexport" -> executarDataExport(dataInicio, dataFim, entidade, incluirFaturasGraphQL);
+            case "raster" -> executarRaster(dataInicio, dataFim, entidade);
             default -> {
                 System.err.println("ERRO: Tipo de API invalido: " + tipoApi);
-                System.err.println("Tipos validos: graphql, dataexport");
+                System.err.println("Tipos validos: graphql, dataexport, raster");
                 throw new IllegalArgumentException("Tipo de API invalido: " + tipoApi);
             }
         }
@@ -205,6 +209,22 @@ public class TesteApiUseCase {
         }
 
         executarPipeline(dataInicio, dataFim, steps, "teste DataExport");
+    }
+
+    private void executarRaster(final LocalDate dataInicio,
+                                final LocalDate dataFim,
+                                final String entidade) {
+        if (!ConfigRaster.possuiCredenciais()) {
+            throw new IllegalStateException(
+                "Credenciais Raster ausentes. Configure RASTER_LOGIN e RASTER_SENHA ou RASTER_PASSWORD no .env/ambiente."
+            );
+        }
+        final List<PipelineStep> steps = new ArrayList<>();
+        final String entidadeRaster = entidade == null || entidade.isBlank()
+            ? ConstantesEntidades.RASTER_VIAGENS
+            : normalizarEntidadeRaster(entidade);
+        steps.add(new RasterPipelineStep(AplicacaoContexto.rasterGateway(), entidadeRaster));
+        executarPipeline(dataInicio, dataFim, steps, "teste Raster");
     }
 
     private void executarPipeline(final LocalDate dataInicio,
@@ -324,6 +344,10 @@ public class TesteApiUseCase {
             entidades.add(ConstantesEntidades.SINISTROS);
         }
 
+        if ("raster".equals(tipo)) {
+            entidades.add(ConstantesEntidades.RASTER_VIAGENS);
+        }
+
         return new ArrayList<>(entidades);
     }
 
@@ -353,6 +377,14 @@ public class TesteApiUseCase {
             case "faturasporcliente" -> ConstantesEntidades.FATURAS_POR_CLIENTE;
             case "inventário" -> ConstantesEntidades.INVENTARIO;
             case "sinistro" -> ConstantesEntidades.SINISTROS;
+            default -> valor;
+        };
+    }
+
+    private String normalizarEntidadeRaster(final String entidade) {
+        final String valor = entidade == null ? "" : entidade.trim().toLowerCase();
+        return switch (valor) {
+            case "raster", "viagens_raster", "all", "todas" -> ConstantesEntidades.RASTER_VIAGENS;
             default -> valor;
         };
     }

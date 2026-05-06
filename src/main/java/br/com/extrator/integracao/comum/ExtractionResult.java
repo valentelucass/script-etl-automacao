@@ -242,6 +242,10 @@ public class ExtractionResult {
     public String getStatus() {
         return status;
     }
+
+    public String getMensagem() {
+        return mensagem;
+    }
     
     public int getTotalUnicos() {
         return totalUnicos;

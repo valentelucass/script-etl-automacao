@@ -37,6 +37,30 @@ class ExecutarExtracaoPorIntervaloComandoTest {
     }
 
     @Test
+    void deveInferirApiRasterParaRasterViagensQuandoApiNaoForInformada() throws Exception {
+        final CapturingExtracaoPorIntervaloUseCase useCase = new CapturingExtracaoPorIntervaloUseCase();
+        final ExecutarExtracaoPorIntervaloComando comando = new ExecutarExtracaoPorIntervaloComando(useCase);
+
+        comando.executar(new String[] {"--extracao-intervalo", "2026-04-01", "2026-04-02", "raster_viagens"});
+
+        assertNotNull(useCase.requestCapturada);
+        assertEquals("raster", useCase.requestCapturada.apiEspecifica());
+        assertEquals("raster_viagens", useCase.requestCapturada.entidadeEspecifica());
+    }
+
+    @Test
+    void deveAceitarApiRasterExplicitamente() throws Exception {
+        final CapturingExtracaoPorIntervaloUseCase useCase = new CapturingExtracaoPorIntervaloUseCase();
+        final ExecutarExtracaoPorIntervaloComando comando = new ExecutarExtracaoPorIntervaloComando(useCase);
+
+        comando.executar(new String[] {"--extracao-intervalo", "2026-04-01", "2026-04-02", "raster"});
+
+        assertNotNull(useCase.requestCapturada);
+        assertEquals("raster", useCase.requestCapturada.apiEspecifica());
+    }
+
+
+    @Test
     void deveAtivarModoRapido24hSemFaturasGraphQL() throws Exception {
         final CapturingExtracaoPorIntervaloUseCase useCase = new CapturingExtracaoPorIntervaloUseCase();
         final ExecutarExtracaoPorIntervaloComando comando = new ExecutarExtracaoPorIntervaloComando(useCase);

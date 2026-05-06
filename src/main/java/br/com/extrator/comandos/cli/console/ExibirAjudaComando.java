@@ -49,7 +49,7 @@ public class ExibirAjudaComando implements Comando {
         System.out.println("  --auditoria --periodo YYYY-MM-DD YYYY-MM-DD");
         System.out.println("                        Executa auditoria para periodo especifico");
         System.out.println("  --auditar-api         Audita estrutura das APIs e gera CSV");
-        System.out.println("  --testar-api [tipo]   Testa API especifica (graphql|dataexport)");
+        System.out.println("  --testar-api [tipo]   Testa API especifica (graphql|dataexport|raster)");
         System.out.println("                        Uso: --testar-api [tipo] [entidade] [--sem-faturas-graphql]");
         System.out.println("  --sincronizar-usuarios");
         System.out.println("                        Executa carga completa explicita de dim_usuarios via snapshot");

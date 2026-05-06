@@ -42,6 +42,7 @@ import br.com.extrator.aplicacao.portas.LimpezaBancoPort;
 import br.com.extrator.aplicacao.portas.ManifestoOrfaoQueryPort;
 import br.com.extrator.aplicacao.portas.PipelineOrchestratorFactory;
 import br.com.extrator.aplicacao.portas.PipelineStepsFactory;
+import br.com.extrator.aplicacao.portas.RasterGateway;
 import br.com.extrator.aplicacao.portas.VerificacaoTimestampPort;
 import br.com.extrator.aplicacao.portas.VerificacaoTimezonePort;
 
@@ -56,6 +57,8 @@ public final class AplicacaoContexto {
     private static volatile PipelineStepsFactory stepsFactory;
     private static volatile GraphQLGateway graphQLGateway;
     private static volatile DataExportGateway dataExportGateway;
+    private static volatile RasterGateway rasterGateway;
+    private static volatile boolean rasterHabilitadoParaExecucao;
     private static volatile ExtractionLogQueryPort extractionLogQueryPort;
     private static volatile ExecutionAuditPort executionAuditPort;
     private static volatile CompletudePort completudePort;
@@ -82,6 +85,14 @@ public final class AplicacaoContexto {
 
     public static void registrar(final DataExportGateway gateway) {
         dataExportGateway = gateway;
+    }
+
+    public static void registrar(final RasterGateway gateway) {
+        rasterGateway = gateway;
+    }
+
+    public static void registrarRasterHabilitadoParaExecucao(final boolean habilitado) {
+        rasterHabilitadoParaExecucao = habilitado;
     }
 
     public static void registrar(final ExtractionLogQueryPort port) {
@@ -155,6 +166,17 @@ public final class AplicacaoContexto {
             throw new IllegalStateException("AplicacaoContexto nao inicializado: DataExportGateway ausente.");
         }
         return dataExportGateway;
+    }
+
+    public static RasterGateway rasterGateway() {
+        if (rasterGateway == null) {
+            throw new IllegalStateException("AplicacaoContexto nao inicializado: RasterGateway ausente.");
+        }
+        return rasterGateway;
+    }
+
+    public static boolean rasterHabilitadoParaExecucao() {
+        return rasterHabilitadoParaExecucao;
     }
 
     public static IntegridadeEtlPort integridadeEtlPort() {
