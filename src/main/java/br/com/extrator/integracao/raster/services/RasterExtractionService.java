@@ -7,10 +7,12 @@ import br.com.extrator.aplicacao.portas.ExecutionAuditPort;
 import br.com.extrator.integracao.comum.ExtractionLogger;
 import br.com.extrator.integracao.comum.ExtractionResult;
 import br.com.extrator.integracao.raster.RasterViagemExtractor;
+import br.com.extrator.persistencia.entidade.LogExtracaoEntity;
 import br.com.extrator.persistencia.repositorio.LogExtracaoRepository;
 import br.com.extrator.plataforma.auditoria.aplicacao.ExecutionAuditRecorder;
 import br.com.extrator.suporte.configuracao.ConfigRaster;
 import br.com.extrator.suporte.tempo.RelogioSistema;
+import br.com.extrator.suporte.validacao.ConstantesEntidades;
 
 public class RasterExtractionService {
     private final RasterViagemExtractor extractor;
@@ -50,6 +52,29 @@ public class RasterExtractionService {
             return;
         }
         logRepository.gravarLogExtracao(result.toLogEntity());
+        logRepository.gravarLogExtracao(criarLogParadas(result));
         ExecutionAuditRecorder.registrar(executionAuditPort, result);
+    }
+
+    private LogExtracaoEntity criarLogParadas(final ExtractionResult result) {
+        return new LogExtracaoEntity(
+            ConstantesEntidades.RASTER_VIAGEM_PARADAS,
+            result.getInicio(),
+            result.getFim(),
+            result.getStatus(),
+            extractor.getUltimaQuantidadeParadas(),
+            result.getPaginasProcessadas(),
+            montarMensagemParadas(result)
+        );
+    }
+
+    private String montarMensagemParadas(final ExtractionResult result) {
+        return "Paradas derivadas da extracao Raster "
+            + ConstantesEntidades.RASTER_VIAGENS
+            + " | API/paradas mapeadas: " + extractor.getUltimaQuantidadeParadas()
+            + " | DB/paradas operacoes: " + extractor.getUltimasParadasSalvas()
+            + " | Persistidos: " + extractor.getUltimasParadasPersistidas()
+            + " | No-op: " + extractor.getUltimasParadasNoOpIdempotente()
+            + " | " + result.getMensagem();
     }
 }

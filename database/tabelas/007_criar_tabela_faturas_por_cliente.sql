@@ -26,6 +26,7 @@ BEGIN
         estado NVARCHAR(50),
         pagador_nome NVARCHAR(255),
         pagador_documento NVARCHAR(50),
+        cliente_cnpj NVARCHAR(14),
         remetente_nome NVARCHAR(255),
         remetente_documento NVARCHAR(50),
         destinatario_nome NVARCHAR(255),

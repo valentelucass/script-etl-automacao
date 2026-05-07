@@ -21,6 +21,10 @@ public class RasterViagemExtractor implements EntityExtractor<RasterViagemDTO> {
     private final RasterViagemRepository viagemRepository;
     private final RasterViagemParadaRepository paradaRepository;
     private final RasterMapper mapper;
+    private int ultimaQuantidadeParadas;
+    private int ultimasParadasSalvas;
+    private int ultimasParadasPersistidas;
+    private int ultimasParadasNoOpIdempotente;
 
     public RasterViagemExtractor() {
         this(
@@ -43,6 +47,7 @@ public class RasterViagemExtractor implements EntityExtractor<RasterViagemDTO> {
 
     @Override
     public ResultadoExtracao<RasterViagemDTO> extract(final LocalDate dataInicio, final LocalDate dataFim) {
+        resetarMetricasParadas();
         return apiClient.buscarEventoFimViagem(dataInicio, dataFim);
     }
 
@@ -53,6 +58,7 @@ public class RasterViagemExtractor implements EntityExtractor<RasterViagemDTO> {
 
     @Override
     public SaveMetrics saveWithMetrics(final List<RasterViagemDTO> dtos) throws SQLException {
+        resetarMetricasParadas();
         final List<RasterViagemEntity> viagens = new ArrayList<>();
         final List<RasterViagemParadaEntity> paradas = new ArrayList<>();
         int invalidos = 0;
@@ -74,8 +80,12 @@ public class RasterViagemExtractor implements EntityExtractor<RasterViagemDTO> {
         }
 
         final int registrosSalvos = viagens.isEmpty() ? 0 : viagemRepository.salvar(viagens);
+        ultimaQuantidadeParadas = paradas.size();
         if (!paradas.isEmpty()) {
-            paradaRepository.salvar(paradas);
+            ultimasParadasSalvas = paradaRepository.salvar(paradas);
+            final AbstractRepository.SaveSummary resumoParadas = paradaRepository.getUltimoResumoSalvamento();
+            ultimasParadasPersistidas = resumoParadas.getRegistrosPersistidos();
+            ultimasParadasNoOpIdempotente = resumoParadas.getRegistrosNoOpIdempotente();
         }
         final AbstractRepository.SaveSummary resumo = viagemRepository.getUltimoResumoSalvamento();
         return new SaveMetrics(
@@ -95,5 +105,28 @@ public class RasterViagemExtractor implements EntityExtractor<RasterViagemDTO> {
     @Override
     public String getEmoji() {
         return "[RASTER]";
+    }
+
+    public int getUltimaQuantidadeParadas() {
+        return ultimaQuantidadeParadas;
+    }
+
+    public int getUltimasParadasSalvas() {
+        return ultimasParadasSalvas;
+    }
+
+    public int getUltimasParadasPersistidas() {
+        return ultimasParadasPersistidas;
+    }
+
+    public int getUltimasParadasNoOpIdempotente() {
+        return ultimasParadasNoOpIdempotente;
+    }
+
+    private void resetarMetricasParadas() {
+        ultimaQuantidadeParadas = 0;
+        ultimasParadasSalvas = 0;
+        ultimasParadasPersistidas = 0;
+        ultimasParadasNoOpIdempotente = 0;
     }
 }

@@ -98,6 +98,7 @@ public class FaturaPorClienteEntity {
     // Envolvidos
     private String pagadorNome;
     private String pagadorDocumento;
+    private String clienteCnpj;
     private String remetenteNome;
     private String remetenteDocumento;
     private String destinatarioNome;
@@ -303,6 +304,14 @@ public class FaturaPorClienteEntity {
 
     public void setPagadorDocumento(final String pagadorDocumento) {
         this.pagadorDocumento = pagadorDocumento;
+    }
+
+    public String getClienteCnpj() {
+        return clienteCnpj;
+    }
+
+    public void setClienteCnpj(final String clienteCnpj) {
+        this.clienteCnpj = clienteCnpj;
     }
 
     public String getRemetenteNome() {

@@ -271,7 +271,7 @@ Observações:
 ## vw_faturas_por_cliente_powerbi
 
 - Dependências: `faturas_por_cliente`, `faturas_graphql`
-- Total de campos: 41
+- Total de campos: 42
 
 | Campo | Expressão / Origem | Tipo inferido | Classificação | Descrição inferida |
 | --- | --- | --- | --- | --- |
@@ -291,6 +291,7 @@ Observações:
 | Classificação | `fpc.classificacao` | NVARCHAR(100) | Dimensão | Atributo descritivo usado para segmentação em Classificação. |
 | Pagador do frete/Nome | `fpc.pagador_nome` | NVARCHAR(255) | Dimensão | Atributo descritivo usado para segmentação em Pagador do frete/Nome. |
 | Pagador do frete/Documento | `fpc.pagador_documento` | NVARCHAR(50) | Chave | Identificador de negócio para Pagador do frete/Documento. |
+| Cliente/CNPJ | `fpc.cliente_cnpj` | NVARCHAR(14) | Chave | CNPJ do cliente pagador vindo da própria requisição `faturas_por_cliente`: API `fit_pyr_document`, persistido em `pagador_documento` e materializado em `cliente_cnpj`. |
 | Remetente/Nome | `fpc.remetente_nome` | NVARCHAR(255) | Dimensão | Atributo descritivo usado para segmentação em Remetente/Nome. |
 | Remetente/Documento | `fpc.remetente_documento` | NVARCHAR(50) | Chave | Identificador de negócio para Remetente/Documento. |
 | Destinatário/Nome | `fpc.destinatario_nome` | NVARCHAR(255) | Dimensão | Atributo descritivo usado para segmentação em Destinatário/Nome. |

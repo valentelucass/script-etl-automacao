@@ -23,7 +23,7 @@ Premissas adotadas:
 | `vw_coletas_powerbi` | Coletas | 38 | 1 linha por coleta | `coletas`, `manifestos`, `dim_usuarios` |
 | `vw_manifestos_powerbi` | Manifestos | 97 | 1 linha por manifesto natural | `manifestos` |
 | `vw_fretes_powerbi` | Fretes | 102 | 1 linha por frete | `fretes` |
-| `vw_faturas_por_cliente_powerbi` | Faturamento cliente | 41 | 1 linha por registro canônico de fatura | `faturas_por_cliente`, `faturas_graphql` |
+| `vw_faturas_por_cliente_powerbi` | Faturamento cliente | 42 | 1 linha por registro canônico de fatura | `faturas_por_cliente`, `faturas_graphql` |
 | `vw_faturas_graphql_powerbi` | Cobrança / contas a receber | 29 | 1 linha por título GraphQL | `faturas_graphql` |
 | `vw_contas_a_pagar_powerbi` | Financeiro / AP | 31 | 1 linha por lançamento a pagar | `contas_a_pagar` |
 | `vw_cotacoes_powerbi` | Comercial / pricing | 53 | 1 linha por cotação | `cotacoes` |
@@ -66,7 +66,7 @@ Leitura crítica:
 | `coletas` | `cancellation_user_id` | `dim_usuarios` | `user_id` | `N:1` | enriquecimento do usuário que cancelou |
 | `coletas` | `destroy_user_id` | `dim_usuarios` | `user_id` | `N:1` | enriquecimento do usuário que excluiu |
 | `fretes` | `accounting_credit_id` | `faturas_graphql` | `id` | `N:1` | ponte entre logística e cobrança |
-| `faturas_por_cliente` | `fit_ant_document` | `faturas_graphql` | `document` | esperado `N:1`, real pode ser `N:N` | join atual da view não usa data de emissão |
+| `faturas_por_cliente` | `fit_ant_document` + `fit_ant_issue_date` | `faturas_graphql` | `document` + `issue_date` | `N:0..1` na view | enriquecimento usa escolha determinística para não multiplicar linhas |
 | fatos diversos | nomes de filial | `vw_dim_filiais` | `NomeFilial` | `N:1` | dimensão textual normalizada |
 | fatos diversos | nomes/documentos de clientes | `vw_dim_clientes` | `Nome` | `N:1` conceitual | risco de colapsar homônimos |
 | `manifestos` | `vehicle_plate` | `vw_dim_veiculos` | `Placa` | `N:1` | melhor dimensão operacional hoje |
@@ -85,7 +85,7 @@ Leitura crítica:
 
 - Coletas x Manifestos: uma coleta pode alimentar zero, um ou vários manifestos ao longo do ciclo operacional.
 - Fretes x Faturas GraphQL: vários fretes podem apontar para o mesmo crédito/título financeiro.
-- Faturas por cliente x Faturas GraphQL: existe afinidade forte de negócio, mas o join atual não é suficientemente determinístico para assumir `1:1`.
+- Faturas por cliente x Faturas GraphQL: a view mantém grain 1 linha por `faturas_por_cliente` e escolhe no máximo um título GraphQL, priorizando `document + issue_date`.
 - Tracking (`localizacao_cargas`) está isolado como fato operacional independente; o schema atual não fornece FK explícita para `fretes`.
 
 ## 4. Modelo analítico recomendado
@@ -159,8 +159,8 @@ No estágio atual, a melhor relação custo-benefício continua sendo Star Schem
 1. `vw_coletas_powerbi` faz `LEFT JOIN` direto com `manifestos` por `c.sequence_code = m.pick_sequence_code`.
 Isso pode duplicar linhas de coleta quando houver múltiplos manifestos para a mesma coleta, inflando KPIs de volume, peso e quantidade.
 
-2. `vw_faturas_por_cliente_powerbi` enriquece com `faturas_graphql` apenas por `fit_ant_document = document`.
-Os scripts de validação do próprio projeto já consideram que o par correto é documento + data; logo o join atual pode duplicar ou associar título errado.
+2. `vw_faturas_por_cliente_powerbi` depende da qualidade de `document + issue_date` para escolher o título GraphQL de enriquecimento.
+Quando houver múltiplos títulos iguais também por data, a view mantém apenas um por ordem determinística para preservar o grain.
 
 3. `contas_a_pagar` usa `sequence_code` como PK física e o deduplicador mantém apenas o último registro.
 A documentação legado do Data Export mostra casos reais de múltiplas linhas para o mesmo `ant_ils_sequence_code`, representando rateios contábeis ou centro de custo. Isso compromete KPIs de despesas por conta, centro de custo, fornecedor e filial.
@@ -862,7 +862,7 @@ types/
 Prioridade alta:
 
 1. Corrigir `vw_coletas_powerbi` para não duplicar coletas quando houver múltiplos manifestos por `pick_sequence_code`.
-2. Corrigir o enriquecimento de `vw_faturas_por_cliente_powerbi` com chave composta `document + issue_date` ou chave financeira estável.
+2. Monitorar duplicidades reais em `faturas_graphql` por `document + issue_date` e evoluir para uma chave financeira estável se a API expuser esse vínculo.
 3. Redesenhar `contas_a_pagar` para suportar grain por rateio, com chave composta ou surrogate key.
 4. Converter `localizacao_cargas.taxed_weight` e `localizacao_cargas.invoices_value` para `DECIMAL`.
 5. Converter `cotacoes.real_weight` para `DECIMAL`.

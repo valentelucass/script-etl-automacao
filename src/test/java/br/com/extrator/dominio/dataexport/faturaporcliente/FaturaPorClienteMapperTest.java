@@ -28,6 +28,7 @@ package br.com.extrator.dominio.dataexport.faturaporcliente;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -237,6 +238,28 @@ class FaturaPorClienteMapperTest {
         assertEquals(projecaoA, projecaoB);
         assertEquals("NF-1, NF-2", projecaoA.get("notas_fiscais").asText());
         assertEquals("PED-1, PED-2", projecaoA.get("pedidos_cliente").asText());
+    }
+
+    @Test
+    void deveMaterializarClienteCnpjAPartirDoDocumentoDoPagador() {
+        final FaturaPorClienteDTO dto = criarDtoSemChaveNatural();
+        dto.setPagadorDocumento("12.345.678/0001-90");
+
+        final var entity = mapper.toEntity(dto);
+        final JsonNode projecao = mapper.projetarCamposPersistidosEstaveis(entity);
+
+        assertEquals("12345678000190", entity.getClienteCnpj());
+        assertEquals("12345678000190", projecao.get("cliente_cnpj").asText());
+    }
+
+    @Test
+    void deveManterClienteCnpjNuloQuandoDocumentoDoPagadorForCpf() {
+        final FaturaPorClienteDTO dto = criarDtoSemChaveNatural();
+        dto.setPagadorDocumento("123.456.789-01");
+
+        final var entity = mapper.toEntity(dto);
+
+        assertNull(entity.getClienteCnpj());
     }
 
     private FaturaPorClienteDTO criarDtoSemChaveNatural() {

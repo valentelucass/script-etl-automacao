@@ -21,6 +21,7 @@ SELECT
     fpc.classificacao AS [Classificação],
     fpc.pagador_nome AS [Pagador do frete/Nome],
     fpc.pagador_documento AS [Pagador do frete/Documento],
+    fpc.cliente_cnpj AS [Cliente/CNPJ],
     fpc.remetente_nome AS [Remetente/Nome],
     fpc.remetente_documento AS [Remetente/Documento],
     fpc.destinatario_nome AS [Destinatário/Nome],
@@ -47,5 +48,26 @@ SELECT
     fpc.metadata AS [Metadata],
     fpc.data_extracao AS [Data da Última Atualização]
 FROM dbo.faturas_por_cliente fpc
-LEFT JOIN dbo.faturas_graphql fg ON fpc.fit_ant_document = fg.document;
+OUTER APPLY (
+    -- Mantem o enriquecimento 1:1 e evita multiplicar faturas quando ha varios titulos com o mesmo document.
+    SELECT TOP (1)
+        fg.nfse_numero,
+        fg.carteira_banco,
+        fg.instrucao_boleto
+    FROM dbo.faturas_graphql fg
+    WHERE fg.document = fpc.fit_ant_document
+    ORDER BY
+        CASE
+            WHEN fpc.fit_ant_issue_date IS NOT NULL AND fg.issue_date = fpc.fit_ant_issue_date THEN 0
+            WHEN fpc.fit_ant_issue_date IS NULL THEN 1
+            ELSE 2
+        END,
+        CASE
+            WHEN fpc.fit_ant_issue_date IS NOT NULL AND fg.issue_date IS NOT NULL
+                THEN ABS(DATEDIFF(DAY, fg.issue_date, fpc.fit_ant_issue_date))
+            ELSE 2147483647
+        END,
+        fg.issue_date DESC,
+        fg.id DESC
+) fg;
 GO

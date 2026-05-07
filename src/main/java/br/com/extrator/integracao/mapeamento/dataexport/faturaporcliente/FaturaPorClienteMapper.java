@@ -149,6 +149,7 @@ public class FaturaPorClienteMapper {
             // 6. Envolvidos
             entity.setPagadorNome(dto.getPagadorNome());
             entity.setPagadorDocumento(dto.getPagadorDocumento());
+            entity.setClienteCnpj(extrairCnpj(dto.getPagadorDocumento()));
             entity.setRemetenteNome(dto.getRemetenteNome());
             entity.setRemetenteDocumento(dto.getRemetenteDocumento());
             entity.setDestinatarioNome(dto.getDestinatarioNome());
@@ -243,6 +244,7 @@ public class FaturaPorClienteMapper {
         putString(node, "classificacao", entity.getClassificacao());
         putString(node, "estado", entity.getEstado());
         putString(node, "pagador_documento", entity.getPagadorDocumento());
+        putString(node, "cliente_cnpj", entity.getClienteCnpj());
         putString(node, "remetente_documento", entity.getRemetenteDocumento());
         putString(node, "destinatario_documento", entity.getDestinatarioDocumento());
         putString(node, "notas_fiscais", entity.getNotasFiscais());
@@ -338,6 +340,15 @@ public class FaturaPorClienteMapper {
 
     private boolean possuiTexto(final String valor) {
         return valor != null && !valor.trim().isEmpty();
+    }
+
+    private String extrairCnpj(final String documento) {
+        if (!possuiTexto(documento)) {
+            return null;
+        }
+
+        final String documentoLimpo = documento.replaceAll("[^0-9]", "");
+        return documentoLimpo.length() == 14 ? documentoLimpo : null;
     }
 
     private void appendCampo(final StringBuilder sb, final String nome, final String valor) {

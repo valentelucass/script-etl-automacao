@@ -164,6 +164,7 @@ for %%F in (
     "migrations\012_adicionar_frete_cortesia.sql"
     "migrations\013_ajustar_precisao_cubagem_fretes.sql"
     "migrations\014_criar_tabelas_raster.sql"
+    "migrations\015_adicionar_cliente_cnpj_faturas_por_cliente.sql"
 ) do (
     if not exist %%F (
         echo   [SKIP] Nao encontrada: %%~F

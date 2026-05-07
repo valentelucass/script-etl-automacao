@@ -578,6 +578,7 @@ ORDER BY data_extracao DESC;
 | `estado` | `NVARCHAR(50)` | Estado/UF ou estado operacional recebido no relatório. |
 | `pagador_nome` | `NVARCHAR(255)` | Nome do pagador. |
 | `pagador_documento` | `NVARCHAR(50)` | Documento do pagador. |
+| `cliente_cnpj` | `NVARCHAR(14)` | CNPJ do cliente pagador materializado da API DataExport `fit_pyr_document`; preenchido apenas quando o documento limpo tem 14 dígitos. |
 | `remetente_nome` | `NVARCHAR(255)` | Nome do remetente. |
 | `remetente_documento` | `NVARCHAR(50)` | Documento do remetente. |
 | `destinatario_nome` | `NVARCHAR(255)` | Nome do destinatário. |
