@@ -25,6 +25,9 @@ REM     - Apaga e recria o banco do zero
 REM     - Executa: tabelas, migrations, indices, views, validacoes
 REM     - ATENCAO: todos os dados serao perdidos
 REM
+REM   executar_database.bat --help
+REM     Mostra um resumo operacional rapido sem conectar no SQL Server.
+REM
 REM AUTENTICACAO SQL SERVER:
 REM   Windows Auth (padrao): deixe DB_USER vazio em config.bat
 REM   SQL Auth              : preencha DB_USER e DB_PASSWORD em config.bat
@@ -46,6 +49,9 @@ cd /d "%~dp0"
 
 REM --- Detectar modo ---
 set "MODO_RECRIAR=0"
+if /i "%~1"=="--help" goto :MOSTRAR_AJUDA
+if /i "%~1"=="-h" goto :MOSTRAR_AJUDA
+if /i "%~1"=="/?" goto :MOSTRAR_AJUDA
 if /i "%~1"=="--recriar" set "MODO_RECRIAR=1"
 
 echo.
@@ -237,10 +243,11 @@ for %%F in (
     "validacao\029_verificar_duplicacao_faturas.sql"
     "validacao\032_validar_orfaos_manifestos_coletas.sql"
     "validacao\033_validar_orfaos_fretes_faturas_graphql.sql"
+    "validacao\034_validar_schema_recriacao.sql"
 ) do (
     if exist %%F (
         echo   [EXEC] %%~F
-        sqlcmd %SQLCMD_FLAGS% -S %DB_SERVER_TARGET% -d %DB_NAME% %AUTH_CMD% -i "%%~F"
+        sqlcmd %SQLCMD_FLAGS% -S %DB_SERVER_TARGET% -d %DB_NAME% %AUTH_CMD% -i "%%~F" -b
         if errorlevel 1 echo   [AVISO] Validacao retornou aviso: %%~F
     )
 )
@@ -259,6 +266,29 @@ if "%MODO_RECRIAR%"=="1" (
 echo ============================================
 echo.
 if /i not "%EXTRATOR_DB_SILENT%"=="1" pause
+exit /b 0
+
+:MOSTRAR_AJUDA
+echo.
+echo Uso:
+echo   executar_database.bat
+echo      Atualiza um banco existente. Cria tabelas faltantes, aplica migrations,
+echo      indices, views e validacoes seguras.
+echo.
+echo   executar_database.bat --recriar
+echo      Apaga e recria o banco definido em config.bat ^(ex.: ETL_SISTEMA^).
+echo      Depois cria tabelas base, aplica migrations, indices, views e validacoes.
+echo      Requer digitacao de RECRIAR para confirmar.
+echo.
+echo Configuracao:
+echo   Copie config_exemplo.bat para config.bat e ajuste DB_SERVER, DB_PORT,
+echo   DB_NAME, DB_USER, DB_PASSWORD e SQLCMD_EXTRA_ARGS.
+echo.
+echo Observacoes:
+echo   - Pare o daemon antes de recriar ou apagar o banco.
+echo   - Scripts destrutivos de validacao/limpeza nao rodam automaticamente.
+echo   - O banco SQLite de autenticacao nao e recriado por este script.
+echo.
 exit /b 0
 
 :GARANTIR_TABELAS_BASE

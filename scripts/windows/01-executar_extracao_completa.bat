@@ -43,7 +43,7 @@ REM   01-executar_extracao_completa.bat
 REM
 REM Funcionalidades:
 REM   - Executa extracao de todas as entidades
-REM   - Inclui as trilhas DataExport de inventario e sinistros
+REM   - Inclui as trilhas DataExport de inventario/sinistros e Raster quando habilitada
 REM   - Gera logs detalhados
 REM   - Salva dados no banco configurado
 REM ================================================================
@@ -54,6 +54,7 @@ echo ================================================================
 echo Escopo operacional desta rodada:
 echo   GraphQL   = coletas, fretes, faturas_graphql, usuarios_sistema
 echo   DataExport = manifestos, cotacoes, localizacao_cargas, contas_a_pagar, faturas_por_cliente, inventario, sinistros
+echo   Raster    = raster_viagens e raster_viagem_paradas ^(quando RASTER_ENABLED/credenciais habilitarem^)
 echo.
 
 if /i "%PROD_MODE%"=="1" (
@@ -185,7 +186,8 @@ echo.
 echo Verifique os logs na pasta 'logs' para mais detalhes.
 echo Referencias desta rodada:
 echo   - passos de inventario e sinistros aparecerao como trilhas proprias nos logs
-echo   - destino BI: vw_inventario_powerbi e vw_sinistros_powerbi
+echo   - Raster grava raster_viagens e raster_viagem_paradas quando habilitada
+echo   - destino BI: vw_inventario_powerbi, vw_sinistros_powerbi e vw_raster_sm_transit_time
 echo.
 if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" if /i not "%EXTRATOR_MENU_CHILD%"=="1" pause
 set "RET_CODE=%JAVA_EXIT_CODE%"

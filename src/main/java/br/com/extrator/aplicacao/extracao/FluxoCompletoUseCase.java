@@ -65,8 +65,9 @@ import br.com.extrator.plataforma.auditoria.aplicacao.ExecutionWindowPlanner;
 import br.com.extrator.plataforma.auditoria.dominio.ExecutionPlanContext;
 import br.com.extrator.plataforma.auditoria.dominio.ExecutionAuditRecord;
 import br.com.extrator.plataforma.auditoria.dominio.ExecutionWindowPlan;
-import br.com.extrator.suporte.configuracao.ConfigEtl;
 import br.com.extrator.suporte.banco.SqlServerExecutionLockManager;
+import br.com.extrator.suporte.configuracao.ConfigEtl;
+import br.com.extrator.suporte.configuracao.ConfigRaster;
 import br.com.extrator.suporte.console.BannerUtil;
 import br.com.extrator.suporte.console.LoggerConsole;
 import br.com.extrator.suporte.formatacao.FormatadorData;
@@ -559,26 +560,85 @@ public class FluxoCompletoUseCase {
         log.console("\n" + "=".repeat(60));
         infoConsole("PLANO DE JANELAS DO CICLO");
         log.console("=".repeat(60));
-        for (final String entidade : List.of(
+        final Set<String> entidadesRegistradas = new LinkedHashSet<>();
+        for (final String entidade : entidadesResumoPlano()) {
+            if (registrarLinhaPlano(entidade, planosExecucao.get(entidade))) {
+                entidadesRegistradas.add(entidade);
+            }
+        }
+        for (final String entidade : planosExecucao.keySet()) {
+            if (!entidadesRegistradas.contains(entidade)
+                && registrarLinhaPlano(entidade, planosExecucao.get(entidade))) {
+                entidadesRegistradas.add(entidade);
+            }
+        }
+        registrarPlanoRasterSeHabilitado(planosExecucao);
+        log.console("=".repeat(60) + "\n");
+    }
+
+    private List<String> entidadesResumoPlano() {
+        return List.of(
             ConstantesEntidades.USUARIOS_SISTEMA,
             ConstantesEntidades.COLETAS,
+            ConstantesEntidades.FRETES,
+            ConstantesEntidades.FATURAS_GRAPHQL,
             ConstantesEntidades.MANIFESTOS,
-            ConstantesEntidades.FRETES
-        )) {
-            final ExecutionWindowPlan plano = planosExecucao.get(entidade);
-            if (plano == null) {
-                continue;
-            }
-            infoConsole(
-                "PLANO_EXECUCAO | entidade={} | consulta={}..{} | confirmacao={}..{}",
-                entidade,
-                FormatadorData.formatBR(plano.consultaDataInicio()),
-                FormatadorData.formatBR(plano.consultaDataFim()),
-                FormatadorData.formatBR(plano.confirmacaoInicio()),
-                FormatadorData.formatBR(plano.confirmacaoFim())
-            );
+            ConstantesEntidades.COTACOES,
+            ConstantesEntidades.LOCALIZACAO_CARGAS,
+            ConstantesEntidades.CONTAS_A_PAGAR,
+            ConstantesEntidades.FATURAS_POR_CLIENTE,
+            ConstantesEntidades.INVENTARIO,
+            ConstantesEntidades.SINISTROS
+        );
+    }
+
+    private boolean registrarLinhaPlano(final String entidade, final ExecutionWindowPlan plano) {
+        if (plano == null) {
+            return false;
         }
-        log.console("=".repeat(60) + "\n");
+        infoConsole(
+            "PLANO_EXECUCAO | entidade={} | consulta={}..{} | confirmacao={}..{}",
+            entidade,
+            FormatadorData.formatBR(plano.consultaDataInicio()),
+            FormatadorData.formatBR(plano.consultaDataFim()),
+            FormatadorData.formatBR(plano.confirmacaoInicio()),
+            FormatadorData.formatBR(plano.confirmacaoFim())
+        );
+        return true;
+    }
+
+    private void registrarPlanoRasterSeHabilitado(final Map<String, ExecutionWindowPlan> planosExecucao) {
+        if (!ConfigRaster.isHabilitadoParaExecucao()) {
+            return;
+        }
+
+        final LocalDate consultaInicio = planosExecucao.values().stream()
+            .map(ExecutionWindowPlan::consultaDataInicio)
+            .filter(Objects::nonNull)
+            .min(LocalDate::compareTo)
+            .orElse(null);
+        final LocalDate consultaFim = planosExecucao.values().stream()
+            .map(ExecutionWindowPlan::consultaDataFim)
+            .filter(Objects::nonNull)
+            .max(LocalDate::compareTo)
+            .orElse(null);
+        if (consultaInicio == null || consultaFim == null) {
+            return;
+        }
+
+        infoConsole(
+            "PLANO_EXECUCAO | entidade={} | consulta={}..{} | confirmacao=n/a | observacao=extracao raster principal",
+            ConstantesEntidades.RASTER_VIAGENS,
+            FormatadorData.formatBR(consultaInicio),
+            FormatadorData.formatBR(consultaFim)
+        );
+        infoConsole(
+            "PLANO_EXECUCAO | entidade={} | consulta={}..{} | confirmacao=n/a | observacao=derivada de {} e gravada em log_extracoes",
+            ConstantesEntidades.RASTER_VIAGEM_PARADAS,
+            FormatadorData.formatBR(consultaInicio),
+            FormatadorData.formatBR(consultaFim),
+            ConstantesEntidades.RASTER_VIAGENS
+        );
     }
 
     private void infoConsole(final String message, final Object... args) {

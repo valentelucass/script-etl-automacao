@@ -204,6 +204,8 @@ public class ExecutarExtracaoPorIntervaloComando implements Comando {
         }
         if (entidadeLower.equals(ConstantesEntidades.RASTER)
             || entidadeLower.equals(ConstantesEntidades.RASTER_VIAGENS)
+            || entidadeLower.equals(ConstantesEntidades.RASTER_VIAGEM_PARADAS)
+            || "paradas_raster".equals(entidadeLower)
             || "viagens_raster".equals(entidadeLower)) {
             log.info("API inferida: Raster (baseado na entidade: {})", entidadeEspecifica);
             return ConstantesEntidades.RASTER;

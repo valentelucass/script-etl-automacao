@@ -40,8 +40,8 @@ echo   EXPORTADOR CSV - TODOS OS DADOS
 echo ================================================================
 echo.
 echo Escopo atual de exportacao:
-echo   Views/tabelas operacionais, incluindo inventario e sinistros
-echo   Referencias BI: vw_inventario_powerbi e vw_sinistros_powerbi
+echo   Views/tabelas operacionais, incluindo inventario, sinistros e Raster
+echo   Referencias BI: vw_inventario_powerbi, vw_sinistros_powerbi e vw_raster_sm_transit_time
 echo.
 
 REM Compilar e gerar JAR antes de executar
@@ -136,7 +136,9 @@ if "%OPCAO%"=="2" (
     echo   8. localizacao_cargas    ^(Localizacao de Cargas^)
     echo   9. inventario            ^(Inventario / vw_inventario_powerbi^)
     echo  10. sinistros             ^(Sinistros / vw_sinistros_powerbi^)
-    echo  11. dim_usuarios          ^(Usuarios do Sistema - Dimensao^)
+    echo  11. raster_viagens        ^(Raster viagens^)
+    echo  12. raster_viagem_paradas ^(Raster paradas^)
+    echo  13. dim_usuarios          ^(Usuarios do Sistema - Dimensao^)
     echo   0. Voltar ao menu anterior
     echo.
     set /p TABELA_NUM="Digite o numero da tabela: "
@@ -158,7 +160,9 @@ if "%OPCAO%"=="2" (
     if "!TABELA_NUM!"=="8" set "TABELA=localizacao_cargas"
     if "!TABELA_NUM!"=="9" set "TABELA=inventario"
     if "!TABELA_NUM!"=="10" set "TABELA=sinistros"
-    if "!TABELA_NUM!"=="11" set "TABELA=dim_usuarios"
+    if "!TABELA_NUM!"=="11" set "TABELA=raster_viagens"
+    if "!TABELA_NUM!"=="12" set "TABELA=raster_viagem_paradas"
+    if "!TABELA_NUM!"=="13" set "TABELA=dim_usuarios"
     
     if not defined TABELA (
         echo ERRO: Numero invalido!
@@ -233,6 +237,8 @@ echo   - cotacoes.csv                        (Cotacoes)
 echo   - localizacao_cargas.csv              (Localizacao da Carga)
 echo   - inventario.csv                      (Inventario / vw_inventario_powerbi)
 echo   - sinistros.csv                       (Sinistros / vw_sinistros_powerbi)
+echo   - raster_viagens.csv                  (Raster viagens)
+echo   - raster_viagem_paradas.csv           (Raster paradas)
 echo   - dim_usuarios.csv                    (Usuarios do Sistema - Dimensao)
 echo.
 echo Verifique a pasta 'runtime\exports' para os arquivos gerados.

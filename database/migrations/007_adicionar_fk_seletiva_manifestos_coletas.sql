@@ -1,6 +1,18 @@
 PRINT 'Migration 007: adicionar FK seletiva manifestos.pick_sequence_code -> coletas.sequence_code';
 GO
 
+IF OBJECT_ID(N'dbo.schema_migrations', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.schema_migrations (
+        migration_id NVARCHAR(255) NOT NULL,
+        applied_at DATETIME2(0) NOT NULL CONSTRAINT DF_schema_migrations_applied_at DEFAULT SYSUTCDATETIME(),
+        checksum_sha256 VARCHAR(64) NULL,
+        notes NVARCHAR(500) NULL,
+        CONSTRAINT PK_schema_migrations PRIMARY KEY (migration_id)
+    );
+END;
+GO
+
 IF NOT EXISTS (
     SELECT 1
     FROM sys.indexes
@@ -78,4 +90,14 @@ BEGIN
     ALTER TABLE dbo.manifestos CHECK CONSTRAINT FK_manifestos_pick_sequence_code_coletas;
     PRINT 'FK_manifestos_pick_sequence_code_coletas criada com sucesso.';
 END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.schema_migrations WHERE migration_id = N'007_adicionar_fk_seletiva_manifestos_coletas')
+BEGIN
+    INSERT INTO dbo.schema_migrations (migration_id, notes)
+    VALUES (
+        N'007_adicionar_fk_seletiva_manifestos_coletas',
+        N'Cria indice e FK seletiva de manifestos.pick_sequence_code para coletas.sequence_code.'
+    );
+END;
 GO

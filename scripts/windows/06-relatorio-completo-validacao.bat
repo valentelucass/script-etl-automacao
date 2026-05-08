@@ -17,7 +17,7 @@ echo Este script executa a validacao completa do ETL sem alterar producao
 echo por padrao. Testes que reescrevem dados ^(idempotencia e hidratacao^)
 echo so rodam com confirmacao explicita.
 echo Cobertura operacional considerada: coletas, fretes, faturas_graphql, manifestos, cotacoes,
-echo localizacao_cargas, contas_a_pagar, faturas_por_cliente, inventario e sinistros.
+echo localizacao_cargas, contas_a_pagar, faturas_por_cliente, inventario, sinistros e Raster quando habilitada.
 echo.
 
 if /i "%PROD_MODE%"=="1" (
@@ -98,7 +98,7 @@ echo ================================================================
 )
 echo.
 echo Verifique os relatorios gerados na pasta logs\.
-echo Referencias novas esperadas nos relatorios: inventario e sinistros.
+echo Referencias novas esperadas nos relatorios: inventario, sinistros e Raster quando habilitada.
 echo.
 pause
 endlocal & exit /b %RET_CODE%

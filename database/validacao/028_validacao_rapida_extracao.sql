@@ -12,7 +12,7 @@ PRINT '';
 PRINT '1. CONTAGEM DE REGISTROS POR ENTIDADE (Últimas 24 horas):';
 PRINT '';
 
-SELECT 
+SELECT
     'usuarios_sistema' AS entidade,
     COUNT(*) AS total_registros,
     MAX(data_atualizacao) AS ultima_extracao
@@ -21,7 +21,7 @@ WHERE data_atualizacao >= DATEADD(hour, -24, GETDATE())
 
 UNION ALL
 
-SELECT 
+SELECT
     'coletas' AS entidade,
     COUNT(*) AS total_registros,
     MAX(data_extracao) AS ultima_extracao
@@ -30,7 +30,7 @@ WHERE data_extracao >= DATEADD(hour, -24, GETDATE())
 
 UNION ALL
 
-SELECT 
+SELECT
     'fretes' AS entidade,
     COUNT(*) AS total_registros,
     MAX(data_extracao) AS ultima_extracao
@@ -39,7 +39,7 @@ WHERE data_extracao >= DATEADD(hour, -24, GETDATE())
 
 UNION ALL
 
-SELECT 
+SELECT
     'faturas_graphql' AS entidade,
     COUNT(*) AS total_registros,
     MAX(data_extracao) AS ultima_extracao
@@ -48,7 +48,7 @@ WHERE data_extracao >= DATEADD(hour, -24, GETDATE())
 
 UNION ALL
 
-SELECT 
+SELECT
     'manifestos' AS entidade,
     COUNT(*) AS total_registros,
     MAX(data_extracao) AS ultima_extracao
@@ -57,7 +57,7 @@ WHERE data_extracao >= DATEADD(hour, -24, GETDATE())
 
 UNION ALL
 
-SELECT 
+SELECT
     'cotacoes' AS entidade,
     COUNT(*) AS total_registros,
     MAX(data_extracao) AS ultima_extracao
@@ -66,7 +66,7 @@ WHERE data_extracao >= DATEADD(hour, -24, GETDATE())
 
 UNION ALL
 
-SELECT 
+SELECT
     'localizacao_cargas' AS entidade,
     COUNT(*) AS total_registros,
     MAX(data_extracao) AS ultima_extracao
@@ -75,7 +75,7 @@ WHERE data_extracao >= DATEADD(hour, -24, GETDATE())
 
 UNION ALL
 
-SELECT 
+SELECT
     'contas_a_pagar' AS entidade,
     COUNT(*) AS total_registros,
     MAX(data_extracao) AS ultima_extracao
@@ -84,7 +84,7 @@ WHERE data_extracao >= DATEADD(hour, -24, GETDATE())
 
 UNION ALL
 
-SELECT 
+SELECT
     'faturas_por_cliente' AS entidade,
     COUNT(*) AS total_registros,
     MAX(data_extracao) AS ultima_extracao
@@ -93,7 +93,7 @@ WHERE data_extracao >= DATEADD(hour, -24, GETDATE())
 
 UNION ALL
 
-SELECT 
+SELECT
     'inventario' AS entidade,
     COUNT(*) AS total_registros,
     MAX(data_extracao) AS ultima_extracao
@@ -102,11 +102,29 @@ WHERE data_extracao >= DATEADD(hour, -24, GETDATE())
 
 UNION ALL
 
-SELECT 
+SELECT
     'sinistros' AS entidade,
     COUNT(*) AS total_registros,
     MAX(data_extracao) AS ultima_extracao
 FROM dbo.sinistros
+WHERE data_extracao >= DATEADD(hour, -24, GETDATE())
+
+UNION ALL
+
+SELECT
+    'raster_viagens' AS entidade,
+    COUNT(*) AS total_registros,
+    MAX(data_extracao) AS ultima_extracao
+FROM dbo.raster_viagens
+WHERE data_extracao >= DATEADD(hour, -24, GETDATE())
+
+UNION ALL
+
+SELECT
+    'raster_viagem_paradas' AS entidade,
+    COUNT(*) AS total_registros,
+    MAX(data_extracao) AS ultima_extracao
+FROM dbo.raster_viagem_paradas
 WHERE data_extracao >= DATEADD(hour, -24, GETDATE())
 
 ORDER BY entidade;
@@ -115,7 +133,7 @@ PRINT '';
 PRINT '2. VERIFICANDO LOGS DE EXTRAÇÃO (Últimas 24 horas):';
 PRINT '';
 
-SELECT TOP 10
+SELECT TOP 20
     entidade,
     status_final,
     registros_extraidos,
@@ -132,7 +150,7 @@ PRINT '';
 PRINT '3. VERIFICANDO PAGE_AUDIT (Últimas 24 horas):';
 PRINT '';
 
-SELECT 
+SELECT
     template_id,
     COUNT(DISTINCT execution_uuid) AS total_execucoes,
     COUNT(*) AS total_paginas,
@@ -148,7 +166,7 @@ PRINT '';
 PRINT '4. VERIFICANDO VIEWS POWERBI (Existência):';
 PRINT '';
 
-SELECT 
+SELECT
     TABLE_NAME AS view_name,
     'EXISTE' AS status
 FROM INFORMATION_SCHEMA.VIEWS
@@ -160,7 +178,7 @@ PRINT '';
 PRINT '5. VERIFICANDO VIEWS DIMENSÃO (Existência):';
 PRINT '';
 
-SELECT 
+SELECT
     TABLE_NAME AS view_name,
     'EXISTE' AS status
 FROM INFORMATION_SCHEMA.VIEWS
@@ -177,11 +195,11 @@ SELECT TOP 10
     vehicle_plate,
     vehicle_type,
     capacidade_kg,
-    CASE 
+    CASE
         WHEN obs_operacional IS NOT NULL THEN 'SIM'
         ELSE 'NULL'
     END AS tem_obs_operacional,
-    CASE 
+    CASE
         WHEN obs_financeira IS NOT NULL THEN 'SIM'
         ELSE 'NULL'
     END AS tem_obs_financeira,
@@ -194,7 +212,7 @@ PRINT '';
 PRINT '7. VERIFICANDO ENRIQUECIMENTO DE USUÁRIOS (dim_usuarios):';
 PRINT '';
 
-SELECT 
+SELECT
     COUNT(*) AS total_usuarios,
     COUNT(DISTINCT user_id) AS usuarios_unicos,
     MAX(data_atualizacao) AS ultima_extracao
@@ -204,7 +222,7 @@ PRINT '';
 PRINT '8. VERIFICANDO JOIN COM dim_usuarios EM COLETAS:';
 PRINT '';
 
-SELECT 
+SELECT
     COUNT(*) AS total_coletas,
     COUNT(cancellation_user_id) AS coletas_com_cancellation_user_id,
     COUNT(destroy_user_id) AS coletas_com_destroy_user_id,

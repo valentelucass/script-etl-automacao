@@ -1,6 +1,18 @@
 PRINT 'Migration 008: criar tabela sys_replay_idempotency';
 GO
 
+IF OBJECT_ID(N'dbo.schema_migrations', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.schema_migrations (
+        migration_id NVARCHAR(255) NOT NULL,
+        applied_at DATETIME2(0) NOT NULL CONSTRAINT DF_schema_migrations_applied_at DEFAULT SYSUTCDATETIME(),
+        checksum_sha256 VARCHAR(64) NULL,
+        notes NVARCHAR(500) NULL,
+        CONSTRAINT PK_schema_migrations PRIMARY KEY (migration_id)
+    );
+END;
+GO
+
 IF OBJECT_ID(N'dbo.sys_replay_idempotency', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.sys_replay_idempotency (
@@ -25,6 +37,16 @@ ELSE
 BEGIN
     PRINT 'Tabela sys_replay_idempotency ja existe. Nada a fazer.';
 END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.schema_migrations WHERE migration_id = N'008_criar_tabela_sys_replay_idempotency')
+BEGIN
+    INSERT INTO dbo.schema_migrations (migration_id, notes)
+    VALUES (
+        N'008_criar_tabela_sys_replay_idempotency',
+        N'Cria tabela de idempotencia de replay e indice operacional.'
+    );
+END;
 GO
 
 IF NOT EXISTS (

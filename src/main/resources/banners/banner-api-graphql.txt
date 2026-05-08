@@ -26,6 +26,12 @@
   🚚 FRETES
      └─ Informações de transporte
 
+  🧾 FATURAS GRAPHQL
+     └─ Faturas via consulta GraphQL
+
+  👤 USUÁRIOS DO SISTEMA
+     └─ Dimensão de usuários e vínculos
+
 ╔═══════════════════════════════════════════════════════════════════════════╗
 ║                        ⏱️  INICIANDO EXTRAÇÃO GraphQL                     ║
 ╚═══════════════════════════════════════════════════════════════════════════╝

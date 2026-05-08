@@ -88,13 +88,14 @@ REM   04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 dataexport
 REM   04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 dataexport localizacao_cargas
 REM   04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 dataexport inventario
 REM   04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 dataexport sinistros
+REM   04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 raster
 REM   04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 --sem-faturas-graphql
 REM   04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 --com-faturas-graphql
 REM   04-extracao_por_intervalo.bat 2026-04-27 2026-04-28 --sem-faturas-graphql --modo-rapido-24h
 REM
 REM Funcionalidades:
 REM   - Aceita parametros na linha de comando OU menu interativo
-REM   - Permite escolher API especifica (GraphQL ou DataExport)
+REM   - Permite escolher API especifica (GraphQL, DataExport ou Raster)
 REM   - Permite escolher entidade especifica
 REM   - Divide periodo em blocos de 30 dias automaticamente
 REM   - Cada bloco de 30 dias e tratado como "< 31 dias" (sem limite de horas)
@@ -161,6 +162,24 @@ if /i "%ENTIDADE_ESCOLHIDA%"=="--modo-rapido-24h" (
     set "ENTIDADE_ESCOLHIDA="
     set "PARAM_FLAG_RAPIDO=--modo-rapido-24h"
 )
+if "%ENTIDADE_ESCOLHIDA%"=="" (
+    if /i "%API_ESCOLHIDA%"=="raster_viagens" (
+        set "ENTIDADE_ESCOLHIDA=%API_ESCOLHIDA%"
+        set "API_ESCOLHIDA=raster"
+    )
+    if /i "%API_ESCOLHIDA%"=="raster_viagem_paradas" (
+        set "ENTIDADE_ESCOLHIDA=%API_ESCOLHIDA%"
+        set "API_ESCOLHIDA=raster"
+    )
+    if /i "%API_ESCOLHIDA%"=="viagens_raster" (
+        set "ENTIDADE_ESCOLHIDA=%API_ESCOLHIDA%"
+        set "API_ESCOLHIDA=raster"
+    )
+    if /i "%API_ESCOLHIDA%"=="paradas_raster" (
+        set "ENTIDADE_ESCOLHIDA=%API_ESCOLHIDA%"
+        set "API_ESCOLHIDA=raster"
+    )
+)
 call :CAPTURAR_PARAM_FLAG "%PARAM_EXTRA_FLAG1%"
 call :CAPTURAR_PARAM_FLAG "%PARAM_EXTRA_FLAG2%"
 call :CAPTURAR_PARAM_FLAG "%PARAM_EXTRA_FLAG3%"
@@ -171,6 +190,7 @@ if "%DATA_INICIO%"=="" (
     echo.
     echo Uso: 04-extracao_por_intervalo.bat [DATA_INICIO] [DATA_FIM] [API] [ENTIDADE] [--sem-faturas-graphql^|--com-faturas-graphql] [--modo-rapido-24h]
     echo Exemplo: 04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 dataexport localizacao_cargas
+    echo Exemplo: 04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 raster
     if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
     exit /b 1
 )
@@ -180,6 +200,7 @@ if "%DATA_FIM%"=="" (
     echo.
     echo Uso: 04-extracao_por_intervalo.bat [DATA_INICIO] [DATA_FIM] [API] [ENTIDADE] [--sem-faturas-graphql^|--com-faturas-graphql] [--modo-rapido-24h]
     echo Exemplo: 04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 dataexport localizacao_cargas
+    echo Exemplo: 04-extracao_por_intervalo.bat 2024-10-26 2024-12-26 raster
     if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
     exit /b 1
 )
@@ -216,6 +237,7 @@ echo.
 echo Este script permite extrair dados de um periodo especifico.
 echo O sistema dividira automaticamente em blocos de 31 dias.
 echo Escopo DataExport atual: manifestos, cotacoes, localizacao_cargas, contas_a_pagar, faturas_por_cliente, inventario e sinistros.
+echo Escopo Raster atual: raster_viagens e raster_viagem_paradas ^(quando habilitada^).
 echo.
 echo Formato de data: YYYY-MM-DD ^(exemplo: 2024-11-01^)
 echo.
@@ -262,7 +284,7 @@ echo.
 echo Escolha uma opcao:
 echo.
 echo   1. Extrair TODAS as APIs e entidades
-echo   2. Extrair API especifica ^(GraphQL ou DataExport^)
+echo   2. Extrair API especifica ^(GraphQL, DataExport ou Raster^)
 echo   0. Cancelar
 echo.
 set /p OPCAO_API="Digite o numero da opcao: "
@@ -281,8 +303,9 @@ if "%OPCAO_API%"=="2" (
     echo   ESCOLHA DA API
     echo ================================================================
     echo.
-    echo   1. GraphQL ^(Coletas, Fretes, Faturas GraphQL^)
+    echo   1. GraphQL ^(Coletas, Fretes, Faturas GraphQL, Usuarios^)
     echo   2. DataExport ^(Manifestos, Cotacoes, Localizacao de Cargas, Contas a Pagar, Faturas por Cliente, Inventario, Sinistros^)
+    echo   3. Raster ^(raster_viagens + raster_viagem_paradas^)
     echo   0. Voltar
     echo.
     set /p API_NUM="Digite o numero da API: "
@@ -296,6 +319,8 @@ if "%OPCAO_API%"=="2" (
         set "API_ESCOLHIDA=graphql"
     ) else if "!API_NUM!"=="2" (
         set "API_ESCOLHIDA=dataexport"
+    ) else if "!API_NUM!"=="3" (
+        set "API_ESCOLHIDA=raster"
     ) else (
         echo ERRO: Opcao invalida!
         if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
@@ -367,6 +392,21 @@ if "%OPCAO_API%"=="2" (
             if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
             exit /b 1
         )
+    ) else if "!API_ESCOLHIDA!"=="raster" (
+        echo   Entidades Raster:
+        echo   1. raster_viagens ^(tambem grava raster_viagem_paradas^)
+        echo.
+        set /p ENTIDADE_NUM="Digite o numero da entidade (0 = todas): "
+
+        if "!ENTIDADE_NUM!"=="0" (
+            set "ENTIDADE_ESCOLHIDA="
+        ) else if "!ENTIDADE_NUM!"=="1" (
+            set "ENTIDADE_ESCOLHIDA=raster_viagens"
+        ) else (
+            echo ERRO: Numero invalido!
+            if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
+            exit /b 1
+        )
     )
 )
 
@@ -394,8 +434,13 @@ if not "%API_ESCOLHIDA%"=="" (
 ) else (
     echo API: TODAS
     echo Entidade: TODAS
+    echo Escopo Raster: incluido se habilitado por configuracao/credenciais
 )
-if defined FLAG_FATURAS_GRAPHQL (
+if /i "%API_ESCOLHIDA%"=="dataexport" (
+    echo Faturas GraphQL: NAO SE APLICA
+) else if /i "%API_ESCOLHIDA%"=="raster" (
+    echo Faturas GraphQL: NAO SE APLICA
+) else if defined FLAG_FATURAS_GRAPHQL (
     echo Faturas GraphQL: DESABILITADO
 ) else (
     echo Faturas GraphQL: INCLUIDO
@@ -473,11 +518,19 @@ if not "%API_ESCOLHIDA%"=="" (
 ) else (
     echo API: TODAS
     echo Entidade: TODAS
+    echo Escopo Raster: incluido se habilitado por configuracao/credenciais
 )
 if /i "%API_ESCOLHIDA%"=="dataexport" if "%ENTIDADE_ESCOLHIDA%"=="" (
     echo Escopo DataExport: manifestos, cotacoes, localizacao_cargas, contas_a_pagar, faturas_por_cliente, inventario, sinistros
 )
-if defined FLAG_FATURAS_GRAPHQL (
+if /i "%API_ESCOLHIDA%"=="raster" (
+    echo Escopo Raster: raster_viagens e raster_viagem_paradas
+)
+if /i "%API_ESCOLHIDA%"=="dataexport" (
+    echo Faturas GraphQL: NAO SE APLICA
+) else if /i "%API_ESCOLHIDA%"=="raster" (
+    echo Faturas GraphQL: NAO SE APLICA
+) else if defined FLAG_FATURAS_GRAPHQL (
     echo Faturas GraphQL: DESABILITADO
 ) else (
     echo Faturas GraphQL: INCLUIDO
@@ -531,7 +584,7 @@ if "%JAVA_EXIT_CODE%"=="0" (
 :END
 echo.
 echo Verifique os logs na pasta 'logs' para mais detalhes.
-echo Referencia de entidades novas nos logs: dataexport:inventario e dataexport:sinistros.
+echo Referencia de entidades novas nos logs: dataexport:inventario, dataexport:sinistros, raster:raster_viagens e raster_viagem_paradas.
 echo.
 if /i not "%EXTRATOR_NONINTERACTIVE%"=="1" pause
 set "RET_CODE=%FINAL_EXIT_CODE%"
@@ -566,6 +619,11 @@ if /i "%ENTIDADE_ESCOLHIDA%"=="faturasgraphql" (
 if /i "%API_ESCOLHIDA%"=="dataexport" (
     echo.
     echo Faturas GraphQL: nao se aplica ^(API DataExport selecionada^).
+    exit /b 0
+)
+if /i "%API_ESCOLHIDA%"=="raster" (
+    echo.
+    echo Faturas GraphQL: nao se aplica ^(API Raster selecionada^).
     exit /b 0
 )
 

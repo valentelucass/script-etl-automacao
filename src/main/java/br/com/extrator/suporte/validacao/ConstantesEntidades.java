@@ -79,7 +79,7 @@ public final class ConstantesEntidades {
     public static final String[] ALIASES_INVENTARIO = {"inventario", "inventário"};
     public static final String[] ALIASES_SINISTROS = {"sinistros", "sinistro"};
     public static final String[] ALIASES_FATURAS_GRAPHQL = {"faturas_graphql", "faturas"};
-    public static final String[] ALIASES_RASTER = {"raster", "raster_viagens", "viagens_raster"};
+    public static final String[] ALIASES_RASTER = {"raster", "raster_viagens", "viagens_raster", "raster_viagem_paradas", "paradas_raster"};
     
     // ========== STATUS DE EXTRAÇÃO ==========
     public static final String STATUS_COMPLETO = "COMPLETO";

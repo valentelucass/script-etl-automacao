@@ -32,7 +32,7 @@ echo GERENCIAMENTO DE USUARIOS DE ACESSO
 echo ================================================================
 echo.
 echo Este menu controla o acesso a todas as trilhas operacionais,
-echo incluindo inventario e sinistros.
+echo incluindo inventario, sinistros e Raster quando habilitada.
 echo.
 
 if /i "%PROD_MODE%"=="1" (

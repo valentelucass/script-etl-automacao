@@ -33,7 +33,13 @@
      ├─ Cotações
      ├─ Localização da Carga
      ├─ Contas a Pagar
-     └─ Faturas por Cliente
+     ├─ Faturas por Cliente
+     ├─ Inventário
+     └─ Sinistros
+
+  🟠 API Raster
+     ├─ Viagens Raster
+     └─ Paradas da Viagem
 
 ╔═══════════════════════════════════════════════════════════════════════════╗
 ║                          ⏱️  INICIANDO EXTRAÇÃO                           ║

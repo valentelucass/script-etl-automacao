@@ -49,7 +49,8 @@ import br.com.extrator.suporte.console.LoggerConsole;
  * Tabelas internas de auditoria permanecem disponiveis para exportacao explicita,
  * mas ficam fora da exportacao padrao.
  * Inclui: Cotacoes, Coletas, Contas a Pagar, Faturas por Cliente, Faturas GraphQL,
- *         Fretes, Manifestos, Localizacao de Cargas, Inventario, Sinistros, dim_usuarios
+ *         Fretes, Manifestos, Localizacao de Cargas, Inventario, Sinistros,
+ *         Raster Viagens, Raster Paradas, dim_usuarios
  */
 public class ExportadorCSV {
     private static final String ENTIDADE_COTACOES = "cotacoes";
@@ -62,6 +63,8 @@ public class ExportadorCSV {
     private static final String ENTIDADE_LOCALIZACAO_CARGAS = "localizacao_cargas";
     private static final String ENTIDADE_INVENTARIO = "inventario";
     private static final String ENTIDADE_SINISTROS = "sinistros";
+    private static final String ENTIDADE_RASTER_VIAGENS = "raster_viagens";
+    private static final String ENTIDADE_RASTER_VIAGEM_PARADAS = "raster_viagem_paradas";
 
     // PROBLEMA #9 CORRIGIDO: Usar LoggerConsole para log duplo (arquivo + console)
     private static final LoggerConsole log = LoggerConsole.getLogger(ExportadorCSV.class);
@@ -77,6 +80,8 @@ public class ExportadorCSV {
         ENTIDADE_LOCALIZACAO_CARGAS,
         ENTIDADE_INVENTARIO,
         ENTIDADE_SINISTROS,
+        ENTIDADE_RASTER_VIAGENS,
+        ENTIDADE_RASTER_VIAGEM_PARADAS,
         "dim_usuarios"  // Tabela dimensão de usuários do sistema
     };
     
@@ -219,6 +224,8 @@ public class ExportadorCSV {
             } else {
                 switch (entidade) {
                     case ENTIDADE_MANIFESTOS, ENTIDADE_COTACOES, ENTIDADE_CONTAS_A_PAGAR, ENTIDADE_INVENTARIO, ENTIDADE_SINISTROS -> query += " ORDER BY sequence_code";
+                    case ENTIDADE_RASTER_VIAGENS -> query += " ORDER BY cod_solicitacao";
+                    case ENTIDADE_RASTER_VIAGEM_PARADAS -> query += " ORDER BY cod_solicitacao, ordem";
                     case ENTIDADE_LOCALIZACAO_CARGAS -> query += " ORDER BY sequence_number";
                     case ENTIDADE_COLETAS, ENTIDADE_FRETES -> query += " ORDER BY id";
                     case ENTIDADE_FATURAS_POR_CLIENTE -> query += " ORDER BY unique_id";

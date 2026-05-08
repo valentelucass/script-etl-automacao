@@ -32,8 +32,14 @@
   💰 FATURAS A PAGAR
      └─ Contas a pagar do período
 
-  📋 OCORRÊNCIAS
-     └─ Eventos operacionais
+  🧾 FATURAS POR CLIENTE
+     └─ Faturamento consolidado por cliente
+
+  📦 INVENTÁRIO
+     └─ Estoque e itens operacionais
+
+  📋 SINISTROS
+     └─ Eventos de sinistro operacional
 
 ╔═══════════════════════════════════════════════════════════════════════════╗
 ║                      ⏱️  INICIANDO EXTRAÇÃO Data Export                   ║

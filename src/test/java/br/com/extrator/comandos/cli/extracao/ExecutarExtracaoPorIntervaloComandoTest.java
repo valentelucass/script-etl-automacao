@@ -59,6 +59,17 @@ class ExecutarExtracaoPorIntervaloComandoTest {
         assertEquals("raster", useCase.requestCapturada.apiEspecifica());
     }
 
+    @Test
+    void deveInferirApiRasterParaTabelaDerivadaDeParadas() throws Exception {
+        final CapturingExtracaoPorIntervaloUseCase useCase = new CapturingExtracaoPorIntervaloUseCase();
+        final ExecutarExtracaoPorIntervaloComando comando = new ExecutarExtracaoPorIntervaloComando(useCase);
+
+        comando.executar(new String[] {"--extracao-intervalo", "2026-04-01", "2026-04-02", "raster_viagem_paradas"});
+
+        assertNotNull(useCase.requestCapturada);
+        assertEquals("raster", useCase.requestCapturada.apiEspecifica());
+        assertEquals("raster_viagem_paradas", useCase.requestCapturada.entidadeEspecifica());
+    }
 
     @Test
     void deveAtivarModoRapido24hSemFaturasGraphQL() throws Exception {

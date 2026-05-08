@@ -38,16 +38,17 @@ REM ================================================================
 REM Script: 02-testar_api_especifica.bat
 REM Finalidade:
 REM   Executa testes da API especifica informada como parametro ou via menu interativo.
-REM   Valores aceitos: 'graphql' ou 'dataexport'.
+REM   Valores aceitos: 'graphql', 'dataexport' ou 'raster'.
 REM
 REM Uso:
 REM   02-testar_api_especifica.bat [api] [entidade] [--sem-faturas-graphql]
 REM
 REM Parametros (opcionais):
-REM   %1  Nome da API a testar: graphql | dataexport
+REM   %1  Nome da API a testar: graphql | dataexport | raster
 REM   %2  Entidade (opcional):
-REM       GraphQL -> coletas | fretes | faturas_graphql
+REM       GraphQL -> coletas | fretes | faturas_graphql | usuarios_sistema
 REM       DataExport -> manifestos | cotacoes | localizacao_cargas | contas_a_pagar | faturas_por_cliente | inventario | sinistros
+REM       Raster -> raster_viagens ^(tambem valida raster_viagem_paradas^)
 REM   %3  Flag opcional: --sem-faturas-graphql (somente para GraphQL sem entidade especifica)
 REM
 REM Se nenhum parametro for informado, exibe menu interativo.
@@ -85,8 +86,9 @@ echo.
 echo Escolha a API:
 echo   1. GraphQL
 echo   2. DataExport ^(inclui inventario e sinistros^)
+echo   3. Raster ^(raster_viagens + raster_viagem_paradas^)
 echo.
-set /p "OPCAO_API=Digite sua opcao (1 ou 2): "
+set /p "OPCAO_API=Digite sua opcao (1, 2 ou 3): "
 
 if "%OPCAO_API%"=="1" (
     set "API=graphql"
@@ -94,6 +96,10 @@ if "%OPCAO_API%"=="1" (
 )
 if "%OPCAO_API%"=="2" (
     set "API=dataexport"
+    goto :CHOOSE_ENTITY
+)
+if "%OPCAO_API%"=="3" (
+    set "API=raster"
     goto :CHOOSE_ENTITY
 )
 
@@ -187,15 +193,33 @@ if /i "%API%"=="dataexport" (
     goto :RUN
 )
 
+if /i "%API%"=="raster" (
+    echo Entidades disponiveis:
+    echo   1. Raster Viagens ^(tambem grava/valida raster_viagem_paradas^)
+    echo.
+    set /p "OPCAO_ENTIDADE=Digite sua opcao ^(1^): "
+
+    if "!OPCAO_ENTIDADE!"=="1" set "ENTIDADE=raster_viagens"
+
+    if "!ENTIDADE!"=="" (
+        echo.
+        echo ERRO: Opcao invalida!
+        timeout /t 2 /nobreak >nul 2>&1
+        goto :CHOOSE_SPECIFIC_ENTITY
+    )
+    goto :RUN
+)
+
 goto :RUN
 
 :VALIDATE_ARGS
 REM Valida API e entidade usando ramos sem parenteses
 if /i "%API%"=="graphql" goto :CHECK_GRAPHQL
 if /i "%API%"=="dataexport" goto :CHECK_DATAEXPORT
+if /i "%API%"=="raster" goto :CHECK_RASTER
 echo ERRO: API '%API%' nao reconhecida!
 echo.
-echo APIs suportadas: graphql, dataexport
+echo APIs suportadas: graphql, dataexport, raster
 echo.
 pause
 exit /b 1
@@ -237,6 +261,20 @@ echo.
 pause
 exit /b 1
 
+:CHECK_RASTER
+if "%ENTIDADE%"=="" goto :RUN
+if /i "%ENTIDADE%"=="raster" goto :RUN
+if /i "%ENTIDADE%"=="raster_viagens" goto :RUN
+if /i "%ENTIDADE%"=="viagens_raster" goto :RUN
+if /i "%ENTIDADE%"=="raster_viagem_paradas" goto :RUN
+if /i "%ENTIDADE%"=="paradas_raster" goto :RUN
+echo ERRO: Entidade '%ENTIDADE%' invalida para API Raster!
+echo.
+echo Entidades suportadas: raster, raster_viagens, viagens_raster, raster_viagem_paradas, paradas_raster
+echo.
+pause
+exit /b 1
+
 :RUN
 cls
 echo ================================================================
@@ -244,6 +282,9 @@ echo TESTANDO API: %API%
 if not "%ENTIDADE%"=="" echo ENTIDADE: %ENTIDADE%
 if /i "%API%"=="dataexport" (
     echo COBERTURA DATAEXPORT: manifestos, cotacoes, localizacao_cargas, contas_a_pagar, faturas_por_cliente, inventario, sinistros
+)
+if /i "%API%"=="raster" (
+    echo COBERTURA RASTER: raster_viagens e raster_viagem_paradas
 )
 if /i "%API%"=="graphql" if "%ENTIDADE%"=="" (
     if defined FLAG_FATURAS_GRAPHQL (
@@ -318,6 +359,7 @@ echo ================================================================
 echo TESTE CONCLUIDO COM SUCESSO!
 echo ================================================================
 if /i "%API%"=="dataexport" echo Verifique no log a trilha executada, incluindo inventario/sinistros quando selecionados.
+if /i "%API%"=="raster" echo Verifique no log as entidades raster_viagens e raster_viagem_paradas.
 goto :END
 
 :FAIL

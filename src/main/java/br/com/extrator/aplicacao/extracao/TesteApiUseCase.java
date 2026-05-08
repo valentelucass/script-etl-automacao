@@ -346,6 +346,7 @@ public class TesteApiUseCase {
 
         if ("raster".equals(tipo)) {
             entidades.add(ConstantesEntidades.RASTER_VIAGENS);
+            entidades.add(ConstantesEntidades.RASTER_VIAGEM_PARADAS);
         }
 
         return new ArrayList<>(entidades);
@@ -384,7 +385,8 @@ public class TesteApiUseCase {
     private String normalizarEntidadeRaster(final String entidade) {
         final String valor = entidade == null ? "" : entidade.trim().toLowerCase();
         return switch (valor) {
-            case "raster", "viagens_raster", "all", "todas" -> ConstantesEntidades.RASTER_VIAGENS;
+            case "raster", "viagens_raster", "raster_viagem_paradas", "paradas_raster", "all", "todas" ->
+                ConstantesEntidades.RASTER_VIAGENS;
             default -> valor;
         };
     }

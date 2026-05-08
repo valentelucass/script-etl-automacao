@@ -226,7 +226,7 @@ LEFT JOIN dbo.localizacao_cargas AS lc
 OUTER APPLY (
     SELECT
         COALESCE(CAST(f.data_previsao_entrega AS DATE), CAST(lc.predicted_delivery_at AS DATE)) AS previsao_entrega_oficial,
-        f.fit_dpn_performance_finished_at AS finalizacao_performance_oficial,
+        COALESCE(f.fit_dpn_performance_finished_at, f.finished_at) AS finalizacao_performance_oficial,
         COALESCE(NULLIF(LTRIM(RTRIM(lc.destination_branch_nickname)), ''), f.filial_nome) AS filial_responsavel_destino
 ) AS indicador_base
 OUTER APPLY (

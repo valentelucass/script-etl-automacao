@@ -22,6 +22,7 @@ WITH base AS (
         v.cod_rota,
         v.rota_descricao,
         v.link_timeline,
+        v.data_extracao AS viagem_data_extracao,
         p.ordem,
         p.tipo,
         p.cod_ibge_cidade AS parada_cod_ibge_cidade,
@@ -29,7 +30,8 @@ WITH base AS (
         p.data_hora_prev_chegada,
         p.data_hora_real_chegada,
         p.data_hora_real_saida,
-        p.chegou_na_entrega
+        p.chegou_na_entrega,
+        p.data_extracao AS parada_data_extracao
     FROM dbo.raster_viagens v
     LEFT JOIN dbo.raster_viagem_paradas p
         ON p.cod_solicitacao = v.cod_solicitacao
@@ -94,6 +96,52 @@ transit AS (
             END
         ) AS transit_time_min
     FROM resolvido r
+),
+apresentacao AS (
+    SELECT
+        t.*,
+        CONCAT(t.origem_sm, ' x ', t.destino_sm) AS origem_destino,
+        CASE
+            WHEN CHARINDEX('/', t.origem_sm) > 0 THEN LTRIM(RTRIM(LEFT(t.origem_sm, CHARINDEX('/', t.origem_sm) - 1)))
+            WHEN CHARINDEX('-', t.origem_sm) > 0 THEN LTRIM(RTRIM(LEFT(t.origem_sm, CHARINDEX('-', t.origem_sm) - 1)))
+            ELSE t.origem_sm
+        END AS origem_nome,
+        CASE
+            WHEN t.ordem IS NULL THEN NULL
+            ELSE CONCAT(t.ordem, N'º')
+        END AS ordem_parada_label,
+        CASE
+            WHEN CHARINDEX('/', t.destino_sm) > 0 THEN LTRIM(RTRIM(LEFT(t.destino_sm, CHARINDEX('/', t.destino_sm) - 1)))
+            WHEN CHARINDEX('-', t.destino_sm) > 0 THEN LTRIM(RTRIM(LEFT(t.destino_sm, CHARINDEX('-', t.destino_sm) - 1)))
+            ELSE t.destino_sm
+        END AS destino_nome,
+        CASE
+            WHEN t.data_hora_prev_ini IS NULL THEN NULL
+            ELSE CONVERT(CHAR(5), CAST(t.data_hora_prev_ini AS TIME), 108)
+        END AS horario_corte_texto,
+        CASE
+            WHEN COALESCE(t.data_hora_prev_chegada, t.data_hora_prev_fim) IS NULL THEN NULL
+            ELSE CONVERT(CHAR(5), CAST(COALESCE(t.data_hora_prev_chegada, t.data_hora_prev_fim) AS TIME), 108)
+        END AS previsao_chegada_destino,
+        CASE
+            WHEN t.transit_time_min IS NULL THEN NULL
+            ELSE CONCAT(
+                CASE
+                    WHEN t.transit_time_min / 60 < 100
+                        THEN RIGHT('00' + CONVERT(VARCHAR(2), t.transit_time_min / 60), 2)
+                    ELSE CONVERT(VARCHAR(10), t.transit_time_min / 60)
+                END,
+                ':',
+                RIGHT('00' + CONVERT(VARCHAR(2), t.transit_time_min % 60), 2)
+            )
+        END AS transit_time_texto,
+        CASE
+            WHEN t.parada_data_extracao IS NULL THEN t.viagem_data_extracao
+            WHEN t.viagem_data_extracao IS NULL THEN t.parada_data_extracao
+            WHEN t.parada_data_extracao > t.viagem_data_extracao THEN t.parada_data_extracao
+            ELSE t.viagem_data_extracao
+        END AS data_extracao_raster
+    FROM transit t
 )
 SELECT
     cod_solicitacao,
@@ -101,41 +149,22 @@ SELECT
     status_viagem,
     origem_sm AS [ORIGEM - SM],
     destino_sm AS [DESTINO - SM],
-    CONCAT(origem_sm, ' x ', destino_sm) AS [Origem x Destino],
-    CASE
-        WHEN CHARINDEX('/', origem_sm) > 0 THEN LTRIM(RTRIM(LEFT(origem_sm, CHARINDEX('/', origem_sm) - 1)))
-        WHEN CHARINDEX('-', origem_sm) > 0 THEN LTRIM(RTRIM(LEFT(origem_sm, CHARINDEX('-', origem_sm) - 1)))
-        ELSE origem_sm
-    END AS [ORIGEM],
-    CASE
-        WHEN ordem IS NULL THEN NULL
-        ELSE CONCAT(ordem, N'º')
-    END AS [ORDEM],
-    CASE
-        WHEN CHARINDEX('/', destino_sm) > 0 THEN LTRIM(RTRIM(LEFT(destino_sm, CHARINDEX('/', destino_sm) - 1)))
-        WHEN CHARINDEX('-', destino_sm) > 0 THEN LTRIM(RTRIM(LEFT(destino_sm, CHARINDEX('-', destino_sm) - 1)))
-        ELSE destino_sm
-    END AS [DESTINO],
-    CASE
-        WHEN data_hora_prev_ini IS NULL THEN NULL
-        ELSE CONVERT(CHAR(5), CAST(data_hora_prev_ini AS TIME), 108)
-    END AS [HORÁRIO CORTE],
-    CASE
-        WHEN COALESCE(data_hora_prev_chegada, data_hora_prev_fim) IS NULL THEN NULL
-        ELSE CONVERT(CHAR(5), CAST(COALESCE(data_hora_prev_chegada, data_hora_prev_fim) AS TIME), 108)
-    END AS [PREV. CHEGADA (destino)],
-    CASE
-        WHEN transit_time_min IS NULL THEN NULL
-        ELSE CONCAT(
-            CASE
-                WHEN transit_time_min / 60 < 100
-                    THEN RIGHT('00' + CONVERT(VARCHAR(2), transit_time_min / 60), 2)
-                ELSE CONVERT(VARCHAR(10), transit_time_min / 60)
-            END,
-            ':',
-            RIGHT('00' + CONVERT(VARCHAR(2), transit_time_min % 60), 2)
-        )
-    END AS [TRANSIT TIME],
+    origem_destino AS [Origem x Destino],
+    origem_nome AS [ORIGEM],
+    ordem_parada_label AS [ORDEM],
+    destino_nome AS [DESTINO],
+    horario_corte_texto AS [HORÁRIO CORTE],
+    previsao_chegada_destino AS [PREV. CHEGADA (destino)],
+    transit_time_texto AS [TRANSIT TIME],
+    origem_sm,
+    destino_sm,
+    origem_destino,
+    origem_nome,
+    ordem_parada_label,
+    destino_nome,
+    horario_corte_texto,
+    previsao_chegada_destino,
+    transit_time_texto,
     ordem AS ordem_parada,
     tipo AS tipo_parada,
     data_hora_prev_ini AS data_hora_prev_ini_raster,
@@ -149,8 +178,10 @@ SELECT
     percentual_atraso_raster,
     cod_rota,
     rota_descricao,
-    link_timeline
-FROM transit;
+    link_timeline,
+    data_extracao_raster AS [Data de extracao],
+    data_extracao_raster
+FROM apresentacao;
 GO
 
 PRINT 'View vw_raster_sm_transit_time criada/atualizada com sucesso!';

@@ -114,6 +114,44 @@ class PlanejadorEscopoExtracaoIntervaloTest {
         assertEquals(List.of("raster:raster_viagens"), steps);
     }
 
+    @Test
+    void deveIncluirRasterNoEscopoCompletoQuandoHabilitado() {
+        AplicacaoContexto.registrarRasterHabilitadoParaExecucao(true);
+        final PlanejadorEscopoExtracaoIntervalo planejador = new PlanejadorEscopoExtracaoIntervalo();
+
+        final List<String> steps = planejador.criarSteps(null, null, false)
+            .stream()
+            .map(PipelineStep::obterNomeEtapa)
+            .toList();
+
+        assertEquals(
+            List.of(
+                "graphql:usuarios_sistema",
+                "graphql:coletas",
+                "graphql:fretes",
+                "dataexport:manifestos",
+                "dataexport:cotacoes",
+                "dataexport:localizacao_cargas",
+                "dataexport:contas_a_pagar",
+                "dataexport:faturas_por_cliente",
+                "dataexport:inventario",
+                "dataexport:sinistros",
+                "raster:raster_viagens"
+            ),
+            steps
+        );
+    }
+
+    @Test
+    void deveValidarLogsDasDuasTabelasRasterNoEscopoRaster() {
+        final PlanejadorEscopoExtracaoIntervalo planejador = new PlanejadorEscopoExtracaoIntervalo();
+
+        assertEquals(
+            java.util.Set.of("raster_viagens", "raster_viagem_paradas"),
+            planejador.determinarEntidadesObrigatoriasParaVolume("raster", null, false)
+        );
+    }
+
     private Object lerCampoContexto(final String nomeCampo) throws Exception {
         final Field campo = AplicacaoContexto.class.getDeclaredField(nomeCampo);
         campo.setAccessible(true);

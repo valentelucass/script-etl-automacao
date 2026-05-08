@@ -60,3 +60,9 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_fpc_chave_cte' AND object_id = OBJECT_ID('dbo.faturas_por_cliente'))
     CREATE INDEX IX_fpc_chave_cte ON dbo.faturas_por_cliente(chave_cte);
 GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_fpc_cliente_cnpj' AND object_id = OBJECT_ID('dbo.faturas_por_cliente'))
+    CREATE INDEX IX_fpc_cliente_cnpj
+        ON dbo.faturas_por_cliente(cliente_cnpj)
+        WHERE cliente_cnpj IS NOT NULL;
+GO

@@ -52,7 +52,8 @@ final class PlanejadorEscopoExtracaoIntervalo {
         final List<String> entidadesParaValidar = new ArrayList<>();
 
         if (entidadeEspecifica != null && !entidadeEspecifica.isEmpty()) {
-            entidadesParaValidar.add(entidadeEspecifica);
+            final String entidadeNormalizada = normalizarEntidade(entidadeEspecifica);
+            entidadesParaValidar.add(entidadeNormalizada == null ? entidadeEspecifica : entidadeNormalizada);
             return entidadesParaValidar;
         }
 
@@ -88,6 +89,9 @@ final class PlanejadorEscopoExtracaoIntervalo {
         entidadesParaValidar.add(ConstantesEntidades.SINISTROS);
         if (incluirFaturasGraphQL) {
             entidadesParaValidar.add(ConstantesEntidades.FATURAS_GRAPHQL);
+        }
+        if (AplicacaoContexto.rasterHabilitadoParaExecucao()) {
+            entidadesParaValidar.add(ConstantesEntidades.RASTER_VIAGENS);
         }
 
         return entidadesParaValidar;
@@ -150,7 +154,7 @@ final class PlanejadorEscopoExtracaoIntervalo {
         if (entidadeEspecifica != null && !entidadeEspecifica.isBlank()) {
             final String entidadeNormalizada = normalizarEntidade(entidadeEspecifica);
             if (entidadeNormalizada != null) {
-                entidades.add(entidadeNormalizada);
+                adicionarEntidadesObrigatoriasParaVolume(entidades, entidadeNormalizada);
             }
             return entidades;
         }
@@ -176,8 +180,8 @@ final class PlanejadorEscopoExtracaoIntervalo {
             entidades.add(ConstantesEntidades.SINISTROS);
         }
 
-        if (apiRaster) {
-            entidades.add(ConstantesEntidades.RASTER_VIAGENS);
+        if (apiRaster || (apiTodas && AplicacaoContexto.rasterHabilitadoParaExecucao())) {
+            adicionarEntidadesObrigatoriasParaVolume(entidades, ConstantesEntidades.RASTER_VIAGENS);
         }
 
         return entidades;
@@ -292,11 +296,21 @@ final class PlanejadorEscopoExtracaoIntervalo {
         }
         if (ConstantesEntidades.RASTER.equals(valor)
             || ConstantesEntidades.RASTER_VIAGENS.equals(valor)
+            || ConstantesEntidades.RASTER_VIAGEM_PARADAS.equals(valor)
+            || "paradas_raster".equals(valor)
             || "viagens_raster".equals(valor)) {
             return ConstantesEntidades.RASTER_VIAGENS;
         }
 
         return valor;
+    }
+
+    private void adicionarEntidadesObrigatoriasParaVolume(final Set<String> entidades,
+                                                          final String entidadeNormalizada) {
+        entidades.add(entidadeNormalizada);
+        if (ConstantesEntidades.RASTER_VIAGENS.equals(entidadeNormalizada)) {
+            entidades.add(ConstantesEntidades.RASTER_VIAGEM_PARADAS);
+        }
     }
 
     private void adicionarStepsGraphQLGranulares(final List<PipelineStep> steps,

@@ -43,6 +43,7 @@ echo.
 echo Cobertura do loop:
 echo   GraphQL   = coletas, fretes, faturas_graphql, usuarios_sistema
 echo   DataExport = manifestos, cotacoes, localizacao_cargas, contas_a_pagar, faturas_por_cliente, inventario, sinistros
+echo   Raster    = raster_viagens e raster_viagem_paradas ^(quando RASTER_ENABLED/credenciais habilitarem^)
 echo.
 
 pushd "%REPO_ROOT%"
@@ -142,11 +143,11 @@ if errorlevel 1 goto :MENU
 
 if /i "%FLAG_FATURAS_GRAPHQL%"=="--sem-faturas-graphql" (
   echo Iniciando loop daemon com Faturas GraphQL DESABILITADO...
-  echo As trilhas DataExport de inventario e sinistros permanecem ativas no loop.
+  echo As trilhas DataExport de inventario/sinistros e Raster habilitada permanecem ativas no loop.
   java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --loop-daemon-start --sem-faturas-graphql
 ) else (
   echo Iniciando loop daemon com Faturas GraphQL INCLUIDO...
-  echo As trilhas DataExport de inventario e sinistros permanecem ativas no loop.
+  echo As trilhas DataExport de inventario/sinistros e Raster habilitada permanecem ativas no loop.
   java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --loop-daemon-start
 )
 echo.
@@ -201,7 +202,7 @@ if not exist "%LOOP_LOG%" (
 echo.
 echo Acompanhando logs em tempo real...
 echo Arquivo: %LOOP_LOG%
-echo Referencias esperadas: dataexport:inventario e dataexport:sinistros entre os steps do ciclo.
+echo Referencias esperadas: dataexport:inventario, dataexport:sinistros, raster:raster_viagens e raster_viagem_paradas quando habilitada.
 echo Pressione CTRL+C para encerrar a visualizacao e voltar ao menu.
 echo.
 powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-Content -Path '%LOOP_LOG%' -Encoding UTF8 -Tail 60 -Wait"

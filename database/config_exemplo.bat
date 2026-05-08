@@ -22,7 +22,7 @@ REM O sqlcmd usara automaticamente -E (Windows Integrated Auth).
 REM ============================================================
 set DB_SERVER=SEU_SERVIDOR_SQL
 set DB_PORT=
-set DB_NAME=esl_cloud
+set DB_NAME=ETL_SISTEMA
 set DB_USER=
 set DB_PASSWORD=
 set SQLCMD_EXTRA_ARGS=
@@ -34,7 +34,7 @@ REM NAO use "sa". Crie um usuario com permissoes minimas necessarias.
 REM ============================================================
 REM set DB_SERVER=SEU_SERVIDOR_SQL
 REM set DB_PORT=1433
-REM set DB_NAME=esl_cloud
+REM set DB_NAME=ETL_SISTEMA
 REM set DB_USER=extrator_user
 REM set DB_PASSWORD=SuaSenhaSegura
 REM set SQLCMD_EXTRA_ARGS=-C

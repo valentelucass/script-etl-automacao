@@ -58,10 +58,10 @@ echo            suporte: lucasmac.dev@gmail.com
 echo            by: @valentelucass
 echo ================================================================
 echo.
-echo 01. Extracao completa operacional ^(D-1..D + replay/validacao^)
-echo 02. Loop de extracao 30 minutos ^(inclui inventario e sinistros^)
-echo 03. Extracao por intervalo ^(inclui inventario e sinistros^)
-echo 04. Testar API especifica ^(inventario e sinistros disponiveis^)
+echo 01. Extracao completa operacional ^(D-1..D + replay/validacao + Raster se habilitada^)
+echo 02. Loop de extracao 30 minutos ^(inclui inventario, sinistros e Raster se habilitada^)
+echo 03. Extracao por intervalo ^(inclui inventario, sinistros e Raster se habilitada^)
+echo 04. Testar API especifica ^(GraphQL, DataExport ou Raster^)
 echo 05. Validar configuracoes
 echo 06. Bateria extrema e relatorio de saude do ETL
 echo 07. Exportar CSV
@@ -74,6 +74,7 @@ echo.
 echo Cobertura atual do ETL:
 echo   GraphQL   = coletas, fretes, faturas_graphql, usuarios_sistema
 echo   DataExport = manifestos, cotacoes, localizacao_cargas, contas_a_pagar, faturas_por_cliente, inventario, sinistros
+echo   Raster    = raster_viagens e raster_viagem_paradas ^(quando RASTER_ENABLED/credenciais habilitarem^)
 echo.
 if not "%BASICS_READY%"=="1" (
     echo Ambiente sera validado ao executar a primeira opcao.
@@ -120,6 +121,7 @@ if "%~2"=="" (
     echo ERRO: Data de inicio nao informada para o modo automatico.
     echo Uso: 00-PRODUCAO_START.bat --auto-intervalo YYYY-MM-DD YYYY-MM-DD [api] [entidade] [--sem-faturas-graphql^|--com-faturas-graphql] [--modo-rapido-24h]
     echo Exemplo DataExport: 00-PRODUCAO_START.bat --auto-intervalo 2026-04-01 2026-04-02 dataexport inventario
+    echo Exemplo Raster:     00-PRODUCAO_START.bat --auto-intervalo 2026-04-01 2026-04-02 raster
     set "AUTO_EXIT=1"
     goto :END_WITH_CODE
 )
@@ -128,6 +130,7 @@ if "%~3"=="" (
     echo ERRO: Data de fim nao informada para o modo automatico.
     echo Uso: 00-PRODUCAO_START.bat --auto-intervalo YYYY-MM-DD YYYY-MM-DD [api] [entidade] [--sem-faturas-graphql^|--com-faturas-graphql] [--modo-rapido-24h]
     echo Exemplo DataExport: 00-PRODUCAO_START.bat --auto-intervalo 2026-04-01 2026-04-02 dataexport sinistros
+    echo Exemplo Raster:     00-PRODUCAO_START.bat --auto-intervalo 2026-04-01 2026-04-02 raster
     set "AUTO_EXIT=1"
     goto :END_WITH_CODE
 )
@@ -151,6 +154,7 @@ if "%~2"=="" (
     echo ERRO: Data de inicio nao informada para o modo automatico.
     echo Uso: 00-PRODUCAO_START.bat --auto-intervalo YYYY-MM-DD YYYY-MM-DD [api] [entidade] [--sem-faturas-graphql^|--com-faturas-graphql] [--modo-rapido-24h]
     echo Exemplo DataExport: 00-PRODUCAO_START.bat --auto-intervalo 2026-04-01 2026-04-02 dataexport inventario
+    echo Exemplo Raster:     00-PRODUCAO_START.bat --auto-intervalo 2026-04-01 2026-04-02 raster
     set "AUTO_EXIT=1"
     goto :END_WITH_CODE
 )
@@ -159,6 +163,7 @@ if "%~3"=="" (
     echo ERRO: Data de fim nao informada para o modo automatico.
     echo Uso: 00-PRODUCAO_START.bat --auto-intervalo YYYY-MM-DD YYYY-MM-DD [api] [entidade] [--sem-faturas-graphql^|--com-faturas-graphql] [--modo-rapido-24h]
     echo Exemplo DataExport: 00-PRODUCAO_START.bat --auto-intervalo 2026-04-01 2026-04-02 dataexport sinistros
+    echo Exemplo Raster:     00-PRODUCAO_START.bat --auto-intervalo 2026-04-01 2026-04-02 raster
     set "AUTO_EXIT=1"
     goto :END_WITH_CODE
 )
@@ -278,6 +283,7 @@ echo.
 echo Executando extracao rapida D-1..D: !RAPIDA_DATA_INICIO! a !RAPIDA_DATA_FIM!
 echo Faturas GraphQL: DESABILITADO
 echo Replay/pre-backfill referencial: DESABILITADO
+echo Raster: INCLUIDA se habilitada por configuracao/credenciais
 call :EXPORT_AUTH_SESSION
 set "PREV_SKIP_AUTH_CHECK=%EXTRATOR_SKIP_AUTH_CHECK%"
 set "PREV_NONINTERACTIVE=%EXTRATOR_NONINTERACTIVE%"
@@ -526,7 +532,7 @@ if exist "%REPO_ROOT%\database\executar_database.bat" (
         timeout /t 3 /nobreak >nul 2>&1
     ) else (
         call :WRITE_DATABASE_MARKER
-        echo [OK] Ambiente de banco preparado, incluindo inventario/sinistros e views do BI.
+        echo [OK] Ambiente de banco preparado, incluindo inventario/sinistros, Raster e views do BI.
         echo [INFO] Referencia: logs\aplicacao\operacoes\database_startup.log
     )
 )

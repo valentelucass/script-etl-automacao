@@ -1,6 +1,18 @@
 PRINT 'Migration 009: criar tabela sys_reconciliation_quarantine';
 GO
 
+IF OBJECT_ID(N'dbo.schema_migrations', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.schema_migrations (
+        migration_id NVARCHAR(255) NOT NULL,
+        applied_at DATETIME2(0) NOT NULL CONSTRAINT DF_schema_migrations_applied_at DEFAULT SYSUTCDATETIME(),
+        checksum_sha256 VARCHAR(64) NULL,
+        notes NVARCHAR(500) NULL,
+        CONSTRAINT PK_schema_migrations PRIMARY KEY (migration_id)
+    );
+END;
+GO
+
 IF OBJECT_ID(N'dbo.sys_reconciliation_quarantine', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.sys_reconciliation_quarantine (
@@ -28,6 +40,16 @@ ELSE
 BEGIN
     PRINT 'Tabela sys_reconciliation_quarantine ja existe. Nada a fazer.';
 END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.schema_migrations WHERE migration_id = N'009_criar_tabela_sys_reconciliation_quarantine')
+BEGIN
+    INSERT INTO dbo.schema_migrations (migration_id, notes)
+    VALUES (
+        N'009_criar_tabela_sys_reconciliation_quarantine',
+        N'Cria tabela de quarentena de reconciliacao e indice operacional.'
+    );
+END;
 GO
 
 IF NOT EXISTS (
