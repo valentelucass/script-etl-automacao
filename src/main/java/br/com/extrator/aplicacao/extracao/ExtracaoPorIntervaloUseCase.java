@@ -44,6 +44,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import br.com.extrator.aplicacao.contexto.AplicacaoContexto;
+import br.com.extrator.aplicacao.portas.ExtractionLogQueryPort;
 import br.com.extrator.aplicacao.portas.IntegridadeEtlPort;
 import br.com.extrator.aplicacao.pipeline.PipelineOrchestrator;
 import br.com.extrator.aplicacao.pipeline.PipelineReport;
@@ -57,6 +58,7 @@ import br.com.extrator.suporte.console.LoggerConsole;
 import br.com.extrator.suporte.formatacao.FormatadorData;
 import br.com.extrator.suporte.configuracao.ScopedSystemPropertyOverride;
 import br.com.extrator.suporte.observabilidade.ExecutionContext;
+import br.com.extrator.suporte.validacao.ConstantesEntidades;
 
 public class ExtracaoPorIntervaloUseCase {
     private static final String EXECUTION_LOCK_RESOURCE = "etl-global-execution";
@@ -212,6 +214,7 @@ public class ExtracaoPorIntervaloUseCase {
         boolean abortadoPorFalhasCriticasColetas = false;
         String motivoAbortoColetas = null;
         final List<String> blocosFalhadosLista = new ArrayList<>();
+        final List<ResumoEntidadeBloco> resumosEntidades = new ArrayList<>();
 
         for (int i = 0; i < blocos.size(); i++) {
             final BlocoPeriodo bloco = blocos.get(i);
@@ -271,6 +274,19 @@ public class ExtracaoPorIntervaloUseCase {
             );
 
             final LocalDateTime fimExecucaoBloco = LocalDateTime.now();
+            final Map<String, Optional<LogExtracaoInfo>> logsBloco = buscarLogsBloco(
+                inicioExecucaoBloco,
+                fimExecucaoBloco,
+                apiEspecifica,
+                entidadeEspecifica,
+                incluirFaturasGraphQL
+            );
+            resumosEntidades.addAll(montarResumoBloco(
+                bloco,
+                numeroBloco,
+                totalBlocos,
+                logsBloco
+            ));
             final List<String> falhasDeVolume = validarResultadosCriticosDoBloco(
                 bloco,
                 inicioExecucaoBloco,
@@ -278,7 +294,8 @@ public class ExtracaoPorIntervaloUseCase {
                 apiEspecifica,
                 entidadeEspecifica,
                 incluirFaturasGraphQL,
-                modoLoopDaemon
+                modoLoopDaemon,
+                logsBloco
             );
             if (!falhasDeVolume.isEmpty()) {
                 blocoComFalha = true;
@@ -347,6 +364,7 @@ public class ExtracaoPorIntervaloUseCase {
         if (blocosFalhados > 0) {
             log.warn("Blocos falhados: {} - {}", blocosFalhados, String.join(", ", blocosFalhadosLista));
         }
+        imprimirResumoDetalhado(resumosEntidades);
         log.console("Duracao total: {} minutos", duracaoMinutos);
         log.console("=".repeat(60));
 
@@ -531,6 +549,272 @@ public class ExtracaoPorIntervaloUseCase {
         return valor != null && valor.toLowerCase(Locale.ROOT).contains("coletas");
     }
 
+    private Map<String, Optional<LogExtracaoInfo>> buscarLogsBloco(
+        final LocalDateTime inicioExecucaoBloco,
+        final LocalDateTime fimExecucaoBloco,
+        final String apiEspecifica,
+        final String entidadeEspecifica,
+        final boolean incluirFaturasGraphQL
+    ) {
+        final Map<String, Optional<LogExtracaoInfo>> logsBloco = new LinkedHashMap<>();
+        final Set<String> entidadesResumo = planejadorEscopo.determinarEntidadesParaResumo(
+            apiEspecifica,
+            entidadeEspecifica,
+            incluirFaturasGraphQL
+        );
+        if (entidadesResumo.isEmpty()) {
+            return logsBloco;
+        }
+
+        final ExtractionLogQueryPort logQueryPort = AplicacaoContexto.extractionLogQueryPort();
+        for (final String entidade : entidadesResumo) {
+            logsBloco.put(
+                entidade,
+                logQueryPort.buscarUltimoLogPorEntidadeNoIntervaloExecucao(
+                    entidade,
+                    inicioExecucaoBloco,
+                    fimExecucaoBloco
+                )
+            );
+        }
+        return logsBloco;
+    }
+
+    private List<ResumoEntidadeBloco> montarResumoBloco(
+        final BlocoPeriodo bloco,
+        final int numeroBloco,
+        final int totalBlocos,
+        final Map<String, Optional<LogExtracaoInfo>> logsBloco
+    ) {
+        final List<ResumoEntidadeBloco> resumos = new ArrayList<>();
+        for (final Map.Entry<String, Optional<LogExtracaoInfo>> entry : logsBloco.entrySet()) {
+            resumos.add(criarResumoEntidade(
+                bloco,
+                numeroBloco,
+                totalBlocos,
+                entry.getKey(),
+                entry.getValue()
+            ));
+        }
+        return resumos;
+    }
+
+    private ResumoEntidadeBloco criarResumoEntidade(
+        final BlocoPeriodo bloco,
+        final int numeroBloco,
+        final int totalBlocos,
+        final String entidade,
+        final Optional<LogExtracaoInfo> logOpt
+    ) {
+        if (logOpt == null || logOpt.isEmpty()) {
+            return new ResumoEntidadeBloco(
+                numeroBloco,
+                totalBlocos,
+                bloco.dataInicio,
+                bloco.dataFim,
+                entidade,
+                "SEM_LOG",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "SEM_LOG",
+                "nao gravou log_extracoes nesta janela"
+            );
+        }
+
+        final LogExtracaoInfo logEntidade = logOpt.get();
+        final String mensagem = logEntidade.getMensagem();
+        final boolean resumoParadas = ConstantesEntidades.RASTER_VIAGEM_PARADAS.equals(entidade);
+        final Integer apiCount = resumoParadas
+            ? primeiroNaoNulo(extrairNumeroAposRotulo(mensagem, "API/paradas mapeadas"), logEntidade.getRegistrosExtraidos())
+            : primeiroNaoNulo(extrairMetricaKeyValue(mensagem, "api_count"), logEntidade.getRegistrosExtraidos());
+        final Integer uniqueCount = resumoParadas
+            ? apiCount
+            : extrairMetricaKeyValue(mensagem, "unique_count");
+        final Integer dbUpserts = resumoParadas
+            ? extrairNumeroAposRotulo(mensagem, "DB/paradas operacoes")
+            : extrairMetricaKeyValue(mensagem, "db_upserts");
+        final Integer dbPersisted = resumoParadas
+            ? extrairNumeroAposRotulo(mensagem, "Persistidos")
+            : extrairMetricaKeyValue(mensagem, "db_persisted");
+        final Integer noopCount = resumoParadas
+            ? extrairNumeroAposRotulo(mensagem, "No-op")
+            : extrairMetricaKeyValue(mensagem, "noop_count");
+        final Integer invalidCount = extrairMetricaKeyValue(mensagem, "invalid_count");
+        final String reasonCode = primeiroNaoNulo(
+            extrairTextoKeyValue(mensagem, "reason_code"),
+            apiCount != null && apiCount == 0 ? "SEM_DADOS_PERIODO" : "OK"
+        );
+        final String status = logEntidade.getStatusFinal() == null
+            ? "DESCONHECIDO"
+            : logEntidade.getStatusFinal().name();
+
+        return new ResumoEntidadeBloco(
+            numeroBloco,
+            totalBlocos,
+            bloco.dataInicio,
+            bloco.dataFim,
+            entidade,
+            status,
+            apiCount,
+            uniqueCount,
+            dbUpserts,
+            dbPersisted,
+            noopCount,
+            invalidCount,
+            logEntidade.getPaginasProcessadas(),
+            reasonCode,
+            observacaoResumo(status, apiCount, dbUpserts, dbPersisted, noopCount, invalidCount, reasonCode)
+        );
+    }
+
+    private void imprimirResumoDetalhado(final List<ResumoEntidadeBloco> resumosEntidades) {
+        if (resumosEntidades == null || resumosEntidades.isEmpty()) {
+            log.console("Detalhe por tabela/bloco: nenhum log de entidade encontrado nesta execucao.");
+            return;
+        }
+
+        log.console("");
+        log.console("DETALHE POR TABELA/BLOCO (API x DB)");
+        log.console("Legenda: API=retorno da fonte; unicos=apos deduplicacao; DB ops=INSERT/UPDATE/no-op; persistidos=linhas alteradas.");
+
+        int blocoAtual = -1;
+        for (final ResumoEntidadeBloco resumo : resumosEntidades) {
+            if (resumo.numeroBloco != blocoAtual) {
+                blocoAtual = resumo.numeroBloco;
+                log.console(
+                    "Bloco {}/{}: {} a {}",
+                    resumo.numeroBloco,
+                    resumo.totalBlocos,
+                    FormatadorData.formatBR(resumo.dataInicio),
+                    FormatadorData.formatBR(resumo.dataFim)
+                );
+            }
+            log.console(resumo.formatarLinha());
+        }
+    }
+
+    private String observacaoResumo(final String status,
+                                    final Integer apiCount,
+                                    final Integer dbUpserts,
+                                    final Integer dbPersisted,
+                                    final Integer noopCount,
+                                    final Integer invalidCount,
+                                    final String reasonCode) {
+        if ("SEM_LOG".equals(status)) {
+            return "sem log gravado";
+        }
+        if (!LogExtracaoInfo.StatusExtracao.COMPLETO.name().equals(status)) {
+            return "verificar status/motivo";
+        }
+        if (valorOuZero(apiCount) == 0 && valorOuZero(dbUpserts) == 0) {
+            return "sem dados retornados no periodo";
+        }
+        if (valorOuZero(apiCount) > 0 && valorOuZero(dbPersisted) == 0 && valorOuZero(noopCount) > 0) {
+            return "somente no-op idempotente";
+        }
+        if (valorOuZero(apiCount) > 0 && valorOuZero(dbUpserts) == 0) {
+            return "API retornou dados, mas DB nao registrou operacoes";
+        }
+        if (valorOuZero(invalidCount) > 0) {
+            return "concluido com invalidos descartados";
+        }
+        if (reasonCode != null && !"OK".equalsIgnoreCase(reasonCode) && !"SEM_DADOS_PERIODO".equalsIgnoreCase(reasonCode)) {
+            return "conferir motivo";
+        }
+        return "ok";
+    }
+
+    private Integer extrairMetricaKeyValue(final String mensagem, final String chave) {
+        if (mensagem == null || chave == null) {
+            return null;
+        }
+        final String marcador = chave + "=";
+        final int inicioMarcador = mensagem.indexOf(marcador);
+        if (inicioMarcador < 0) {
+            return null;
+        }
+        return lerInteiroEm(mensagem, inicioMarcador + marcador.length());
+    }
+
+    private String extrairTextoKeyValue(final String mensagem, final String chave) {
+        if (mensagem == null || chave == null) {
+            return null;
+        }
+        final String marcador = chave + "=";
+        final int inicioMarcador = mensagem.indexOf(marcador);
+        if (inicioMarcador < 0) {
+            return null;
+        }
+        int pos = inicioMarcador + marcador.length();
+        final StringBuilder valor = new StringBuilder();
+        while (pos < mensagem.length()) {
+            final char caractere = mensagem.charAt(pos);
+            if (Character.isWhitespace(caractere) || caractere == '|') {
+                break;
+            }
+            valor.append(caractere);
+            pos++;
+        }
+        return valor.length() == 0 ? null : valor.toString();
+    }
+
+    private Integer extrairNumeroAposRotulo(final String mensagem, final String rotulo) {
+        if (mensagem == null || rotulo == null) {
+            return null;
+        }
+        final int inicioRotulo = mensagem.indexOf(rotulo);
+        if (inicioRotulo < 0) {
+            return null;
+        }
+        int pos = inicioRotulo + rotulo.length();
+        while (pos < mensagem.length() && (mensagem.charAt(pos) == ':' || Character.isWhitespace(mensagem.charAt(pos)))) {
+            pos++;
+        }
+        return lerInteiroEm(mensagem, pos);
+    }
+
+    private Integer lerInteiroEm(final String texto, final int inicio) {
+        if (texto == null || inicio < 0 || inicio >= texto.length()) {
+            return null;
+        }
+        int pos = inicio;
+        final StringBuilder digitos = new StringBuilder();
+        while (pos < texto.length()) {
+            final char caractere = texto.charAt(pos);
+            if (Character.isDigit(caractere)) {
+                digitos.append(caractere);
+            } else if (caractere != ',' && caractere != '.') {
+                break;
+            }
+            pos++;
+        }
+        if (digitos.length() == 0) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(digitos.toString());
+        } catch (final NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private int valorOuZero(final Integer valor) {
+        return valor == null ? 0 : valor;
+    }
+
+    private Integer primeiroNaoNulo(final Integer primeiro, final Integer segundo) {
+        return primeiro != null ? primeiro : segundo;
+    }
+
+    private String primeiroNaoNulo(final String primeiro, final String segundo) {
+        return primeiro != null && !primeiro.isBlank() ? primeiro : segundo;
+    }
+
     private List<String> validarResultadosCriticosDoBloco(
         final BlocoPeriodo bloco,
         final LocalDateTime inicioExecucaoBloco,
@@ -538,7 +822,8 @@ public class ExtracaoPorIntervaloUseCase {
         final String apiEspecifica,
         final String entidadeEspecifica,
         final boolean incluirFaturasGraphQL,
-        final boolean modoLoopDaemon
+        final boolean modoLoopDaemon,
+        final Map<String, Optional<LogExtracaoInfo>> logsBloco
     ) {
         final List<String> falhas = new ArrayList<>();
         final Set<String> entidadesObrigatorias = planejadorEscopo.determinarEntidadesObrigatoriasParaVolume(
@@ -551,14 +836,15 @@ public class ExtracaoPorIntervaloUseCase {
             return falhas;
         }
 
-        final br.com.extrator.aplicacao.portas.ExtractionLogQueryPort logQueryPort =
-            AplicacaoContexto.extractionLogQueryPort();
+        final ExtractionLogQueryPort logQueryPort = AplicacaoContexto.extractionLogQueryPort();
         for (final String entidade : entidadesObrigatorias) {
-            final Optional<LogExtracaoInfo> logOpt = logQueryPort.buscarUltimoLogPorEntidadeNoIntervaloExecucao(
-                entidade,
-                inicioExecucaoBloco,
-                fimExecucaoBloco
-            );
+            final Optional<LogExtracaoInfo> logOpt = logsBloco != null && logsBloco.containsKey(entidade)
+                ? logsBloco.get(entidade)
+                : logQueryPort.buscarUltimoLogPorEntidadeNoIntervaloExecucao(
+                    entidade,
+                    inicioExecucaoBloco,
+                    fimExecucaoBloco
+                );
 
             if (logOpt.isEmpty()) {
                 falhas.add(String.format(
@@ -722,6 +1008,82 @@ public class ExtracaoPorIntervaloUseCase {
                 e.getMessage()
             );
             log.debug("Detalhes da falha na pos-hidratacao referencial de coletas (intervalo):", e);
+        }
+    }
+
+    private static final class ResumoEntidadeBloco {
+        private final int numeroBloco;
+        private final int totalBlocos;
+        private final LocalDate dataInicio;
+        private final LocalDate dataFim;
+        private final String entidade;
+        private final String status;
+        private final Integer apiCount;
+        private final Integer uniqueCount;
+        private final Integer dbUpserts;
+        private final Integer dbPersisted;
+        private final Integer noopCount;
+        private final Integer invalidCount;
+        private final Integer paginasProcessadas;
+        private final String reasonCode;
+        private final String observacao;
+
+        private ResumoEntidadeBloco(final int numeroBloco,
+                                    final int totalBlocos,
+                                    final LocalDate dataInicio,
+                                    final LocalDate dataFim,
+                                    final String entidade,
+                                    final String status,
+                                    final Integer apiCount,
+                                    final Integer uniqueCount,
+                                    final Integer dbUpserts,
+                                    final Integer dbPersisted,
+                                    final Integer noopCount,
+                                    final Integer invalidCount,
+                                    final Integer paginasProcessadas,
+                                    final String reasonCode,
+                                    final String observacao) {
+            this.numeroBloco = numeroBloco;
+            this.totalBlocos = totalBlocos;
+            this.dataInicio = dataInicio;
+            this.dataFim = dataFim;
+            this.entidade = entidade;
+            this.status = status;
+            this.apiCount = apiCount;
+            this.uniqueCount = uniqueCount;
+            this.dbUpserts = dbUpserts;
+            this.dbPersisted = dbPersisted;
+            this.noopCount = noopCount;
+            this.invalidCount = invalidCount;
+            this.paginasProcessadas = paginasProcessadas;
+            this.reasonCode = reasonCode;
+            this.observacao = observacao;
+        }
+
+        private String formatarLinha() {
+            return String.format(
+                Locale.ROOT,
+                "  %-28s status=%-18s api=%8s unicos=%8s db_ops=%8s persistidos=%8s noop=%8s invalidos=%6s pags=%4s motivo=%-22s %s",
+                entidade,
+                texto(status),
+                numero(apiCount),
+                numero(uniqueCount),
+                numero(dbUpserts),
+                numero(dbPersisted),
+                numero(noopCount),
+                numero(invalidCount),
+                numero(paginasProcessadas),
+                texto(reasonCode),
+                texto(observacao)
+            );
+        }
+
+        private static String numero(final Integer valor) {
+            return valor == null ? "-" : String.format(Locale.ROOT, "%,d", valor);
+        }
+
+        private static String texto(final String valor) {
+            return valor == null || valor.isBlank() ? "-" : valor;
         }
     }
 

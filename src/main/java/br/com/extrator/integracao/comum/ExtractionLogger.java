@@ -238,6 +238,14 @@ public class ExtractionLogger {
                     formatarNumero(registrosInvalidos),
                     String.format("%.2f", percentualInvalidos));
             }
+            if (totalRecebido == 0) {
+                log.warn(
+                    "[AVISO] {} retornou 0 registros da API no periodo {}. O status permanece {} porque janela sem dados pode ser esperada; confira o resumo final API x DB.",
+                    entityName,
+                    formatarPeriodo(dataInicio, dataFim),
+                    statusFinal
+                );
+            }
             log.info("   - ETL_DIAG status_code={} | reason_code={} | api_count={} | unique_count={} | db_upserts={} | db_persisted={} | noop_count={} | invalid_count={} | pages={}",
                 statusFinal,
                 motivoStatus,

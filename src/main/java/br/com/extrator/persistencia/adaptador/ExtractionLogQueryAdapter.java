@@ -59,7 +59,9 @@ public class ExtractionLogQueryAdapter implements ExtractionLogQueryPort {
         return new LogExtracaoInfo(
             mapStatus(entity.getStatusFinal()),
             entity.getTimestampFim(),
-            entity.getRegistrosExtraidos()
+            entity.getRegistrosExtraidos(),
+            entity.getPaginasProcessadas(),
+            entity.getMensagem()
         );
     }
 

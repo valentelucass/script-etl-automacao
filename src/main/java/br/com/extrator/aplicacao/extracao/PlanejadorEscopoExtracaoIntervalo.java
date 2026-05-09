@@ -187,6 +187,52 @@ final class PlanejadorEscopoExtracaoIntervalo {
         return entidades;
     }
 
+    Set<String> determinarEntidadesParaResumo(
+        final String apiEspecifica,
+        final String entidadeEspecifica,
+        final boolean incluirFaturasGraphQL
+    ) {
+        final Set<String> entidades = new LinkedHashSet<>();
+
+        if (entidadeEspecifica != null && !entidadeEspecifica.isBlank()) {
+            final String entidadeNormalizada = normalizarEntidade(entidadeEspecifica);
+            if (entidadeNormalizada != null) {
+                adicionarEntidadeResumo(entidades, entidadeNormalizada);
+            }
+            return entidades;
+        }
+
+        final boolean apiTodas = apiEspecifica == null || apiEspecifica.isBlank();
+        final boolean apiGraphQL = "graphql".equalsIgnoreCase(apiEspecifica);
+        final boolean apiDataExport = "dataexport".equalsIgnoreCase(apiEspecifica);
+        final boolean apiRaster = ConstantesEntidades.RASTER.equalsIgnoreCase(apiEspecifica);
+
+        if (apiTodas || apiGraphQL) {
+            entidades.add(ConstantesEntidades.USUARIOS_SISTEMA);
+            entidades.add(ConstantesEntidades.COLETAS);
+            entidades.add(ConstantesEntidades.FRETES);
+            if (incluirFaturasGraphQL) {
+                entidades.add(ConstantesEntidades.FATURAS_GRAPHQL);
+            }
+        }
+
+        if (apiTodas || apiDataExport) {
+            entidades.add(ConstantesEntidades.MANIFESTOS);
+            entidades.add(ConstantesEntidades.COTACOES);
+            entidades.add(ConstantesEntidades.LOCALIZACAO_CARGAS);
+            entidades.add(ConstantesEntidades.CONTAS_A_PAGAR);
+            entidades.add(ConstantesEntidades.FATURAS_POR_CLIENTE);
+            entidades.add(ConstantesEntidades.INVENTARIO);
+            entidades.add(ConstantesEntidades.SINISTROS);
+        }
+
+        if (apiRaster || (apiTodas && AplicacaoContexto.rasterHabilitadoParaExecucao())) {
+            adicionarEntidadeResumo(entidades, ConstantesEntidades.RASTER_VIAGENS);
+        }
+
+        return entidades;
+    }
+
     Set<String> determinarEntidadesEsperadasParaIntegridade(
         final String apiEspecifica,
         final String entidadeEspecifica,
@@ -307,6 +353,14 @@ final class PlanejadorEscopoExtracaoIntervalo {
 
     private void adicionarEntidadesObrigatoriasParaVolume(final Set<String> entidades,
                                                           final String entidadeNormalizada) {
+        entidades.add(entidadeNormalizada);
+        if (ConstantesEntidades.RASTER_VIAGENS.equals(entidadeNormalizada)) {
+            entidades.add(ConstantesEntidades.RASTER_VIAGEM_PARADAS);
+        }
+    }
+
+    private void adicionarEntidadeResumo(final Set<String> entidades,
+                                         final String entidadeNormalizada) {
         entidades.add(entidadeNormalizada);
         if (ConstantesEntidades.RASTER_VIAGENS.equals(entidadeNormalizada)) {
             entidades.add(ConstantesEntidades.RASTER_VIAGEM_PARADAS);

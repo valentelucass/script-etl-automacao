@@ -47,15 +47,29 @@ public final class LogExtracaoInfo {
     private final StatusExtracao statusFinal;
     private final LocalDateTime timestampFim;
     private final Integer registrosExtraidos;
+    private final Integer paginasProcessadas;
+    private final String mensagem;
 
     public LogExtracaoInfo(
         final StatusExtracao statusFinal,
         final LocalDateTime timestampFim,
         final Integer registrosExtraidos
     ) {
+        this(statusFinal, timestampFim, registrosExtraidos, null, null);
+    }
+
+    public LogExtracaoInfo(
+        final StatusExtracao statusFinal,
+        final LocalDateTime timestampFim,
+        final Integer registrosExtraidos,
+        final Integer paginasProcessadas,
+        final String mensagem
+    ) {
         this.statusFinal = statusFinal;
         this.timestampFim = timestampFim;
         this.registrosExtraidos = registrosExtraidos;
+        this.paginasProcessadas = paginasProcessadas;
+        this.mensagem = mensagem;
     }
 
     public StatusExtracao getStatusFinal() {
@@ -68,5 +82,13 @@ public final class LogExtracaoInfo {
 
     public Integer getRegistrosExtraidos() {
         return registrosExtraidos;
+    }
+
+    public Integer getPaginasProcessadas() {
+        return paginasProcessadas;
+    }
+
+    public String getMensagem() {
+        return mensagem;
     }
 }

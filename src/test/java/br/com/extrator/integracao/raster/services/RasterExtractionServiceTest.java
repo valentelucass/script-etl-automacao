@@ -44,6 +44,26 @@ class RasterExtractionServiceTest {
         assertEquals(3, logRepository.logs.get(1).getRegistrosExtraidos());
     }
 
+    @Test
+    void deveRegistrarRasterVazioComoCompletoComZeroRegistros() {
+        final EmptyRasterViagemExtractor extractor = new EmptyRasterViagemExtractor();
+        final RecordingLogExtracaoRepository logRepository = new RecordingLogExtracaoRepository();
+        final RasterExtractionService service = new RasterExtractionService(
+            extractor,
+            logRepository,
+            new NoOpExecutionAuditPort(),
+            new ExtractionLogger(RasterExtractionService.class)
+        );
+
+        service.executar(LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 1));
+
+        assertEquals(2, logRepository.logs.size());
+        assertEquals(LogExtracaoEntity.StatusExtracao.COMPLETO, logRepository.logs.get(0).getStatusFinal());
+        assertEquals(LogExtracaoEntity.StatusExtracao.COMPLETO, logRepository.logs.get(1).getStatusFinal());
+        assertEquals(0, logRepository.logs.get(0).getRegistrosExtraidos());
+        assertEquals(0, logRepository.logs.get(1).getRegistrosExtraidos());
+    }
+
     private static final class RecordingRasterViagemExtractor extends RasterViagemExtractor {
         @Override
         public ResultadoExtracao<RasterViagemDTO> extract(final LocalDate dataInicio, final LocalDate dataFim) {
@@ -73,6 +93,13 @@ class RasterExtractionServiceTest {
         @Override
         public int getUltimasParadasNoOpIdempotente() {
             return 1;
+        }
+    }
+
+    private static final class EmptyRasterViagemExtractor extends RasterViagemExtractor {
+        @Override
+        public ResultadoExtracao<RasterViagemDTO> extract(final LocalDate dataInicio, final LocalDate dataFim) {
+            return ResultadoExtracao.completo(List.of(), 1, 0);
         }
     }
 
