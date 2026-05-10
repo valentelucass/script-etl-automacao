@@ -79,6 +79,7 @@ class AuditoriaConfiabilidadeCodeInspectionTest {
         assertTrue(normalizado.contains("etl.failure.graphql\", \"ABORT_PIPELINE"));
         assertTrue(normalizado.contains("etl.failure.dataexport\", \"ABORT_PIPELINE"));
         assertTrue(normalizado.contains("etl.failure.faturas_graphql\", \"ABORT_PIPELINE"));
+        assertTrue(normalizado.contains("etl.failure.raster\", \"DEGRADE"));
     }
 
     @Test
@@ -91,6 +92,7 @@ class AuditoriaConfiabilidadeCodeInspectionTest {
         assertTrue(normalizado.contains("etl.failure.graphql=ABORT_PIPELINE"));
         assertTrue(normalizado.contains("etl.failure.dataexport=ABORT_PIPELINE"));
         assertTrue(normalizado.contains("etl.failure.faturas_graphql=ABORT_PIPELINE"));
+        assertTrue(normalizado.contains("etl.failure.raster=DEGRADE"));
         assertTrue(normalizado.contains("etl.failure.default=ABORT_PIPELINE"));
     }
 

@@ -93,6 +93,29 @@ public final class ConfigRaster {
         return Duration.ofSeconds(segundos);
     }
 
+    public static Duration obterTimeoutStep() {
+        final long segundos = ConfigValueParser.parseLong(
+            ConfigSource.obterConfiguracao("RASTER_STEP_TIMEOUT_SECONDS", "raster.step_timeout.seconds"),
+            900L,
+            value -> value > 0L,
+            logger,
+            "raster.step_timeout.seconds",
+            "900 segundos"
+        );
+        return Duration.ofSeconds(segundos);
+    }
+
+    public static int obterMaxDiasPorJanela() {
+        return ConfigValueParser.parseInt(
+            ConfigSource.obterConfiguracao("RASTER_MAX_DIAS_JANELA", "raster.max_dias_janela"),
+            1,
+            value -> value > 0,
+            logger,
+            "raster.max_dias_janela",
+            "1"
+        );
+    }
+
     public static int obterLookbackDays() {
         return ConfigValueParser.parseInt(
             ConfigSource.obterConfiguracao("RASTER_LOOKBACK_DAYS", "raster.lookback.days"),

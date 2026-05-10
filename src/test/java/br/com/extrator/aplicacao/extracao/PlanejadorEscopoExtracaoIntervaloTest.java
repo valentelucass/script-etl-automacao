@@ -115,6 +115,46 @@ class PlanejadorEscopoExtracaoIntervaloTest {
     }
 
     @Test
+    void deveCriarStepRasterSemExigirGatewaysGraphqlOuDataExport() throws Exception {
+        escreverCampoContexto("graphQLGateway", null);
+        escreverCampoContexto("dataExportGateway", null);
+        final PlanejadorEscopoExtracaoIntervalo planejador = new PlanejadorEscopoExtracaoIntervalo();
+
+        final List<String> steps = planejador.criarSteps("raster", null, false)
+            .stream()
+            .map(PipelineStep::obterNomeEtapa)
+            .toList();
+
+        assertEquals(List.of("raster:raster_viagens"), steps);
+    }
+
+    @Test
+    void deveCriarStepDataExportSemExigirGatewayGraphql() throws Exception {
+        escreverCampoContexto("graphQLGateway", null);
+        final PlanejadorEscopoExtracaoIntervalo planejador = new PlanejadorEscopoExtracaoIntervalo();
+
+        final List<String> steps = planejador.criarSteps("dataexport", "sinistros", false)
+            .stream()
+            .map(PipelineStep::obterNomeEtapa)
+            .toList();
+
+        assertEquals(List.of("dataexport:sinistros"), steps);
+    }
+
+    @Test
+    void deveCriarStepGraphqlSemExigirGatewayDataExport() throws Exception {
+        escreverCampoContexto("dataExportGateway", null);
+        final PlanejadorEscopoExtracaoIntervalo planejador = new PlanejadorEscopoExtracaoIntervalo();
+
+        final List<String> steps = planejador.criarSteps("graphql", "coletas", false)
+            .stream()
+            .map(PipelineStep::obterNomeEtapa)
+            .toList();
+
+        assertEquals(List.of("graphql:coletas"), steps);
+    }
+
+    @Test
     void deveIncluirRasterNoEscopoCompletoQuandoHabilitado() {
         AplicacaoContexto.registrarRasterHabilitadoParaExecucao(true);
         final PlanejadorEscopoExtracaoIntervalo planejador = new PlanejadorEscopoExtracaoIntervalo();

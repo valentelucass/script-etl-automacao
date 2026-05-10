@@ -33,6 +33,6 @@ public final class RasterPipelineStep implements PipelineStep {
 
     @Override
     public Duration obterTimeoutExecucao() {
-        return ConfigRaster.obterTimeout();
+        return ConfigRaster.obterTimeoutStep();
     }
 }

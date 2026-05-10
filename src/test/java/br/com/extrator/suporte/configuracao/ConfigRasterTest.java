@@ -14,6 +14,8 @@ class ConfigRasterTest {
         "RASTER_SENHA",
         "RASTER_PASSWORD",
         "RASTER_TIMEOUT_SECONDS",
+        "RASTER_STEP_TIMEOUT_SECONDS",
+        "RASTER_MAX_DIAS_JANELA",
         "RASTER_LOOKBACK_DAYS"
     };
 
@@ -52,9 +54,13 @@ class ConfigRasterTest {
     @Test
     void deveAplicarDefaultsNumericos() {
         System.setProperty("RASTER_TIMEOUT_SECONDS", "0");
+        System.setProperty("RASTER_STEP_TIMEOUT_SECONDS", "0");
+        System.setProperty("RASTER_MAX_DIAS_JANELA", "0");
         System.setProperty("RASTER_LOOKBACK_DAYS", "-1");
 
         assertEquals(120, ConfigRaster.obterTimeout().toSeconds());
+        assertEquals(900, ConfigRaster.obterTimeoutStep().toSeconds());
+        assertEquals(1, ConfigRaster.obterMaxDiasPorJanela());
         assertEquals(1, ConfigRaster.obterLookbackDays());
     }
 }

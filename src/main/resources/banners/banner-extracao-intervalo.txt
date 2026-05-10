@@ -1,0 +1,10 @@
+============================================================
+               EXTRATOR ESL CLOUD - PRODUCAO
+============================================================
+
+EXTRACAO POR INTERVALO DE DATAS
+
+O escopo selecionado sera exibido abaixo.
+Use API/entidade especifica para rodar somente o necessario.
+
+============================================================

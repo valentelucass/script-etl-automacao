@@ -104,10 +104,10 @@ final class PlanejadorEscopoExtracaoIntervalo {
     ) {
         final String entidadeNormalizada = normalizarEntidade(entidadeEspecifica);
         final List<PipelineStep> steps = new ArrayList<>();
-        final GraphQLGateway graphQLGateway = AplicacaoContexto.graphQLGateway();
-        final DataExportGateway dataExportGateway = AplicacaoContexto.dataExportGateway();
 
         if (apiEspecifica == null || apiEspecifica.isBlank()) {
+            final GraphQLGateway graphQLGateway = AplicacaoContexto.graphQLGateway();
+            final DataExportGateway dataExportGateway = AplicacaoContexto.dataExportGateway();
             adicionarStepsGraphQLGranulares(steps, graphQLGateway, incluirFaturasGraphQL);
             adicionarStepsDataExportGranulares(steps, dataExportGateway);
             if (AplicacaoContexto.rasterHabilitadoParaExecucao()) {
@@ -117,6 +117,7 @@ final class PlanejadorEscopoExtracaoIntervalo {
         }
 
         if ("graphql".equalsIgnoreCase(apiEspecifica)) {
+            final GraphQLGateway graphQLGateway = AplicacaoContexto.graphQLGateway();
             if (entidadeNormalizada == null) {
                 adicionarStepsGraphQLGranulares(steps, graphQLGateway, incluirFaturasGraphQL);
                 return steps;
@@ -126,6 +127,7 @@ final class PlanejadorEscopoExtracaoIntervalo {
         }
 
         if ("dataexport".equalsIgnoreCase(apiEspecifica)) {
+            final DataExportGateway dataExportGateway = AplicacaoContexto.dataExportGateway();
             if (entidadeNormalizada == null) {
                 adicionarStepsDataExportGranulares(steps, dataExportGateway);
                 return steps;

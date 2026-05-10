@@ -261,6 +261,28 @@ class ExtracaoPorIntervaloUseCaseTest {
         assertTrue(erro.getMessage().contains("falhas criticas consecutivas de coletas"));
     }
 
+    @Test
+    void deveClassificarResumoErroApiComTimeoutComoTimeout() {
+        final String reason = ExtracaoPorIntervaloUseCase.resolverReasonCodeResumo(
+            "ERRO_API",
+            0,
+            "Erro: Thread interrompida durante requisicao"
+        );
+
+        assertEquals("TIMEOUT", reason);
+    }
+
+    @Test
+    void deveInformarFaturasGraphqlComoNaoAplicavelParaRasterEDataExport() {
+        assertEquals("NAO SE APLICA", ExtracaoPorIntervaloUseCase.descreverFaturasGraphQL("raster", true));
+        assertEquals("NAO SE APLICA", ExtracaoPorIntervaloUseCase.descreverFaturasGraphQL("dataexport", true));
+        assertEquals("INCLUIDO", ExtracaoPorIntervaloUseCase.descreverFaturasGraphQL("graphql", true));
+        assertEquals(
+            "DESABILITADO (flag --sem-faturas-graphql)",
+            ExtracaoPorIntervaloUseCase.descreverFaturasGraphQL(null, false)
+        );
+    }
+
     private ExtracaoPorIntervaloUseCase criarUseCase(
         final GraphQLGateway graphQLGateway,
         final ExtractionLogQueryPort extractionLogQueryPort,

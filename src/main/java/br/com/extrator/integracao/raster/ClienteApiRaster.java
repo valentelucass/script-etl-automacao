@@ -8,6 +8,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -15,6 +16,8 @@ import java.util.Map;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import br.com.extrator.dominio.raster.RasterParadaDTO;
 import br.com.extrator.dominio.raster.RasterViagemDTO;
@@ -25,7 +28,11 @@ import br.com.extrator.suporte.log.SensitiveDataSanitizer;
 import br.com.extrator.suporte.mapeamento.MapperUtil;
 
 public class ClienteApiRaster {
+    private static final Logger logger = LoggerFactory.getLogger(ClienteApiRaster.class);
     private static final int LIMITE_ALERTA_REGISTROS = 500;
+    private static final String MOTIVO_LOTE_RASTER_500_REGISTROS = "LOTE_RASTER_500_REGISTROS";
+    private static final String MOTIVO_RESULTADO_RASTER_NULO = "RESULTADO_RASTER_NULO";
+    private static final String MOTIVO_INCOMPLETO_RASTER = "INCOMPLETO_RASTER";
     private static final DateTimeFormatter FORMATO_DATA = DateTimeFormatter.ISO_LOCAL_DATE;
     private static final String METODO_EVENTO_FIM_VIAGEM = "%22getEventoFimViagem%22";
 
@@ -48,6 +55,61 @@ public class ClienteApiRaster {
 
     public ResultadoExtracao<RasterViagemDTO> buscarEventoFimViagem(final LocalDate dataInicio,
                                                                     final LocalDate dataFim) {
+        final LocalDate inicioResolvido = resolverData(dataInicio);
+        final LocalDate fimResolvido = resolverData(dataFim);
+        final int maxDiasPorJanela = ConfigRaster.obterMaxDiasPorJanela();
+        return buscarEventoFimViagemParticionado(inicioResolvido, fimResolvido, maxDiasPorJanela);
+    }
+
+    private ResultadoExtracao<RasterViagemDTO> buscarEventoFimViagemParticionado(final LocalDate dataInicio,
+                                                                                 final LocalDate dataFim,
+                                                                                 final int maxDiasPorJanela) {
+        if (deveParticionarPorTamanho(dataInicio, dataFim, maxDiasPorJanela)) {
+            logger.info(
+                "Particionando consulta Raster antes da chamada HTTP: {} a {} excede {} dia(s)",
+                dataInicio,
+                dataFim,
+                maxDiasPorJanela
+            );
+            return consultarPartes(dataInicio, dataFim, maxDiasPorJanela);
+        }
+
+        final ResultadoExtracao<RasterViagemDTO> resultado = buscarEventoFimViagemUmaJanela(dataInicio, dataFim);
+        if (!deveParticionar(resultado, dataInicio, dataFim)) {
+            return resultado;
+        }
+
+        logger.warn(
+            "Particionando consulta Raster apos lote limite de {} registros: {} a {}",
+            LIMITE_ALERTA_REGISTROS,
+            dataInicio,
+            dataFim
+        );
+        return consultarPartes(dataInicio, dataFim, maxDiasPorJanela);
+    }
+
+    private ResultadoExtracao<RasterViagemDTO> consultarPartes(final LocalDate dataInicio,
+                                                               final LocalDate dataFim,
+                                                               final int maxDiasPorJanela) {
+        final LocalDate meio = dataInicio.plusDays(ChronoUnit.DAYS.between(dataInicio, dataFim) / 2);
+        final ResultadoExtracao<RasterViagemDTO> primeiraMetade =
+            buscarEventoFimViagemParticionado(dataInicio, meio, maxDiasPorJanela);
+        final ResultadoExtracao<RasterViagemDTO> segundaMetade =
+            buscarEventoFimViagemParticionado(meio.plusDays(1), dataFim, maxDiasPorJanela);
+        return combinarResultados(primeiraMetade, segundaMetade);
+    }
+
+    private boolean deveParticionarPorTamanho(final LocalDate dataInicio,
+                                              final LocalDate dataFim,
+                                              final int maxDiasPorJanela) {
+        return dataInicio != null
+            && dataFim != null
+            && dataInicio.isBefore(dataFim)
+            && ChronoUnit.DAYS.between(dataInicio, dataFim) + 1L > maxDiasPorJanela;
+    }
+
+    ResultadoExtracao<RasterViagemDTO> buscarEventoFimViagemUmaJanela(final LocalDate dataInicio,
+                                                                      final LocalDate dataFim) {
         try {
             final String body = montarPayload(dataInicio, dataFim);
             final HttpRequest request = HttpRequest.newBuilder(URI.create(montarUrlEventoFimViagem()))
@@ -65,6 +127,59 @@ public class ClienteApiRaster {
             final String mensagem = SensitiveDataSanitizer.sanitize(e.getMessage());
             throw new IllegalStateException(mensagem, e);
         }
+    }
+
+    private boolean deveParticionar(final ResultadoExtracao<RasterViagemDTO> resultado,
+                                    final LocalDate dataInicio,
+                                    final LocalDate dataFim) {
+        return resultado != null
+            && !resultado.isCompleto()
+            && MOTIVO_LOTE_RASTER_500_REGISTROS.equals(resultado.getMotivoInterrupcao())
+            && dataInicio != null
+            && dataFim != null
+            && dataInicio.isBefore(dataFim);
+    }
+
+    private ResultadoExtracao<RasterViagemDTO> combinarResultados(
+        final ResultadoExtracao<RasterViagemDTO> primeiraMetade,
+        final ResultadoExtracao<RasterViagemDTO> segundaMetade
+    ) {
+        final List<RasterViagemDTO> viagens = new ArrayList<>();
+        int paginasProcessadas = 0;
+        int registrosExtraidos = 0;
+        String motivoIncompletude = null;
+
+        final List<ResultadoExtracao<RasterViagemDTO>> resultados = new ArrayList<>();
+        resultados.add(primeiraMetade);
+        resultados.add(segundaMetade);
+        for (final ResultadoExtracao<RasterViagemDTO> resultado : resultados) {
+            if (resultado == null) {
+                motivoIncompletude = primeiroMotivo(motivoIncompletude, MOTIVO_RESULTADO_RASTER_NULO);
+                continue;
+            }
+            viagens.addAll(resultado.getDados());
+            paginasProcessadas += resultado.getPaginasProcessadas();
+            registrosExtraidos += resultado.getRegistrosExtraidos();
+            if (!resultado.isCompleto()) {
+                motivoIncompletude = primeiroMotivo(
+                    motivoIncompletude,
+                    motivoOuPadrao(resultado.getMotivoInterrupcao())
+                );
+            }
+        }
+
+        if (motivoIncompletude == null) {
+            return ResultadoExtracao.completo(viagens, paginasProcessadas, registrosExtraidos);
+        }
+        return ResultadoExtracao.incompleto(viagens, motivoIncompletude, paginasProcessadas, registrosExtraidos);
+    }
+
+    private String primeiroMotivo(final String motivoAtual, final String novoMotivo) {
+        return motivoAtual != null && !motivoAtual.isBlank() ? motivoAtual : novoMotivo;
+    }
+
+    private String motivoOuPadrao(final String motivo) {
+        return motivo != null && !motivo.isBlank() ? motivo : MOTIVO_INCOMPLETO_RASTER;
     }
 
     ResultadoExtracao<RasterViagemDTO> parseResponse(final String responseBody) {
@@ -87,7 +202,7 @@ public class ClienteApiRaster {
             if (viagens.size() >= LIMITE_ALERTA_REGISTROS) {
                 return ResultadoExtracao.incompleto(
                     viagens,
-                    "LOTE_RASTER_500_REGISTROS",
+                    MOTIVO_LOTE_RASTER_500_REGISTROS,
                     1,
                     viagens.size()
                 );
@@ -96,6 +211,10 @@ public class ClienteApiRaster {
         } catch (final IOException e) {
             throw new IllegalStateException("Resposta Raster invalida: " + e.getMessage(), e);
         }
+    }
+
+    private LocalDate resolverData(final LocalDate data) {
+        return data != null ? data : LocalDate.now();
     }
 
     private String montarPayload(final LocalDate dataInicio, final LocalDate dataFim) throws IOException {
@@ -117,8 +236,7 @@ public class ClienteApiRaster {
     }
 
     private String formatarData(final LocalDate data) {
-        final LocalDate resolvida = data != null ? data : LocalDate.now();
-        return resolvida.format(FORMATO_DATA);
+        return resolverData(data).format(FORMATO_DATA);
     }
 
     private void extrairViagensDeResult(final JsonNode node, final List<RasterViagemDTO> viagens) throws IOException {

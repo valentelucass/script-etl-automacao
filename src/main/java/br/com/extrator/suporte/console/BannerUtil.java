@@ -63,6 +63,13 @@ public class BannerUtil {
     }
 
     /**
+     * Exibe o banner da extracao por intervalo.
+     */
+    public static void exibirBannerExtracaoPorIntervalo() {
+        exibirBanner("banners/banner-extracao-intervalo.txt");
+    }
+
+    /**
      * Exibe o banner da API REST
      */
     public static void exibirBannerApiRest() {

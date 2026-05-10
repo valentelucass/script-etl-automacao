@@ -138,7 +138,7 @@ public class ExtracaoPorIntervaloUseCase {
         final boolean incluirFaturasGraphQL = request.incluirFaturasGraphQL();
         final boolean modoLoopDaemon = request.modoLoopDaemon();
 
-        BannerUtil.exibirBannerExtracaoCompleta();
+        BannerUtil.exibirBannerExtracaoPorIntervalo();
 
         log.console("\n" + "=".repeat(60));
         log.console("EXTRACAO POR INTERVALO DE DATAS");
@@ -158,7 +158,7 @@ public class ExtracaoPorIntervaloUseCase {
         }
         log.console(
             "Faturas GraphQL: {}",
-            incluirFaturasGraphQL ? "INCLUIDO" : "DESABILITADO (flag --sem-faturas-graphql)"
+            descreverFaturasGraphQL(apiEspecifica, incluirFaturasGraphQL)
         );
         if (modoRapido24h) {
             log.console("Modo rapido 24h: ATIVO (sem pre-backfill e sem pos-hidratacao referencial de coletas)");
@@ -645,13 +645,13 @@ public class ExtracaoPorIntervaloUseCase {
             ? extrairNumeroAposRotulo(mensagem, "No-op")
             : extrairMetricaKeyValue(mensagem, "noop_count");
         final Integer invalidCount = extrairMetricaKeyValue(mensagem, "invalid_count");
-        final String reasonCode = primeiroNaoNulo(
-            extrairTextoKeyValue(mensagem, "reason_code"),
-            apiCount != null && apiCount == 0 ? "SEM_DADOS_PERIODO" : "OK"
-        );
         final String status = logEntidade.getStatusFinal() == null
             ? "DESCONHECIDO"
             : logEntidade.getStatusFinal().name();
+        final String reasonCode = primeiroNaoNulo(
+            extrairTextoKeyValue(mensagem, "reason_code"),
+            resolverReasonCodeResumo(status, apiCount, mensagem)
+        );
 
         return new ResumoEntidadeBloco(
             numeroBloco,
@@ -805,6 +805,31 @@ public class ExtracaoPorIntervaloUseCase {
 
     private int valorOuZero(final Integer valor) {
         return valor == null ? 0 : valor;
+    }
+
+    static String resolverReasonCodeResumo(final String status,
+                                           final Integer apiCount,
+                                           final String mensagem) {
+        if (ConstantesEntidades.STATUS_ERRO_API.equalsIgnoreCase(status)) {
+            final String normalizada = mensagem == null ? "" : mensagem.toLowerCase(Locale.ROOT);
+            if (normalizada.contains("timeout") || normalizada.contains("interrompida")) {
+                return "TIMEOUT";
+            }
+            return ConstantesEntidades.STATUS_ERRO_API;
+        }
+        if (apiCount != null && apiCount == 0) {
+            return "SEM_DADOS_PERIODO";
+        }
+        return "OK";
+    }
+
+    static String descreverFaturasGraphQL(final String apiEspecifica,
+                                          final boolean incluirFaturasGraphQL) {
+        if ("dataexport".equalsIgnoreCase(apiEspecifica)
+            || ConstantesEntidades.RASTER.equalsIgnoreCase(apiEspecifica)) {
+            return "NAO SE APLICA";
+        }
+        return incluirFaturasGraphQL ? "INCLUIDO" : "DESABILITADO (flag --sem-faturas-graphql)";
     }
 
     private Integer primeiroNaoNulo(final Integer primeiro, final Integer segundo) {
