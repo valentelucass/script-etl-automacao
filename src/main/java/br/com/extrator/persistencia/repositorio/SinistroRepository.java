@@ -24,6 +24,31 @@ public class SinistroRepository extends AbstractRepository<SinistroEntity> {
     }
 
     @Override
+    protected int refrescarDataExtracaoQuandoNoOp(final Connection conexao,
+                                                  final SinistroEntity sinistro) throws SQLException {
+        if (sinistro == null
+            || sinistro.getIdentificadorUnico() == null
+            || sinistro.getIdentificadorUnico().isBlank()) {
+            return 0;
+        }
+
+        final String sql = """
+            UPDATE dbo.sinistros
+               SET data_extracao = ?
+             WHERE identificador_unico = ?
+               AND (data_extracao IS NULL OR data_extracao < ?)
+            """;
+
+        try (PreparedStatement statement = conexao.prepareStatement(sql)) {
+            final Instant agora = Instant.now();
+            setInstantParameter(statement, 1, agora);
+            setStringParameter(statement, 2, sinistro.getIdentificadorUnico());
+            setInstantParameter(statement, 3, agora);
+            return statement.executeUpdate();
+        }
+    }
+
+    @Override
     protected int executarMerge(final Connection conexao, final SinistroEntity sinistro) throws SQLException {
         if (sinistro.getIdentificadorUnico() == null || sinistro.getIdentificadorUnico().isBlank()) {
             throw new SQLException("Nao e possivel executar o MERGE para sinistros sem identificador_unico.");

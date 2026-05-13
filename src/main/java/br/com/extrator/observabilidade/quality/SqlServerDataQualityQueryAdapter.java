@@ -247,7 +247,7 @@ public final class SqlServerDataQualityQueryAdapter implements DataQualityQueryP
                         FROM current_run
                         WHERE status_execucao <> 'COMPLETO'
                            OR api_completa = 0
-                           OR db_persistidos < api_total_unico
+                           OR (db_persistidos + noop_count) < api_total_unico
                            OR invalid_count > 0
                     ) THEN CAST(1 AS BIGINT)
                     ELSE CAST(0 AS BIGINT)

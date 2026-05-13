@@ -83,6 +83,17 @@ class RepositoryMergeGuardSourceTest {
     }
 
     @Test
+    void sinistroRepositoryDeveRefrescarDataExtracaoQuandoNoOpForAceito() throws IOException {
+        final String source = Files.readString(Path.of(
+            "src/main/java/br/com/extrator/persistencia/repositorio/SinistroRepository.java"
+        ));
+        assertTrue(source.contains("protected int refrescarDataExtracaoQuandoNoOp("));
+        assertTrue(source.contains("UPDATE dbo.sinistros"));
+        assertTrue(source.contains("WHERE identificador_unico = ?"));
+        assertTrue(source.contains("data_extracao IS NULL OR data_extracao < ?"));
+    }
+
+    @Test
     void abstractRepositoryDeveGerarGreatestTimestampComValuesMaxParaEvitarExplosaoDeExpressao() throws IOException {
         final String source = Files.readString(Path.of(
             "src/main/java/br/com/extrator/persistencia/repositorio/AbstractRepository.java"

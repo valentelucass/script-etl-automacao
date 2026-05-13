@@ -99,6 +99,31 @@ class SqlServerDataQualityQueryAdapterTest {
     }
 
     @Test
+    void deveConsiderarNoopIdempotenteComoRegistroCobertoNaCompletudeDaExecucaoAtual() {
+        final SqlCapture capture = new SqlCapture();
+        final Connection connection = criarConexao(capture, List.of(Map.of("1", 0L)));
+        final SqlServerDataQualityQueryAdapter adapter =
+            new SqlServerDataQualityQueryAdapter(() -> connection);
+
+        MDC.put(ExecutionContext.MDC_EXECUTION_ID, "exec-noop-123");
+        try {
+            final long incompletos = adapter.contarLinhasIncompletas(
+                "sinistros",
+                LocalDate.of(2026, 5, 11),
+                LocalDate.of(2026, 5, 12)
+            );
+
+            assertEquals(0L, incompletos);
+            assertTrue(capture.sql().contains("(db_persistidos + noop_count) < api_total_unico"));
+            assertTrue(capture.sql().contains("invalid_count > 0"));
+            assertEquals("exec-noop-123", capture.parameters().get(1));
+            assertEquals("sinistros", capture.parameters().get(2));
+        } finally {
+            MDC.clear();
+        }
+    }
+
+    @Test
     void deveUsarJanelaPlanejadaDaEntidadeNoFallbackDeLogExterno() {
         final SqlCapture capture = new SqlCapture();
         final Connection connection = criarConexao(capture, List.of(Map.of("1", 0L)));
