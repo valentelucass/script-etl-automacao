@@ -267,6 +267,26 @@ class IndicadoresGestaoViewSqlTest {
     }
 
     @Test
+    void faturamentoFrigelarDeveTerRegraDeAtribuicaoParaCwbNoBaselineEMigration() throws IOException {
+        final String tabelaRegrasSql = lerSql("database/tabelas/033_criar_tabela_regras_atribuicao_filial.sql");
+        final String migrationSql = lerSql("database/migrations/050_garantir_regra_frigelar_cwb.sql");
+        final String procedureSql = lerSql("database/procedures/003_criar_sp_carga_fato_fretes_faturamento.sql");
+        final String validacaoSql = lerSql("database/validacao/034_validar_schema_recriacao.sql");
+
+        for (String sql : new String[] {tabelaRegrasSql, migrationSql}) {
+            assertContem(sql, "N'92660406007040'");
+            assertContem(sql, "N'CWB - RODOGARCIA'");
+            assertContem(sql, "N'cwb - rodogarcia'");
+        }
+        assertContem(migrationSql, "050_garantir_regra_frigelar_cwb");
+        assertContem(procedureSql, "COALESCE(regra.filial_destino_nome, NULLIF(LTRIM(RTRIM(f.filial_nome)), N'')) AS filial_nome");
+        assertContem(procedureSql, "COALESCE(regra.filial_destino_key, f.filial_nome_key");
+        assertContem(validacaoSql, "050_garantir_regra_frigelar_cwb");
+        assertSemMojibake(tabelaRegrasSql, "database/tabelas/033_criar_tabela_regras_atribuicao_filial.sql");
+        assertSemMojibake(migrationSql, "database/migrations/050_garantir_regra_frigelar_cwb.sql");
+    }
+
+    @Test
     void expurgoNoturnoDeveMaterializarFatosSemReexecutarInstaladorDoBanco() throws IOException {
         final String script = lerSql("scripts/windows/10-expurgo-orfaos-noturno.ps1");
 

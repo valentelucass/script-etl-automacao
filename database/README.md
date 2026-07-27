@@ -92,6 +92,7 @@ ORDER BY data_extracao DESC;
 | `dbo.fato_fretes_faturamento` | Fato BI | Carga SQL de `fretes` + status CT-e de `faturas_por_cliente` | 1 linha por frete validado para faturamento | `frete_id` |
 | `dbo.fato_gestao_vista_faturas` | Fato BI | Carga SQL de `faturas_por_cliente` | 1 linha por título/`unique_id` | `unique_id` |
 | `dbo.fato_gestao_vista_manifestos` | Fato BI | Carga SQL de `manifestos` + `coletas` + `fretes` | 1 linha por manifesto | `sequence_code` |
+| `dbo.regras_atribuicao_filial` | Referência | Regras comerciais internas | 1 regra ativa por CNPJ pagador | `pagador_documento_key` ativo |
 | `dbo.inventario` | Negócio | Data Export | 1 linha por ordem/minuta consolidada por chave técnica | `identificador_unico` |
 | `dbo.sinistros` | Negócio | Data Export | 1 linha por sinistro + NF consolidada por chave técnica | `identificador_unico` |
 | `dbo.raster_viagens` | Negócio | Raster `getEventoFimViagem` | 1 linha por viagem/SM | `cod_solicitacao` |

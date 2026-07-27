@@ -125,7 +125,8 @@ INSERT INTO @migrations (migration_id) VALUES
     (N'046_reclassificar_tipo_contrato_manifestos'),
     (N'047_criar_tabela_regras_atribuicao_filial'),
     (N'048_inserir_regra_frigelar_cwb'),
-    (N'049_criar_dim_regiao_logistica_rules');
+    (N'049_criar_dim_regiao_logistica_rules'),
+    (N'050_garantir_regra_frigelar_cwb');
 
 IF OBJECT_ID(N'dbo.schema_migrations', N'U') IS NOT NULL
 BEGIN

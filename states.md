@@ -47,6 +47,7 @@
 - Agregações, totalizações, rankings, contagens e cruzamentos de BI devem ser executados no SQL Server, não em memória Java.
 - Filtros temporais devem ser sargable, sem funções no lado esquerdo de colunas indexadas.
 - Regras pesadas de BI devem ser materializadas durante carga ou em procedures/tabelas fato, não calculadas sob demanda em views de apresentação.
+- A atribuição financeira de faturamento usa `dbo.regras_atribuicao_filial` por CNPJ do pagador antes da materialização de `dbo.fato_fretes_faturamento`; a regra ativa de Frigelar Garuva (`92660406007040`) direciona a receita para `CWB - RODOGARCIA` (`cwb - rodogarcia`), mesmo quando a emissão original pertence a NHB.
 - A resolução de Região Logística de Coletas deve permanecer no ETL: `dbo.vw_coletas_powerbi` cruza `dbo.dim_regiao_logistica_rules` primeiro por CEP limpo de 8 dígitos entre `cep_inicio`/`cep_fim`, depois por correspondência exata de `cidade`/`uf`, e finalmente preserva `Cidade - UF` para não retornar nulo ao Dashboard.
 - O fluxo completo usa lock transacional SQL Server (`sp_getapplock`) para evitar execuções concorrentes.
 - GraphQL usa política de falha `ABORT_PIPELINE`; DataExport, Raster e Data Quality podem degradar conforme configuração.

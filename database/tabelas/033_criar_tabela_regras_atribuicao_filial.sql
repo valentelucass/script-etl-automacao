@@ -47,3 +47,35 @@ BEGIN
     PRINT 'Indice UX_regras_atribuicao_filial_pagador_ativo criado.';
 END;
 GO
+
+IF EXISTS (
+    SELECT 1
+    FROM dbo.regras_atribuicao_filial
+    WHERE pagador_documento_key = N'92660406007040'
+      AND ativo = 1
+)
+BEGIN
+    UPDATE dbo.regras_atribuicao_filial
+       SET filial_destino_nome = N'CWB - RODOGARCIA',
+           filial_destino_key = N'cwb - rodogarcia',
+           motivo = N'Migracao financeira solicitada pela diretoria (emissao original na NHB)'
+     WHERE pagador_documento_key = N'92660406007040'
+       AND ativo = 1;
+END
+ELSE
+BEGIN
+    INSERT INTO dbo.regras_atribuicao_filial (
+        pagador_documento_key,
+        filial_destino_nome,
+        filial_destino_key,
+        ativo,
+        motivo
+    ) VALUES (
+        N'92660406007040',
+        N'CWB - RODOGARCIA',
+        N'cwb - rodogarcia',
+        CAST(1 AS BIT),
+        N'Migracao financeira solicitada pela diretoria (emissao original na NHB)'
+    );
+END;
+GO
