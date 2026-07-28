@@ -159,6 +159,9 @@ SELECT
     CASE f.status
         WHEN 'pending' THEN 'pendente'
         WHEN 'finished' THEN 'finalizado'
+        WHEN 'done' THEN 'finalizado'
+        WHEN 'canceled' THEN 'cancelada'
+        WHEN 'cancelled' THEN 'cancelada'
         WHEN 'in_transit' THEN 'em trânsito'
         WHEN 'standby' THEN 'aguardando'
         WHEN 'manifested' THEN 'registrado'

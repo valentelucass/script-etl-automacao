@@ -176,7 +176,15 @@ BEGIN
                 MAX(ml.departured_at) AS saida,
                 MAX(ml.closed_at) AS fechamento,
                 MAX(ml.finished_at) AS chegada,
-                MAX(ml.status) AS status_raw,
+                CASE
+                    WHEN MAX(CASE WHEN LOWER(LTRIM(RTRIM(ml.status))) = N'closed' THEN 1 ELSE 0 END) = 1
+                        THEN N'closed'
+                    WHEN MAX(CASE WHEN LOWER(LTRIM(RTRIM(ml.status))) = N'in_transit' THEN 1 ELSE 0 END) = 1
+                        THEN N'in_transit'
+                    WHEN MAX(CASE WHEN LOWER(LTRIM(RTRIM(ml.status))) = N'pending' THEN 1 ELSE 0 END) = 1
+                        THEN N'pending'
+                    ELSE MAX(ml.status)
+                END AS status_raw,
                 MAX(ml.classification) AS classificacao,
                 MAX(ml.branch_nickname) AS filial,
                 MAX(ml.branch_nickname) AS filial_emissora,

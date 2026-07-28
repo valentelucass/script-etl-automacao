@@ -16,7 +16,14 @@ class RepositoryMergeGuardSourceTest {
     void deveExigirGuardasMonotonicasNosMergesCriticos() throws IOException {
         assertMergeGuard(
             "src/main/java/br/com/extrator/persistencia/repositorio/ColetaRepository.java",
-            List.of("WITH (HOLDLOCK)", "WHEN MATCHED AND", "target.status_updated_at", "source.status_updated_at")
+            List.of(
+                "WITH (HOLDLOCK)",
+                "WHEN MATCHED AND",
+                "target.status_updated_at",
+                "source.status_updated_at",
+                "buildTerminalStatusTransitionGuard",
+                "N'finished', N'done', N'canceled', N'cancelled'"
+            )
         );
         assertMergeGuard(
             "src/main/java/br/com/extrator/persistencia/repositorio/FreteRepository.java",
@@ -90,6 +97,17 @@ class RepositoryMergeGuardSourceTest {
     }
 
     @Test
+    void freteRepositoryDeveNormalizarCteAusenteAntesDePromoverStatusTerminal() throws IOException {
+        final String source = Files.readString(Path.of(
+            "src/main/java/br/com/extrator/persistencia/repositorio/FreteRepository.java"
+        ));
+
+        assertTrue(source.contains("normalizarStagingParaTransicaoTerminal(conexao)"));
+        assertTrue(source.contains("cte_created_at = COALESCE(source.cte_created_at, target.cte_created_at)"));
+        assertTrue(source.contains("N'finished', N'done', N'canceled', N'cancelled'"));
+    }
+
+    @Test
     void manifestoRepositoryDeveUsarIdentificadorUnicoComoFallbackNoMatching() throws IOException {
         final String source = Files.readString(Path.of(
             "src/main/java/br/com/extrator/persistencia/repositorio/ManifestoRepository.java"
@@ -158,6 +176,25 @@ class RepositoryMergeGuardSourceTest {
             "src/main/java/br/com/extrator/persistencia/repositorio/FaturaPorClienteRepository.java",
             "target.unique_id = source.unique_id"
         );
+    }
+
+    @Test
+    void inventarioDevePreservarComprovanteJaObservado() throws IOException {
+        final String source = Files.readString(Path.of(
+            "src/main/java/br/com/extrator/persistencia/repositorio/InventarioRepository.java"
+        ));
+        assertTrue(source.contains("target.flag_comprovante_anexado"));
+        assertTrue(source.contains("source.flag_comprovante_anexado"));
+    }
+
+    @Test
+    void viewDeFretesDeveNormalizarTodosOsStatusTerminais() throws IOException {
+        final String source = Files.readString(Path.of(
+            "database/views/012_criar_view_fretes_powerbi.sql"
+        ));
+        assertTrue(source.contains("WHEN 'done' THEN 'finalizado'"));
+        assertTrue(source.contains("WHEN 'canceled' THEN 'cancelada'"));
+        assertTrue(source.contains("WHEN 'cancelled' THEN 'cancelada'"));
     }
 
     @Test

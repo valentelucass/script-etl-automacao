@@ -20,6 +20,13 @@ graph TD
     ExtratorDaemon <-->|Autenticação Operacional & Logs| SQLiteLocal[(SQLite Local - users.db)]
 ```
 
+## Garantias de status
+
+- Coletas aceitam a transição de um status aberto para terminal (`finished`, `done`, `canceled`), mesmo quando a data do evento recebida é retroativa em relação ao registro pendente já persistido.
+- Fretes normalizam `finished` e `done` como `finalizado`, e `canceled`/`cancelled` como `cancelada` no contrato de Performance.
+- A fato de Manifestos consolida status por prioridade operacional: `closed` > `in_transit` > `pending`.
+- O comprovante de entrega no Inventário é cumulativo por chave lógica: uma evidência já observada não é removida por uma ocorrência posterior sem a mesma descrição.
+
 ---
 
 ## 🧱 Governança Estrutural do Banco e Views

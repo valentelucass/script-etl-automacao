@@ -71,6 +71,7 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
             "COALESCE(TRY_CONVERT(datetime2, target.status_updated_at), CAST(target.finish_date AS datetime2), CAST(target.service_date AS datetime2), CAST(target.request_date AS datetime2))",
             "COALESCE(TRY_CONVERT(datetime2, source.status_updated_at), CAST(source.finish_date AS datetime2), CAST(source.service_date AS datetime2), CAST(source.request_date AS datetime2))"
         );
+        final String terminalStatusTransitionGuard = buildTerminalStatusTransitionGuard();
         final String sql = String.format("""
             MERGE dbo.%s WITH (HOLDLOCK) AS target
             USING (
@@ -85,7 +86,7 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
                     CAST(NULL AS datetime2(0)) AS data_exclusao_origem
             ) AS source
             ON target.id = source.id
-            WHEN MATCHED AND (%s OR target.excluido_na_origem = 1) THEN
+            WHEN MATCHED AND ((%s) OR (%s) OR target.excluido_na_origem = 1) THEN
                 UPDATE SET
                     sequence_code = source.sequence_code,
                     request_date = source.request_date,
@@ -144,7 +145,7 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
                     source.taxed_weight, source.pick_region, source.last_occurrence, source.acao_ocorrencia, source.numero_tentativas,
                     source.metadata, source.data_extracao, source.excluido_na_origem, source.data_exclusao_origem
                 );
-            """, NOME_TABELA, freshnessGuard);
+            """, NOME_TABELA, freshnessGuard, terminalStatusTransitionGuard);
 
         logger.debug("Preparando MERGE de Coleta ID {}", coleta.getId());
         PreparedStatement statement;
@@ -217,6 +218,21 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
             logger.debug("MERGE executado para Coleta ID {}: {} linha(s) afetada(s)", coleta.getId(), rowsAffected);
             return rowsAffected;
         }
+    }
+
+    /**
+     * A API ESL pode publicar a conclusao/cancelamento com uma data de evento anterior
+     * ao timestamp salvo para o estado pendente. Nessa situacao, a guarda monotônica
+     * temporal isolada impediria uma transicao de negocio valida. Um estado terminal
+     * sempre supera um estado ainda aberto, mas nunca regride um terminal ja gravado.
+     */
+    private static String buildTerminalStatusTransitionGuard() {
+        return """
+            (
+                LOWER(LTRIM(RTRIM(COALESCE(source.status, N'')))) IN (N'finished', N'done', N'canceled', N'cancelled')
+                AND LOWER(LTRIM(RTRIM(COALESCE(target.status, N'')))) NOT IN (N'finished', N'done', N'canceled', N'cancelled')
+            )
+            """;
     }
 
     private int refrescarDataExtracaoNoOp(final Connection conexao, final ColetaEntity coleta) throws SQLException {

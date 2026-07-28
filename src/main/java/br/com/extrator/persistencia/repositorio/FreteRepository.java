@@ -127,6 +127,7 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
 
     @Override
     protected int promoverStagingPorExecucao(final Connection conexao) throws SQLException {
+        normalizarStagingParaTransicaoTerminal(conexao);
         final String freshnessGuard = buildMonotonicUpdateGuard(
             "COALESCE(CAST(target.cte_created_at AS datetime2), CAST(target.cte_issued_at AS datetime2), CAST(target.criado_em AS datetime2), CAST(target.servico_em AS datetime2))",
             "COALESCE(CAST(source.cte_created_at AS datetime2), CAST(source.cte_issued_at AS datetime2), CAST(source.criado_em AS datetime2), CAST(source.servico_em AS datetime2))"
@@ -139,6 +140,38 @@ public class FreteRepository extends AbstractRepository<FreteEntity> {
             COLUNAS_MERGE,
             COLUNAS_ATUALIZAVEIS
         );
+    }
+
+    /**
+     * Um frete terminal pode chegar sem o objeto CT-e que existia em uma leitura
+     * anterior. Sem esta normalizacao, a guarda de freshness compara a data do
+     * CT-e persistido com uma data de criacao anterior e bloqueia o novo status.
+     * Os campos tecnicos ausentes sao preservados no staging apenas para a
+     * transicao de estado aberto para terminal; a promocao continua usando o
+     * mesmo MERGE monotônico e nao aceita regressao de estado terminal.
+     */
+    private void normalizarStagingParaTransicaoTerminal(final Connection conexao) throws SQLException {
+        final String staging = validarNomeTabelaTemporaria(NOME_TABELA_STAGING);
+        final String sql = """
+            UPDATE source
+               SET cte_created_at = COALESCE(source.cte_created_at, target.cte_created_at),
+                   cte_issued_at = COALESCE(source.cte_issued_at, target.cte_issued_at),
+                   finished_at = COALESCE(source.finished_at, target.finished_at),
+                   fit_dpn_performance_finished_at = COALESCE(
+                       source.fit_dpn_performance_finished_at,
+                       target.fit_dpn_performance_finished_at
+                   )
+              FROM %s AS source
+              JOIN dbo.fretes AS target
+                ON target.id = source.id
+             WHERE LOWER(LTRIM(RTRIM(COALESCE(source.status, N''))))
+                    IN (N'finished', N'done', N'canceled', N'cancelled')
+               AND LOWER(LTRIM(RTRIM(COALESCE(target.status, N''))))
+                    NOT IN (N'finished', N'done', N'canceled', N'cancelled')
+            """.formatted(staging);
+        try (PreparedStatement statement = conexao.prepareStatement(sql)) {
+            statement.executeUpdate();
+        }
     }
 
     public int removerAusentesNoPeriodo(final LocalDate dataInicio,

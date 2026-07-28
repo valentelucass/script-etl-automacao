@@ -98,7 +98,14 @@ public class InventarioRepository extends AbstractRepository<InventarioEntity> {
                     performance_finished_at = source.performance_finished_at,
                     ultima_ocorrencia_at = source.ultima_ocorrencia_at,
                     ultima_ocorrencia_descricao = source.ultima_ocorrencia_descricao,
-                    flag_comprovante_anexado = source.flag_comprovante_anexado,
+                    flag_comprovante_anexado = CAST(
+                        CASE
+                            WHEN COALESCE(target.flag_comprovante_anexado, CAST(0 AS bit)) = CAST(1 AS bit)
+                              OR COALESCE(source.flag_comprovante_anexado, CAST(0 AS bit)) = CAST(1 AS bit)
+                            THEN 1
+                            ELSE 0
+                        END AS bit
+                    ),
                     metadata = source.metadata,
                     data_extracao = source.data_extracao,
                     excluido_na_origem = source.excluido_na_origem,
