@@ -3,7 +3,11 @@ package br.com.extrator.comandos.cli.extracao;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
+import br.com.extrator.aplicacao.expurgo.ColetaHistoricalReconciliationJob;
+import br.com.extrator.aplicacao.expurgo.ColetaHistoricalReconciliationReport;
+import br.com.extrator.aplicacao.expurgo.ColetaHistoricalReconciliationRequest;
 import br.com.extrator.aplicacao.expurgo.EntityReconciliationSpec;
 import br.com.extrator.aplicacao.expurgo.EntityReconciliationSpecs;
 import br.com.extrator.aplicacao.expurgo.OrphanReconciliationEntityReport;
@@ -19,29 +23,59 @@ public class ExpurgoOrfaosComando implements Comando {
     private static final LoggerConsole log = LoggerConsole.getLogger(ExpurgoOrfaosComando.class);
 
     private final OrphanReconciliationJob job;
+    private final ColetaHistoricalReconciliationJob coletaJob;
 
     public ExpurgoOrfaosComando() {
-        this(new OrphanReconciliationJob());
+        this(new OrphanReconciliationJob(), new ColetaHistoricalReconciliationJob());
     }
 
     ExpurgoOrfaosComando(final OrphanReconciliationJob job) {
+        this(job, new ColetaHistoricalReconciliationJob());
+    }
+
+    ExpurgoOrfaosComando(final OrphanReconciliationJob job,
+                         final ColetaHistoricalReconciliationJob coletaJob) {
         this.job = job;
+        this.coletaJob = coletaJob;
     }
 
     @Override
     public void executar(final String[] args) throws Exception {
         final Opcoes opcoes = parseArgs(args);
-        final List<EntityReconciliationSpec> specs = EntityReconciliationSpecs.resolverDataExport(opcoes.entidades);
-        final OrphanReconciliationRequest request = new OrphanReconciliationRequest(
-            opcoes.dataInicio,
-            opcoes.dataFim,
-            specs,
-            opcoes.dryRun,
-            opcoes.batchSize
-        );
+        final boolean incluirColetas = opcoes.entidades.isEmpty()
+            || opcoes.entidades.stream().anyMatch(this::ehColetas);
+        final List<String> entidadesDataExport = opcoes.entidades.stream()
+            .filter(entidade -> !ehColetas(entidade))
+            .toList();
 
-        final OrphanReconciliationReport report = job.executar(request);
-        imprimirResumo(report);
+        if (opcoes.entidades.isEmpty() || !entidadesDataExport.isEmpty()) {
+            final List<EntityReconciliationSpec> specs = EntityReconciliationSpecs.resolverDataExport(entidadesDataExport);
+            final OrphanReconciliationRequest request = new OrphanReconciliationRequest(
+                opcoes.dataInicio,
+                opcoes.dataFim,
+                specs,
+                opcoes.dryRun,
+                opcoes.batchSize
+            );
+            imprimirResumo(job.executar(request));
+        }
+
+        if (incluirColetas) {
+            final LocalDate inicioColetas = opcoes.periodoInformado
+                ? opcoes.dataInicio
+                : RelogioSistema.hoje().minusDays(ConfigEtl.obterColetasReconciliacaoDias() - 1L);
+            final LocalDate fimColetas = opcoes.periodoInformado ? opcoes.dataFim : RelogioSistema.hoje();
+            final ColetaHistoricalReconciliationReport report = coletaJob.executar(
+                new ColetaHistoricalReconciliationRequest(
+                    inicioColetas,
+                    fimColetas,
+                    opcoes.dryRun,
+                    opcoes.batchSize,
+                    ConfigEtl.obterColetasReconciliacaoConfirmacoesAusencia()
+                )
+            );
+            imprimirResumoColetas(report);
+        }
     }
 
     private Opcoes parseArgs(final String[] args) {
@@ -58,11 +92,12 @@ public class ExpurgoOrfaosComando implements Comando {
                 }
                 opcoes.dataInicio = LocalDate.parse(args[++i]);
                 opcoes.dataFim = LocalDate.parse(args[++i]);
+                opcoes.periodoInformado = true;
                 continue;
             }
             if ("--entidade".equalsIgnoreCase(arg)) {
                 if (i + 1 >= args.length) {
-                    throw new IllegalArgumentException("Uso: --expurgo-orfaos --entidade faturas_por_cliente|manifestos");
+                    throw new IllegalArgumentException("Uso: --expurgo-orfaos --entidade coletas|faturas_por_cliente|manifestos");
                 }
                 adicionarEntidades(opcoes.entidades, args[++i]);
                 continue;
@@ -116,10 +151,27 @@ public class ExpurgoOrfaosComando implements Comando {
         );
     }
 
+    private void imprimirResumoColetas(final ColetaHistoricalReconciliationReport report) {
+        log.console(
+            "Reconciliação histórica de Coletas | run_id={} | periodo={} a {} | dry_run={}",
+            report.runId(), report.dataInicio(), report.dataFim(), report.dryRun()
+        );
+        log.console(
+            "  source_rows={} | source_keys={} | db_ativas={} | persistidos={} | ausentes={} | excluidas={} | paginas={}",
+            report.sourceRows(), report.sourceKeys(), report.dbActiveKeys(), report.recordsPersisted(),
+            report.missingCandidates(), report.logicallyExcluded(), report.pagesProcessed()
+        );
+    }
+
+    private boolean ehColetas(final String entidade) {
+        return entidade != null && "coletas".equals(entidade.trim().toLowerCase(Locale.ROOT));
+    }
+
     private static final class Opcoes {
         private final List<String> entidades = new ArrayList<>();
         private LocalDate dataInicio = RelogioSistema.hoje().minusDays(1);
         private LocalDate dataFim = RelogioSistema.hoje();
+        private boolean periodoInformado;
         private boolean dryRun;
         private int batchSize = ConfigEtl.obterOrphanReconciliationBatchSize();
     }

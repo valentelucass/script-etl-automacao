@@ -670,6 +670,34 @@ public final class ConfigEtl {
         );
     }
 
+    public static int obterColetasReconciliacaoDias() {
+        return ConfigValueParser.parseInt(
+            ConfigSource.obterConfiguracao(
+                "ETL_COLETAS_RECONCILIACAO_DIAS",
+                "etl.coletas.reconciliacao.dias"
+            ),
+            90,
+            value -> value >= 1 && value <= 365,
+            null,
+            null,
+            null
+        );
+    }
+
+    public static int obterColetasReconciliacaoConfirmacoesAusencia() {
+        return ConfigValueParser.parseInt(
+            ConfigSource.obterConfiguracao(
+                "ETL_COLETAS_RECONCILIACAO_CONFIRMACOES_AUSENCIA",
+                "etl.coletas.reconciliacao.confirmacoes_ausencia"
+            ),
+            2,
+            value -> value >= 2 && value <= 10,
+            null,
+            null,
+            null
+        );
+    }
+
     public static Duration obterTimeoutStepPadrao() {
         return Duration.ofMillis(obterLongComFallback(
             "ETL_PIPELINE_TIMEOUT_STEP_PADRAO_MS",

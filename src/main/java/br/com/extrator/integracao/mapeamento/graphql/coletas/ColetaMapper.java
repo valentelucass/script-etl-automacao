@@ -30,6 +30,8 @@ package br.com.extrator.integracao.mapeamento.graphql.coletas;
 
 import br.com.extrator.dominio.graphql.coletas.ColetaNodeDTO;
 import br.com.extrator.dominio.graphql.coletas.PickItemDTO;
+import br.com.extrator.dominio.coletas.ColetaStatusPolicy;
+import br.com.extrator.dominio.coletas.ColetaStatusTimestampParser;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -71,16 +73,20 @@ public class ColetaMapper {
         // 1. Mapeamento dos campos essenciais
         entity.setId(dto.getId());
         entity.setSequenceCode(dto.getSequenceCode());
-        entity.setStatus(dto.getStatus());
+        final String statusNormalizado = ColetaStatusPolicy.normalize(dto.getStatus());
+        entity.setStatus(statusNormalizado);
+        if (statusNormalizado != null && !ColetaStatusPolicy.isKnown(statusNormalizado)) {
+            logger.warn("Status de Coleta ainda não catalogado | id={} | status_raw={}", dto.getId(), dto.getStatus());
+        }
         entity.setTotalValue(dto.getInvoicesValue());
         entity.setTotalWeight(dto.getInvoicesWeight());
         entity.setTotalVolumes(dto.getInvoicesVolumes());
         entity.setTaxedWeight(dto.getTaxedWeight()); // Peso Taxado
 
         // 1.0. Lógica De-Para para campos calculados
-        entity.setLastOccurrence(traduzirStatus(dto.getStatus()));
-        entity.setAcaoOcorrencia(calcularAcaoOcorrencia(dto.getStatus(), dto.getCancellationReason()));
-        entity.setNumeroTentativas(calcularNumeroTentativas(dto.getStatus()));
+        entity.setLastOccurrence(traduzirStatus(statusNormalizado));
+        entity.setAcaoOcorrencia(calcularAcaoOcorrencia(statusNormalizado, dto.getCancellationReason()));
+        entity.setNumeroTentativas(calcularNumeroTentativas(statusNormalizado));
 
         // 1.1. Mapeamento dos campos expandidos (22 campos do CSV)
         if (dto.getCustomer() != null) {
@@ -142,6 +148,19 @@ public class ColetaMapper {
         entity.setPickTypeId(dto.getPickTypeId());
         entity.setPickupLocationId(dto.getPickupLocationId());
         entity.setStatusUpdatedAt(dto.getStatusUpdatedAt());
+        ColetaStatusTimestampParser.parse(dto.getStatusUpdatedAt())
+            .ifPresentOrElse(
+                entity::setStatusUpdatedAtEm,
+                () -> {
+                    if (dto.getStatusUpdatedAt() != null && !dto.getStatusUpdatedAt().isBlank()) {
+                        logger.warn(
+                            "Timestamp de status de Coleta inválido; será preservado apenas no valor bruto | id={} | statusUpdatedAt={}",
+                            dto.getId(),
+                            dto.getStatusUpdatedAt()
+                        );
+                    }
+                }
+            );
 
         // Validação: campos de hora podem vir como datas (ex: "1999-12-31", "2000-01-01") quando não há hora disponível
         entity.setRequestHour(validarCampoHora(dto.getRequestHour()));
@@ -219,18 +238,7 @@ public class ColetaMapper {
         if (status == null) {
             return null;
         }
-        final String statusLower = status.toLowerCase();
-        return switch (statusLower) {
-            case "finished" -> "Finalizado";
-            case "canceled" -> "Cancelado";
-            case "draft" -> "Rascunho";
-            case "pending" -> "Pendente";
-            case "done" -> "Coletada";
-            case "treatment" -> "Em tratativa";
-            case "in_transit" -> "Em trânsito";
-            case "manifested" -> "Manifestada";
-            default -> status; // Retorna o status original se não houver tradução
-        };
+        return ColetaStatusPolicy.displayName(status).orElse(status);
     }
 
     /**
@@ -248,7 +256,7 @@ public class ColetaMapper {
         if (status == null) {
             return "Pendente";
         }
-        final String statusLower = status.toLowerCase();
+        final String statusLower = ColetaStatusPolicy.normalize(status);
         
         // Se status == 'finished' -> "Coleta Realizada"
         if ("finished".equals(statusLower) || "done".equals(statusLower)) {
@@ -258,6 +266,10 @@ public class ColetaMapper {
         // Se cancellationReason != null -> usa o cancellationReason
         if (cancellationReason != null && !cancellationReason.trim().isEmpty()) {
             return cancellationReason;
+        }
+
+        if ("canceled".equals(statusLower) || "cancelled".equals(statusLower)) {
+            return "Coleta cancelada";
         }
         
         // Senão -> "Pendente"
@@ -277,14 +289,6 @@ public class ColetaMapper {
         if (status == null) {
             return 0;
         }
-        final String statusLower = status.toLowerCase();
-        
-        // Se status == 'finished' OU status == 'canceled' -> 1
-        if ("finished".equals(statusLower) || "done".equals(statusLower) || "canceled".equals(statusLower)) {
-            return 1;
-        }
-        
-        // Senão -> 0
-        return 0;
+        return ColetaStatusPolicy.isTerminal(status) ? 1 : 0;
     }
 }

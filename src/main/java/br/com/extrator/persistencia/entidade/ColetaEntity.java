@@ -50,6 +50,7 @@ package br.com.extrator.persistencia.entidade;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 
 /**
  * Entity (Entidade) que representa uma linha na tabela 'coletas' do banco de dados.
@@ -112,6 +113,7 @@ public class ColetaEntity {
     private Long pickTypeId;
     private Long pickupLocationId;
     private String statusUpdatedAt;
+    private OffsetDateTime statusUpdatedAtEm;
     private BigDecimal taxedWeight; // Peso Taxado (node.taxedWeight)
     private String pickRegion; // Região da Coleta (node.pickAddress.city.name + state.code)
     private String lastOccurrence; // Última Ocorrência (tradução do status)
@@ -510,6 +512,14 @@ public class ColetaEntity {
 
     public void setStatusUpdatedAt(final String statusUpdatedAt) {
         this.statusUpdatedAt = statusUpdatedAt;
+    }
+
+    public OffsetDateTime getStatusUpdatedAtEm() {
+        return statusUpdatedAtEm;
+    }
+
+    public void setStatusUpdatedAtEm(final OffsetDateTime statusUpdatedAtEm) {
+        this.statusUpdatedAtEm = statusUpdatedAtEm;
     }
 
     public BigDecimal getTaxedWeight() {

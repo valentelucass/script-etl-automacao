@@ -68,8 +68,8 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
         }
 
         final String freshnessGuard = buildMonotonicUpdateGuard(
-            "COALESCE(TRY_CONVERT(datetime2, target.status_updated_at), CAST(target.finish_date AS datetime2), CAST(target.service_date AS datetime2), CAST(target.request_date AS datetime2))",
-            "COALESCE(TRY_CONVERT(datetime2, source.status_updated_at), CAST(source.finish_date AS datetime2), CAST(source.service_date AS datetime2), CAST(source.request_date AS datetime2))"
+            "COALESCE(target.status_updated_at_em, TODATETIMEOFFSET(CAST(target.finish_date AS datetime2), '+00:00'), TODATETIMEOFFSET(CAST(target.service_date AS datetime2), '+00:00'), TODATETIMEOFFSET(CAST(target.request_date AS datetime2), '+00:00'))",
+            "COALESCE(source.status_updated_at_em, TODATETIMEOFFSET(CAST(source.finish_date AS datetime2), '+00:00'), TODATETIMEOFFSET(CAST(source.service_date AS datetime2), '+00:00'), TODATETIMEOFFSET(CAST(source.request_date AS datetime2), '+00:00'))"
         );
         final String terminalStatusTransitionGuard = buildTerminalStatusTransitionGuard();
         final String sql = String.format("""
@@ -80,13 +80,13 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
                     ? AS cliente_nome, ? AS cliente_doc, ? AS local_coleta, ? AS numero_coleta, ? AS complemento_coleta, ? AS cidade_coleta, ? AS bairro_coleta, ? AS uf_coleta, ? AS cep_coleta, ? AS filial_id, ? AS filial_nome, ? AS usuario_nome,
                     ? AS finish_date, ? AS manifest_item_pick_id, ? AS pick_items_ids, ? AS vehicle_type_id,
                     ? AS cancellation_reason, ? AS cancellation_user_id,
-                    ? AS destroy_reason, ? AS destroy_user_id, ? AS status_updated_at,
+                    ? AS destroy_reason, ? AS destroy_user_id, ? AS status_updated_at, ? AS status_updated_at_em,
                     ? AS taxed_weight, ? AS pick_region, ? AS last_occurrence, ? AS acao_ocorrencia, ? AS numero_tentativas,
                     ? AS metadata, ? AS data_extracao, CAST(0 AS bit) AS excluido_na_origem,
                     CAST(NULL AS datetime2(0)) AS data_exclusao_origem
             ) AS source
             ON target.id = source.id
-            WHEN MATCHED AND ((%s) OR (%s) OR target.excluido_na_origem = 1) THEN
+            WHEN MATCHED AND ((%s) OR (%s) OR target.excluido_na_origem = 1 OR target.ausente_na_origem_desde IS NOT NULL) THEN
                 UPDATE SET
                     sequence_code = source.sequence_code,
                     request_date = source.request_date,
@@ -117,6 +117,7 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
                     destroy_reason = source.destroy_reason,
                     destroy_user_id = source.destroy_user_id,
                     status_updated_at = source.status_updated_at,
+                    status_updated_at_em = source.status_updated_at_em,
                     taxed_weight = source.taxed_weight,
                     pick_region = source.pick_region,
                     last_occurrence = source.last_occurrence,
@@ -125,7 +126,12 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
                     metadata = source.metadata,
                     data_extracao = source.data_extracao,
                     excluido_na_origem = source.excluido_na_origem,
-                    data_exclusao_origem = source.data_exclusao_origem
+                    data_exclusao_origem = source.data_exclusao_origem,
+                    ausente_na_origem_desde = NULL,
+                    confirmacoes_ausencia_origem = 0,
+                    ultima_reconciliacao_origem_em = NULL,
+                    reconciliacao_origem_run_id = NULL,
+                    motivo_exclusao_origem = NULL
             WHEN NOT MATCHED THEN
                 INSERT (
                     id, sequence_code, request_date, request_hour, service_date, status, total_value, total_weight, total_volumes,
@@ -133,6 +139,7 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
                     finish_date, manifest_item_pick_id, pick_items_ids, vehicle_type_id,
                     cancellation_reason, cancellation_user_id,
                     destroy_reason, destroy_user_id, status_updated_at,
+                    status_updated_at_em,
                     taxed_weight, pick_region, last_occurrence, acao_ocorrencia, numero_tentativas,
                     metadata, data_extracao, excluido_na_origem, data_exclusao_origem
                 )
@@ -142,6 +149,7 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
                     source.finish_date, source.manifest_item_pick_id, source.pick_items_ids, source.vehicle_type_id,
                     source.cancellation_reason, source.cancellation_user_id,
                     source.destroy_reason, source.destroy_user_id, source.status_updated_at,
+                    source.status_updated_at_em,
                     source.taxed_weight, source.pick_region, source.last_occurrence, source.acao_ocorrencia, source.numero_tentativas,
                     source.metadata, source.data_extracao, source.excluido_na_origem, source.data_exclusao_origem
                 );
@@ -159,11 +167,11 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
             int expectedCount;
             try {
                 final int metaCount = statement.getParameterMetaData().getParameterCount();
-                expectedCount = (metaCount > 0 ? metaCount : 37);
+                expectedCount = (metaCount > 0 ? metaCount : 38);
                 logger.debug("MERGE de Coletas preparado: {} parâmetro(s) esperado(s)", expectedCount);
             } catch (final SQLException pmEx) {
                 logger.debug("Não foi possível obter ParameterMetaData: {}", pmEx.getMessage());
-                expectedCount = 37;
+                expectedCount = 38;
             }
             // Define os parâmetros de forma segura e na ordem correta.
             int paramIndex = 1;
@@ -198,6 +206,7 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
             statement.setString(paramIndex++, coleta.getDestroyReason());
             statement.setObject(paramIndex++, coleta.getDestroyUserId(), Types.BIGINT);
             statement.setString(paramIndex++, coleta.getStatusUpdatedAt());
+            statement.setObject(paramIndex++, coleta.getStatusUpdatedAtEm(), Types.TIMESTAMP_WITH_TIMEZONE);
             setBigDecimalParameter(statement, paramIndex++, coleta.getTaxedWeight());
             statement.setString(paramIndex++, coleta.getPickRegion());
             statement.setString(paramIndex++, coleta.getLastOccurrence());
@@ -229,8 +238,20 @@ public class ColetaRepository extends AbstractRepository<ColetaEntity> {
     private static String buildTerminalStatusTransitionGuard() {
         return """
             (
-                LOWER(LTRIM(RTRIM(COALESCE(source.status, N'')))) IN (N'finished', N'done', N'canceled', N'cancelled')
-                AND LOWER(LTRIM(RTRIM(COALESCE(target.status, N'')))) NOT IN (N'finished', N'done', N'canceled', N'cancelled')
+                EXISTS (
+                    SELECT 1
+                      FROM dbo.dim_status_coleta status_origem
+                     WHERE status_origem.codigo_status = LOWER(LTRIM(RTRIM(COALESCE(source.status, N''))))
+                       AND status_origem.estado_terminal = 1
+                       AND status_origem.ativo = 1
+                )
+                AND NOT EXISTS (
+                    SELECT 1
+                      FROM dbo.dim_status_coleta status_destino
+                     WHERE status_destino.codigo_status = LOWER(LTRIM(RTRIM(COALESCE(target.status, N''))))
+                       AND status_destino.estado_terminal = 1
+                       AND status_destino.ativo = 1
+                )
             )
             """;
     }

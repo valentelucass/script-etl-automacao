@@ -65,6 +65,10 @@ class IndicadoresGestaoViewSqlTest {
 
         assertContem(tabelaSql, "request_date DATE");
         assertContem(viewSql, "c.request_date AS [Solicitacao]");
+        assertContem(viewSql, "OUTER APPLY (");
+        assertContem(viewSql, "SELECT TOP (1)");
+        assertContem(viewSql, "ORDER BY m.sequence_code DESC, m.id DESC");
+        assertFalse(viewSql.contains("LEFT JOIN dbo.manifestos m"));
         assertContem(indicesSql, "IX_coletas_request_date_dashboard");
         assertContem(indicesSql, "ON dbo.coletas(request_date, status, pick_region, cidade_coleta)");
         assertContem(migrationSql, "IX_coletas_request_date_dashboard");

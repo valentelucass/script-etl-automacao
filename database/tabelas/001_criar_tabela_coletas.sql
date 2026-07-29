@@ -42,6 +42,7 @@ BEGIN
         destroy_reason NVARCHAR(MAX),
         destroy_user_id BIGINT,
         status_updated_at NVARCHAR(50),
+        status_updated_at_em DATETIMEOFFSET(0) NULL,
         taxed_weight DECIMAL(18, 3), -- Peso Taxado (node.taxedWeight)
         pick_region NVARCHAR(255), -- Região da Coleta (node.pickAddress.city.name + state.code)
         last_occurrence NVARCHAR(50), -- Última Ocorrência (tradução do status)
@@ -55,6 +56,12 @@ BEGIN
         data_extracao DATETIME2 DEFAULT GETDATE(),
         excluido_na_origem BIT NOT NULL CONSTRAINT DF_coletas_excluido_na_origem DEFAULT (0),
         data_exclusao_origem DATETIME2(0) NULL,
+        ausente_na_origem_desde DATETIME2(0) NULL,
+        confirmacoes_ausencia_origem SMALLINT NOT NULL
+            CONSTRAINT DF_coletas_confirmacoes_ausencia_origem DEFAULT (0),
+        ultima_reconciliacao_origem_em DATETIME2(0) NULL,
+        reconciliacao_origem_run_id NVARCHAR(36) NULL,
+        motivo_exclusao_origem NVARCHAR(255) NULL,
         
         -- Constraint para chave de negócio
         CONSTRAINT UQ_coletas_sequence_code UNIQUE (sequence_code)
@@ -82,6 +89,46 @@ BEGIN
     ALTER TABLE dbo.coletas
     ADD data_exclusao_origem DATETIME2(0) NULL;
     PRINT 'Coluna coletas.data_exclusao_origem adicionada em tabela existente.';
+END
+GO
+
+IF COL_LENGTH(N'dbo.coletas', N'status_updated_at_em') IS NULL
+BEGIN
+    ALTER TABLE dbo.coletas
+    ADD status_updated_at_em DATETIMEOFFSET(0) NULL;
+    PRINT 'Coluna coletas.status_updated_at_em adicionada em tabela existente.';
+END
+GO
+
+IF COL_LENGTH(N'dbo.coletas', N'ausente_na_origem_desde') IS NULL
+BEGIN
+    ALTER TABLE dbo.coletas ADD ausente_na_origem_desde DATETIME2(0) NULL;
+END
+GO
+
+IF COL_LENGTH(N'dbo.coletas', N'confirmacoes_ausencia_origem') IS NULL
+BEGIN
+    ALTER TABLE dbo.coletas
+    ADD confirmacoes_ausencia_origem SMALLINT NOT NULL
+        CONSTRAINT DF_coletas_confirmacoes_ausencia_origem DEFAULT (0) WITH VALUES;
+END
+GO
+
+IF COL_LENGTH(N'dbo.coletas', N'ultima_reconciliacao_origem_em') IS NULL
+BEGIN
+    ALTER TABLE dbo.coletas ADD ultima_reconciliacao_origem_em DATETIME2(0) NULL;
+END
+GO
+
+IF COL_LENGTH(N'dbo.coletas', N'reconciliacao_origem_run_id') IS NULL
+BEGIN
+    ALTER TABLE dbo.coletas ADD reconciliacao_origem_run_id NVARCHAR(36) NULL;
+END
+GO
+
+IF COL_LENGTH(N'dbo.coletas', N'motivo_exclusao_origem') IS NULL
+BEGIN
+    ALTER TABLE dbo.coletas ADD motivo_exclusao_origem NVARCHAR(255) NULL;
 END
 GO
 

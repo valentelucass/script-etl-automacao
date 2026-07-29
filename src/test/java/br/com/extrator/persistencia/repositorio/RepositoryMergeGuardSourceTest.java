@@ -19,10 +19,10 @@ class RepositoryMergeGuardSourceTest {
             List.of(
                 "WITH (HOLDLOCK)",
                 "WHEN MATCHED AND",
-                "target.status_updated_at",
-                "source.status_updated_at",
+                "target.status_updated_at_em",
+                "source.status_updated_at_em",
                 "buildTerminalStatusTransitionGuard",
-                "N'finished', N'done', N'canceled', N'cancelled'"
+                "dbo.dim_status_coleta"
             )
         );
         assertMergeGuard(

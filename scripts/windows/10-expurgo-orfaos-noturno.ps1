@@ -45,13 +45,42 @@ function Import-OperationalEnvironment {
 }
 
 function Resolve-JavaCommand {
+    $candidates = [System.Collections.Generic.List[string]]::new()
     if (-not [string]::IsNullOrWhiteSpace($env:JAVA_HOME)) {
-        $javaHomeExe = Join-Path $env:JAVA_HOME 'bin\java.exe'
-        if (Test-Path -LiteralPath $javaHomeExe -PathType Leaf) {
-            return $javaHomeExe
+        $candidates.Add((Join-Path $env:JAVA_HOME 'bin\java.exe'))
+    }
+
+    foreach ($baseDir in @('C:\Program Files\Eclipse Adoptium', 'C:\Program Files\Java')) {
+        if (-not (Test-Path -LiteralPath $baseDir -PathType Container)) {
+            continue
+        }
+        Get-ChildItem -LiteralPath $baseDir -Directory -ErrorAction SilentlyContinue |
+            Sort-Object Name -Descending |
+            ForEach-Object { $candidates.Add((Join-Path $_.FullName 'bin\java.exe')) }
+    }
+
+    $pathJava = Get-Command java.exe -ErrorAction SilentlyContinue
+    if ($pathJava) {
+        $candidates.Add($pathJava.Source)
+    }
+
+    foreach ($candidate in $candidates | Select-Object -Unique) {
+        if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) {
+            continue
+        }
+        $versionOutput = & $candidate -version 2>&1
+        $match = [regex]::Match(($versionOutput -join [Environment]::NewLine), '(?:openjdk |java )version "([^"]+)"')
+        if (-not $match.Success) {
+            continue
+        }
+        $parts = $match.Groups[1].Value.Split('.')
+        $major = if ($parts[0] -eq '1' -and $parts.Length -gt 1) { [int] $parts[1] } else { [int] $parts[0] }
+        if ($major -ge 17) {
+            return $candidate
         }
     }
-    return 'java.exe'
+
+    throw 'Java 17 ou superior nao encontrado. O ETL nao pode ser executado com o java.exe legado do PATH.'
 }
 
 function Resolve-SqlConnection {

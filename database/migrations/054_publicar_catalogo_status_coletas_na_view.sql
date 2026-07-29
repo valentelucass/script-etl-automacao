@@ -1,16 +1,16 @@
-IF OBJECT_ID('dbo.vw_coletas_powerbi', 'V') IS NOT NULL 
-    DROP VIEW dbo.vw_coletas_powerbi;
+PRINT 'Migration 054: publicar catálogo de status de Coletas na view Power BI';
 GO
 
-CREATE VIEW dbo.vw_coletas_powerbi AS
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
+
+CREATE OR ALTER VIEW dbo.vw_coletas_powerbi AS
 SELECT
     c.id AS [ID],
     c.sequence_code AS [Coleta],
     c.request_date AS [Solicitacao],
-
-    -- Hora da solicitacao vinda do campo requestHour da API GraphQL (HH:MM:SS)
     CAST(ISNULL(c.request_hour, '00:00:00') AS TIME(0)) AS [Hora (Solicitacao)],
-
     c.service_date AS [Agendamento],
     c.finish_date AS [Finalizacao],
     COALESCE(status_coleta.rotulo_powerbi, c.status) AS [Status],
@@ -18,7 +18,7 @@ SELECT
     c.total_weight AS [Peso Real],
     c.taxed_weight AS [Peso Taxado],
     c.total_value AS [Valor NF],
-    manifesto_canonico.sequence_code AS [Numero Manifesto],
+    m.sequence_code AS [Numero Manifesto],
     c.vehicle_type_id AS [Veiculo],
     c.cliente_nome AS [Cliente],
     c.cliente_doc AS [Cliente Doc],
@@ -33,11 +33,7 @@ SELECT
     COALESCE(
         regra_cep.regiao_logistica,
         regra_cidade.regiao_logistica,
-        CONCAT(
-            COALESCE(coleta_local.cidade_limpa, N'Sem cidade'),
-            N' - ',
-            COALESCE(coleta_local.uf_limpa, N'Sem UF')
-        )
+        CONCAT(COALESCE(coleta_local.cidade_limpa, N'Sem cidade'), N' - ', COALESCE(coleta_local.uf_limpa, N'Sem UF'))
     ) AS [Região Logística],
     c.filial_id AS [Filial ID],
     c.filial_nome AS [Filial],
@@ -59,14 +55,9 @@ FROM dbo.coletas c
 LEFT JOIN dbo.dim_status_coleta status_coleta
     ON status_coleta.codigo_status = LOWER(LTRIM(RTRIM(c.status)))
    AND status_coleta.ativo = 1
-OUTER APPLY (
-    SELECT TOP (1)
-        m.sequence_code
-    FROM dbo.manifestos m
-    WHERE m.pick_sequence_code = c.sequence_code
-      AND COALESCE(m.excluido_na_origem, 0) = 0
-    ORDER BY m.sequence_code DESC, m.id DESC
-) manifesto_canonico
+LEFT JOIN dbo.manifestos m
+    ON c.sequence_code = m.pick_sequence_code
+   AND COALESCE(m.excluido_na_origem, 0) = 0
 LEFT JOIN dbo.dim_usuarios u_cancel
     ON c.cancellation_user_id = u_cancel.user_id
    AND COALESCE(u_cancel.excluido_na_origem, 0) = 0
@@ -80,8 +71,7 @@ OUTER APPLY (
         NULLIF(UPPER(LTRIM(RTRIM(CONVERT(VARCHAR(2), c.uf_coleta)))), '') AS uf_limpa
 ) coleta_local
 OUTER APPLY (
-    SELECT TOP (1)
-        r.regiao_logistica
+    SELECT TOP (1) r.regiao_logistica
     FROM dbo.dim_regiao_logistica_rules r
     WHERE coleta_local.cep_limpo IS NOT NULL
       AND LEN(coleta_local.cep_limpo) = 8
@@ -92,8 +82,7 @@ OUTER APPLY (
     ORDER BY r.cep_inicio DESC, r.cep_fim ASC, r.id ASC
 ) regra_cep
 OUTER APPLY (
-    SELECT TOP (1)
-        r.regiao_logistica
+    SELECT TOP (1) r.regiao_logistica
     FROM dbo.dim_regiao_logistica_rules r
     WHERE regra_cep.regiao_logistica IS NULL
       AND coleta_local.cidade_limpa IS NOT NULL
@@ -103,4 +92,18 @@ OUTER APPLY (
     ORDER BY r.id ASC
 ) regra_cidade
 WHERE COALESCE(c.excluido_na_origem, 0) = 0;
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM dbo.schema_migrations
+    WHERE migration_id = N'054_publicar_catalogo_status_coletas_na_view'
+)
+BEGIN
+    INSERT INTO dbo.schema_migrations (migration_id, notes)
+    VALUES (
+        N'054_publicar_catalogo_status_coletas_na_view',
+        N'Publica labels de status de Coletas pelo catálogo dbo.dim_status_coleta e expõe timestamp normalizado.'
+    );
+END;
 GO

@@ -43,8 +43,8 @@ public class ExibirAjudaComando implements Comando {
         System.out.println("  --fechamento-mensal   Reprocessa automaticamente o mes anterior fechado");
         System.out.println("  --recovery            Replay/backfill idempotente por intervalo");
         System.out.println("                        Uso: --recovery YYYY-MM-DD YYYY-MM-DD [--api graphql|dataexport] [--entidade nome]");
-        System.out.println("  --expurgo-orfaos      Executa reconciliacao noturna Sweep and Prune para DataExport");
-        System.out.println("                        Uso: --expurgo-orfaos [--periodo YYYY-MM-DD YYYY-MM-DD] [--entidade nome] [--dry-run]");
+        System.out.println("  --expurgo-orfaos      Executa reconciliacao noturna Sweep and Prune para DataExport e Coletas");
+        System.out.println("                        Uso: --expurgo-orfaos [--periodo YYYY-MM-DD YYYY-MM-DD] [--entidade coletas|nome] [--dry-run]");
         System.out.println("  --validar             Valida configuracoes e conectividade");
         System.out.println("  --introspeccao        Realiza introspeccao do schema GraphQL");
         System.out.println("  --auditoria           Executa auditoria dos dados (janela operacional recente D-1..D)");

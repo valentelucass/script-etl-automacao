@@ -33,4 +33,18 @@ class ColetaMapperTest {
         assertNotNull(entity);
         assertEquals("[4717944,4717950]", entity.getPickItemsIds());
     }
+
+    @Test
+    void deveNormalizarStatusEVersionarTimestampDaEsl() {
+        final ColetaNodeDTO dto = new ColetaNodeDTO();
+        dto.setId("104203");
+        dto.setStatus(" Finished ");
+        dto.setStatusUpdatedAt("11/06/2026 00:27:00");
+
+        final var entity = new ColetaMapper().toEntity(dto);
+
+        assertEquals("finished", entity.getStatus());
+        assertEquals("Finalizada", entity.getLastOccurrence());
+        assertEquals("2026-06-11T00:27-03:00", entity.getStatusUpdatedAtEm().toString());
+    }
 }
