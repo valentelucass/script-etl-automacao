@@ -31,7 +31,8 @@ function Import-OperationalEnvironment {
         'API_BASEURL',
         'API_REST_TOKEN',
         'API_GRAPHQL_TOKEN',
-        'API_DATAEXPORT_TOKEN'
+        'API_DATAEXPORT_TOKEN',
+        'API_GRAPHQL_PAGINACAO_ANOMALIA_MAX_TENTATIVAS'
     )
 
     foreach ($scope in @('Machine', 'User')) {

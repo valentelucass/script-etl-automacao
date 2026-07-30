@@ -29,6 +29,7 @@
 
 - Comando padrão sem argumentos ou `--fluxo-completo` executa o ciclo intradia planejado por entidade.
 - Comandos vigentes incluem `--extracao-intervalo`, `--fechamento-mensal`, `--recovery`, `--expurgo-orfaos`, `--loop`, `--loop-daemon-start`, `--loop-daemon-stop`, `--loop-daemon-status`, `--loop-daemon-run`, `--materializar-fatos-bi`, `--materializar-fatos-bi-scheduler`, validações, auditorias e comandos `--auth-*`.
+- A tarefa agendada `ETL Expurgo Orfaos Noturno` executa diariamente às 03:00 o script atual `etl-dash\etl-extracao-dados\scripts\windows\10-expurgo-orfaos-noturno.ps1`. Ela usa o JAR atual para obter um snapshot completo e reconciliar Coletas fora do caminho intradia, importando `API_GRAPHQL_PAGINACAO_ANOMALIA_MAX_TENTATIVAS=2` do ambiente operacional.
 - Fluxo completo: planeja janelas, executa pre-backfill de coletas, roda steps `usuarios_sistema`, `coletas`, `fretes`, DataExport, Raster quando habilitado e Data Quality.
 - GraphQL ESL usa `API_BASEURL` padrão `https://rodogarcia.eslcloud.com.br`, endpoint `/graphql` e `api.corporation.id=385129`.
 - Entidades GraphQL: `usuarios_sistema`, `coletas`, `coletas_referencial` e `fretes`.
@@ -47,7 +48,8 @@
 - Toda mudança estrutural deve atualizar migration e baseline correspondente em `database/tabelas`, `views`, `views-dimensao`, `procedures`, `indices`, `validacao`, README e executor quando aplicável.
 - O ciclo recorrente é aditivo: insere/atualiza registros novos ou alterados e não executa `DELETE`/`TRUNCATE` no caminho comum.
 - Ausências na origem são tratadas por expurgo lógico noturno (`excluido_na_origem=1`) com metadados como `data_exclusao_origem` e `ultima_reconciliacao_origem_em`; reaparecimento reativa a chave.
-- Views operacionais e analíticas devem filtrar `excluido_na_origem=1` por padrão, exceto diagnósticos/auditorias explícitas.
+- Em Coletas, a primeira ausência em snapshot completo já é publicada como `Excluída`; a segunda ausência consecutiva confirma o expurgo lógico. A linha é preservada para auditoria e reaparece ativa se voltar ao ESL. `vw_coletas_powerbi` mantém esse caso visível com status `Excluída`; indicadores agregados do Dashboard o desconsideram.
+- Em 30/07/2026 a reconciliação global real de 90 dias concluiu com 14.445 chaves no ESL: 126 ausências foram confirmadas por segunda passagem e marcadas por exclusão lógica; 1 ausência nova ficou como candidata da primeira passagem. As 127 permanecem visíveis como `Excluída` no contrato publicado.
 - Agregações, totalizações, rankings, contagens e cruzamentos de BI devem ser executados no SQL Server, não em memória Java.
 - Filtros temporais devem ser sargable, sem funções no lado esquerdo de colunas indexadas.
 - Regras pesadas de BI devem ser materializadas durante carga ou em procedures/tabelas fato, não calculadas sob demanda em views de apresentação.
@@ -88,4 +90,5 @@
 
 ## Tarefas Pendentes
 
-- Correções deste diagnóstico concluídas e publicadas. Manter a reconciliação periódica ESL x banco para detectar novos contratos/status não mapeados.
+- [Operacional] Conferir o primeiro disparo automático da tarefa `ETL Expurgo Orfaos Noturno` em 31/07/2026 às 03:00. A ação já aponta para o script atual e a execução real manual equivalente terminou com sucesso em 30/07: 14.445 chaves ESL, 127 ausências, 126 exclusões lógicas e 1 candidata. A checagem confirma somente o agendamento automático, não requer nova correção de dados.
+- [Negócio] Confirmar com a operação se o status ESL bruto `done` de Coletas deve ser exibido como `Coletada` ou `Finalizada`; há exemplos históricos das duas interpretações e a regra não deve ser alterada sem essa definição.
