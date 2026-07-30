@@ -62,9 +62,26 @@ class IndicadoresGestaoViewSqlTest {
         final String viewSql = lerSql("database/views/013_criar_view_coletas_powerbi.sql");
         final String indicesSql = lerSql("database/indices/001_criar_indices_performance.sql");
         final String migrationSql = lerSql("database/migrations/018_adicionar_indice_coletas_request_date_dashboard.sql");
+        final String migrationCandidatasExcluidasSql = lerSql(
+            "database/migrations/058_exibir_candidatas_excluidas_na_view_coletas.sql"
+        );
+        final String migrationExcluidasVisiveisSql = lerSql(
+            "database/migrations/059_manter_excluidas_visiveis_na_view_coletas.sql"
+        );
 
         assertContem(tabelaSql, "request_date DATE");
         assertContem(viewSql, "c.request_date AS [Solicitacao]");
+        assertContem(viewSql, "COALESCE(c.excluido_na_origem, 0) = 1");
+        assertContem(viewSql, "COALESCE(c.confirmacoes_ausencia_origem, 0) >= 1");
+        assertContem(viewSql, "THEN N'Excluída'");
+        assertContem(viewSql, "ELSE COALESCE(status_coleta.rotulo_powerbi, c.status)");
+        assertContem(viewSql, "AS [Excluída na Origem]");
+        assertContem(migrationCandidatasExcluidasSql, "c.confirmacoes_ausencia_origem, 0) >= 1");
+        assertContem(migrationCandidatasExcluidasSql, "THEN N'Excluída'");
+        assertContem(migrationCandidatasExcluidasSql, "WHERE COALESCE(c.excluido_na_origem, 0) = 0");
+        assertContem(migrationExcluidasVisiveisSql, "COALESCE(c.excluido_na_origem, 0) = 1");
+        assertContem(migrationExcluidasVisiveisSql, "AS [Excluída na Origem]");
+        assertFalse(migrationExcluidasVisiveisSql.contains("WHERE COALESCE(c.excluido_na_origem, 0) = 0"));
         assertContem(viewSql, "OUTER APPLY (");
         assertContem(viewSql, "SELECT TOP (1)");
         assertContem(viewSql, "ORDER BY m.sequence_code DESC, m.id DESC");
