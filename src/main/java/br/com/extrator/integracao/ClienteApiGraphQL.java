@@ -115,6 +115,7 @@ public class ClienteApiGraphQL {
             this.clienteHttp,
             this.mapeadorJson,
             this.requestFactory,
+            (cliente, requisicao, operacao) -> this.gerenciadorRequisicao.executarRequisicao(cliente, requisicao, operacao),
             logger
         );
         this.lookupSupport = new GraphQLLookupSupport(httpExecutor::executarQueryGraphQLTipado, logger);

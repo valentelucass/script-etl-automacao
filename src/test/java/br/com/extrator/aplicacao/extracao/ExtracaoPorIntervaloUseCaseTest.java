@@ -115,6 +115,57 @@ class ExtracaoPorIntervaloUseCaseTest {
     }
 
     @Test
+    void retrofitGlobalDevePularHidratacaoReferencialForaDoPeriodoSolicitado() {
+        final Queue<StepExecutionResult> resultados = filaDeResultados(
+            resultadoGraphql("coletas", StepStatus.SUCCESS, "ok coletas"),
+            resultadoGraphql("fretes", StepStatus.SUCCESS, "ok fretes")
+        );
+        final List<String> entidadesGraphqlExecutadas = new java.util.ArrayList<>();
+        final TrackingPreBackfillReferencialColetasUseCase backfill = new TrackingPreBackfillReferencialColetasUseCase();
+        final ExtracaoPorIntervaloUseCase useCase = criarUseCase(
+            (dataInicio, dataFim, entidade) -> {
+                entidadesGraphqlExecutadas.add(entidade);
+                return resultados.remove();
+            },
+            new ExtractionLogQueryPort() {
+                @Override
+                public Optional<LogExtracaoInfo> buscarUltimoLogPorEntidadeNoIntervaloExecucao(
+                    final String entidade,
+                    final LocalDateTime inicio,
+                    final LocalDateTime fim
+                ) {
+                    return logCompleto(1);
+                }
+
+                @Override
+                public Optional<LogExtracaoInfo> buscarUltimaExtracaoPorPeriodo(
+                    final String entidade,
+                    final LocalDate dataInicio,
+                    final LocalDate dataFim
+                ) {
+                    return Optional.empty();
+                }
+            },
+            new SequencialIntegridadePort(filaDeIntegridade(integridadeValida())),
+            backfill
+        );
+        final ExtracaoPorIntervaloRequest request = new ExtracaoPorIntervaloRequest(
+            LocalDate.of(2026, 7, 29),
+            LocalDate.of(2026, 8, 12),
+            null,
+            null,
+            false,
+            false,
+            ExtracaoPorIntervaloRequest.ModoExecucao.RETROFIT
+        );
+
+        assertDoesNotThrow(() -> useCase.executar(request));
+        assertEquals(0, backfill.preExecucoes.get());
+        assertEquals(0, backfill.posExecucoes.get());
+        assertEquals(List.of("coletas", "fretes"), entidadesGraphqlExecutadas);
+    }
+
+    @Test
     void modoLoopDaemonDeveSinalizarMicroBatchSemAtivarReconciliacaoDeFretes() {
         final Queue<StepExecutionResult> resultados = filaDeResultados(
             resultadoGraphql("usuarios_sistema", StepStatus.SUCCESS, "ok usuarios"),
@@ -371,6 +422,20 @@ class ExtracaoPorIntervaloUseCaseTest {
         final ExtractionLogQueryPort extractionLogQueryPort,
         final IntegridadeEtlPort integridadeEtlPort
     ) {
+        return criarUseCase(
+            graphQLGateway,
+            extractionLogQueryPort,
+            integridadeEtlPort,
+            new NoOpPreBackfillReferencialColetasUseCase()
+        );
+    }
+
+    private ExtracaoPorIntervaloUseCase criarUseCase(
+        final GraphQLGateway graphQLGateway,
+        final ExtractionLogQueryPort extractionLogQueryPort,
+        final IntegridadeEtlPort integridadeEtlPort,
+        final PreBackfillReferencialColetasUseCase preBackfillReferencialColetasUseCase
+    ) {
         AplicacaoContexto.registrar((PipelineOrchestratorFactory) this::criarOrchestrator);
         AplicacaoContexto.registrar(graphQLGateway);
         AplicacaoContexto.registrar((DataExportGateway) (dataInicio, dataFim, entidade) ->
@@ -384,7 +449,7 @@ class ExtracaoPorIntervaloUseCaseTest {
         AplicacaoContexto.registrar(integridadeEtlPort);
 
         return new ExtracaoPorIntervaloUseCase(
-            new NoOpPreBackfillReferencialColetasUseCase(),
+            preBackfillReferencialColetasUseCase,
             new PlanejadorEscopoExtracaoIntervalo(),
             resourceName -> () -> { }
         );
@@ -528,6 +593,21 @@ class ExtracaoPorIntervaloUseCaseTest {
 
         @Override
         public void executarPosExtracao(final LocalDate dataInicio, final LocalDate dataFim) {
+        }
+    }
+
+    private static final class TrackingPreBackfillReferencialColetasUseCase extends PreBackfillReferencialColetasUseCase {
+        private final AtomicInteger preExecucoes = new AtomicInteger();
+        private final AtomicInteger posExecucoes = new AtomicInteger();
+
+        @Override
+        public void executar(final LocalDate dataInicio, final LocalDate dataFim) {
+            preExecucoes.incrementAndGet();
+        }
+
+        @Override
+        public void executarPosExtracao(final LocalDate dataInicio, final LocalDate dataFim) {
+            posExecucoes.incrementAndGet();
         }
     }
 

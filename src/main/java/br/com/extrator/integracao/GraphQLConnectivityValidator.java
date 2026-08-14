@@ -28,15 +28,18 @@ final class GraphQLConnectivityValidator {
     private final HttpClient clienteHttp;
     private final ObjectMapper mapeadorJson;
     private final GraphQLRequestFactory requestFactory;
+    private final GraphQLHttpRequestExecutor executorRequisicao;
     private final Logger logger;
 
     GraphQLConnectivityValidator(final HttpClient clienteHttp,
                                  final ObjectMapper mapeadorJson,
                                  final GraphQLRequestFactory requestFactory,
+                                 final GraphQLHttpRequestExecutor executorRequisicao,
                                  final Logger logger) {
         this.clienteHttp = clienteHttp;
         this.mapeadorJson = mapeadorJson;
         this.requestFactory = requestFactory;
+        this.executorRequisicao = executorRequisicao;
         this.logger = logger;
     }
 
@@ -45,10 +48,11 @@ final class GraphQLConnectivityValidator {
 
         try {
             final String queryTeste = "{ __schema { queryType { name } } }";
-            final GraphQLRequestFactory.RequestPayload payload = requestFactory.criarPostSemTimeout(queryTeste);
-            final HttpResponse<String> resposta = clienteHttp.send(
+            final GraphQLRequestFactory.RequestPayload payload = requestFactory.criarPost(queryTeste);
+            final HttpResponse<String> resposta = executorRequisicao.executar(
+                clienteHttp,
                 payload.requisicao(),
-                HttpResponse.BodyHandlers.ofString()
+                "GraphQL-connectivity"
             );
 
             if (resposta.statusCode() != 200) {
@@ -64,11 +68,8 @@ final class GraphQLConnectivityValidator {
                 logger.error("Erro na validacao da API GraphQL: {}", respostaJson.get("errors"));
             }
             return sucesso;
-        } catch (final IOException | InterruptedException e) {
+        } catch (final RuntimeException | IOException e) {
             logger.error("Erro durante validacao da API GraphQL: {}", e.getMessage(), e);
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
             return false;
         }
     }

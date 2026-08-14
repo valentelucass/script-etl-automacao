@@ -85,7 +85,7 @@ echo 09. Auditar estrutura das APIs
 echo 10. Ver ajuda de comandos
 echo 11. Gerenciar usuarios de acesso ^(tecla U^)
 echo 12. Extracao rapida ultimas 24h ^(sem replay^)
-echo 13. Retrofit historico por intervalo ^(exige Daemon parado^)
+echo 13. Retrofit global por periodo ^(todas as fontes; exige Daemon parado^)
 echo 00. Sair
 echo.
 echo Cobertura atual do ETL:
@@ -464,7 +464,7 @@ goto :MENU
 :RUN_RETROFIT
 call :PREPARE_SECURITY
 if errorlevel 1 goto :MENU
-call :AUTH_CHECK RUN_EXTRACAO_INTERVALO "Executar Retrofit historico"
+call :AUTH_CHECK RUN_EXTRACAO_INTERVALO "Executar Retrofit global"
 if errorlevel 1 (
     timeout /t 2 /nobreak >nul 2>&1
     goto :MENU
@@ -476,20 +476,59 @@ if errorlevel 1 (
 )
 call :PREPARE_DATABASE
 if errorlevel 1 goto :MENU
-call :RUN_SCRIPT_AUTHORIZED "11-retrofit.bat"
+
+echo.
+echo ================================================================
+echo RETROFIT GLOBAL
+echo ================================================================
+echo Executa todas as fontes habilitadas em carga aditiva.
+echo Inclui GraphQL, DataExport e Raster quando habilitado.
+echo O expurgo de ausentes permanece desabilitado.
+echo.
+set "RETROFIT_DIAS="
+set /p "RETROFIT_DIAS=Dias retroativos [1-3650, ENTER=Cancelar]: " || goto :MENU
+set "RETROFIT_DIAS=!RETROFIT_DIAS: =!"
+if not defined RETROFIT_DIAS goto :MENU
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$value=0; if ([int]::TryParse($env:RETROFIT_DIAS, [ref]$value) -and $value -ge 1 -and $value -le 3650) { exit 0 }; exit 1"
+if errorlevel 1 (
+    echo [ERRO] Informe um numero inteiro entre 1 e 3650.
+    timeout /t 2 /nobreak >nul 2>&1
+    goto :RUN_RETROFIT
+)
+
+for /f "tokens=1,2 delims=|" %%A in ('powershell -NoProfile -ExecutionPolicy Bypass -Command "$days=[int]$env:RETROFIT_DIAS; $end=(Get-Date).Date; $start=$end.AddDays(-$days); Write-Output ($start.ToString('yyyy-MM-dd') + '|' + $end.ToString('yyyy-MM-dd'))"') do (
+    set "RETROFIT_DATA_INICIO=%%A"
+    set "RETROFIT_DATA_FIM=%%B"
+)
+echo.
+echo Periodo: !RETROFIT_DATA_INICIO! a !RETROFIT_DATA_FIM!
+echo Escopo: todas as fontes e entidades habilitadas
+echo.
+set "RETROFIT_CONFIRM="
+set /p "RETROFIT_CONFIRM=Digite RETROFIT para confirmar: " || goto :MENU
+if /i not "!RETROFIT_CONFIRM!"=="RETROFIT" (
+    echo [INFO] Retrofit cancelado pelo operador.
+    timeout /t 2 /nobreak >nul 2>&1
+    goto :MENU
+)
+
+echo.
+echo Revalidando concorrencia imediatamente antes da execucao...
+call :RETROFIT_SAFETY_GATE
+if errorlevel 1 goto :MENU
+echo [INFO] Acompanhe o progresso em logs\aplicacao\runtime\extrator-esl.log.
+echo [INFO] O pre-backfill referencial de coletas pode consultar uma janela maior que o periodo informado.
+call :EXPORT_AUTH_SESSION
+java %JAVA_BASE_OPTS% -jar "%JAR_PATH%" --extracao-intervalo "!RETROFIT_DATA_INICIO!" "!RETROFIT_DATA_FIM!" --retrofit
 set "RUN_RETROFIT_EXIT=!ERRORLEVEL!"
 if "!RUN_RETROFIT_EXIT!"=="0" (
     call :MATERIALIZAR_FATOS_BI_POST_RUN
     set "RUN_RETROFIT_EXIT=!ERRORLEVEL!"
-) else if "!RUN_RETROFIT_EXIT!"=="3" (
-    echo.
-    echo [INFO] Retrofit cancelado pelo operador. Materializacao nao executada.
-    set "RUN_RETROFIT_EXIT=0"
 ) else (
     echo.
     echo [AVISO] Materializacao ignorada porque o Retrofit retornou codigo !RUN_RETROFIT_EXIT!.
 )
-call :WAIT_AFTER_MENU_ACTION "Retrofit historico" "!RUN_RETROFIT_EXIT!"
+call :WAIT_AFTER_MENU_ACTION "Retrofit global" "!RUN_RETROFIT_EXIT!"
 goto :MENU
 
 :RUN_05

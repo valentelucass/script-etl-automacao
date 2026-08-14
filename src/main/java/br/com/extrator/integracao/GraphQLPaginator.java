@@ -30,7 +30,6 @@ import br.com.extrator.suporte.configuracao.ConfigApi;
 import br.com.extrator.suporte.validacao.ConstantesEntidades;
 
 final class GraphQLPaginator {
-    private static final int HARD_LIMIT_PAGINAS_USUARIOS_LEGADO = 10;
 
     private final Logger logger;
     private final int intervaloLogProgresso;
@@ -99,14 +98,14 @@ final class GraphQLPaginator {
         final String nomeEntidadeUsuarios = ConstantesApiGraphQL.obterNomeEntidadeApi(ConstantesEntidades.USUARIOS_SISTEMA);
         final boolean entidadeUsuarios = nomeEntidadeUsuarios.equals(nomeEntidade);
         final int limitePaginas = entidadeUsuarios
-            ? Math.min(ConfigApi.obterLimitePaginasUsuariosGraphQL(), HARD_LIMIT_PAGINAS_USUARIOS_LEGADO)
+            ? Math.min(ConfigApi.obterLimitePaginasUsuariosGraphQL(), limitePaginasGeral)
             : limitePaginasGeral;
         final int maxRegistros = nomeEntidadeUsuarios.equals(nomeEntidade)
             ? ConfigApi.obterMaxRegistrosUsuariosGraphQL()
             : ConfigApi.obterMaxRegistrosGraphQL();
         if (entidadeUsuarios) {
             logger.info(
-                "Hard-limit GraphQL aplicado para {}: max {} paginas por execucao",
+                "Limite configurado GraphQL aplicado para {}: max {} paginas por execucao",
                 nomeEntidade,
                 limitePaginas
             );

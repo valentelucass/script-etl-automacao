@@ -370,7 +370,7 @@ class GraphQLPaginatorTest {
     }
 
     @Test
-    void deveAplicarHardLimitDeDezPaginasParaUsuariosSistemaLegado() {
+    void devePermitirUsuariosSistemaAcimaDoLimiteLegadoDeDezPaginas() {
         final AtomicInteger callCount = new AtomicInteger();
         final GraphQLPaginator paginator = new GraphQLPaginator(
             LoggerFactory.getLogger(GraphQLPaginatorTest.class),
@@ -389,7 +389,7 @@ class GraphQLPaginatorTest {
                     final Class<T> tipoClasse
                 ) {
                     final int pagina = callCount.incrementAndGet();
-                    return cast(List.of(pagina), true, "cursor-" + pagina);
+                    return cast(List.of(pagina), pagina < 11, "cursor-" + pagina);
                 }
             }
         );
@@ -402,11 +402,10 @@ class GraphQLPaginatorTest {
             Integer.class
         );
 
-        assertFalse(resultado.isCompleto());
-        assertEquals(ResultadoExtracao.MotivoInterrupcao.LIMITE_PAGINAS.getCodigo(), resultado.getMotivoInterrupcao());
-        assertEquals(10, resultado.getPaginasProcessadas());
-        assertEquals(10, resultado.getDados().size());
-        assertEquals(10, callCount.get());
+        assertTrue(resultado.isCompleto());
+        assertEquals(11, resultado.getPaginasProcessadas());
+        assertEquals(11, resultado.getDados().size());
+        assertEquals(11, callCount.get());
     }
 
     @Test

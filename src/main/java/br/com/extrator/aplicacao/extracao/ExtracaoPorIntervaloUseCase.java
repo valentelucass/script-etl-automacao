@@ -210,12 +210,29 @@ public class ExtracaoPorIntervaloUseCase {
 
         log.console("=".repeat(60) + "\n");
 
+        final boolean pularHidratacaoReferencial = modoRapido24h
+            || request.modoExecucao() == ExtracaoPorIntervaloRequest.ModoExecucao.RETROFIT;
+        final boolean adiarUsuariosSistemaNoRetrofit = deveAdiarUsuariosSistemaNoRetrofit(
+            request,
+            apiEspecifica,
+            entidadeEspecifica
+        );
+        if (request.modoExecucao() == ExtracaoPorIntervaloRequest.ModoExecucao.RETROFIT) {
+            log.console("Retrofit: pre-backfill e pos-hidratacao referencial de coletas ignorados para respeitar o periodo solicitado.");
+        }
+        if (adiarUsuariosSistemaNoRetrofit) {
+            log.console(
+                "Retrofit global: usuarios_sistema adiado; a API entrega 20 registros por pagina sem filtro temporal. "
+                    + "Execute a sincronizacao de usuarios em rotina dedicada."
+            );
+        }
+
         executarPreBackfillReferencialColetas(
             dataInicio,
             apiEspecifica,
             entidadeEspecifica,
             modoLoopDaemon,
-            modoRapido24h
+            pularHidratacaoReferencial
         );
 
         final LocalDateTime inicioExecucao = LocalDateTime.now();
@@ -264,7 +281,8 @@ public class ExtracaoPorIntervaloUseCase {
             final PipelineOrchestrator orchestrator = AplicacaoContexto.orchestratorFactory().criar();
             final List<PipelineStep> steps = planejadorEscopo.criarSteps(
                 apiEspecifica,
-                entidadeEspecifica
+                entidadeEspecifica,
+                !adiarUsuariosSistemaNoRetrofit
             );
             final PipelineReport pipelineReport = orchestrator.executar(bloco.dataInicio, bloco.dataFim, steps);
             blocoComFalha = registrarResultadosBloco(numeroBloco, totalBlocos, pipelineReport, falhasBloco);
@@ -280,7 +298,7 @@ public class ExtracaoPorIntervaloUseCase {
                 entidadeEspecifica,
                 modoLoopDaemon,
                 blocoComFalha,
-                modoRapido24h
+                pularHidratacaoReferencial
             );
 
             final LocalDateTime fimExecucaoBloco = LocalDateTime.now();
@@ -288,7 +306,8 @@ public class ExtracaoPorIntervaloUseCase {
                 inicioExecucaoBloco,
                 fimExecucaoBloco,
                 apiEspecifica,
-                entidadeEspecifica
+                entidadeEspecifica,
+                !adiarUsuariosSistemaNoRetrofit
             );
             resumosEntidades.addAll(montarResumoBloco(
                 bloco,
@@ -303,7 +322,8 @@ public class ExtracaoPorIntervaloUseCase {
                 apiEspecifica,
                 entidadeEspecifica,
                 modoLoopDaemon,
-                logsBloco
+                logsBloco,
+                !adiarUsuariosSistemaNoRetrofit
             );
             if (!falhasDeVolume.isEmpty()) {
                 blocoComFalha = true;
@@ -597,12 +617,14 @@ public class ExtracaoPorIntervaloUseCase {
         final LocalDateTime inicioExecucaoBloco,
         final LocalDateTime fimExecucaoBloco,
         final String apiEspecifica,
-        final String entidadeEspecifica
+        final String entidadeEspecifica,
+        final boolean incluirUsuariosSistema
     ) {
         final Map<String, Optional<LogExtracaoInfo>> logsBloco = new LinkedHashMap<>();
         final Set<String> entidadesResumo = planejadorEscopo.determinarEntidadesParaResumo(
             apiEspecifica,
-            entidadeEspecifica
+            entidadeEspecifica,
+            incluirUsuariosSistema
         );
         if (entidadesResumo.isEmpty()) {
             return logsBloco;
@@ -880,7 +902,8 @@ public class ExtracaoPorIntervaloUseCase {
         final String apiEspecifica,
         final String entidadeEspecifica,
         final boolean modoLoopDaemon,
-        final Map<String, Optional<LogExtracaoInfo>> logsBloco
+        final Map<String, Optional<LogExtracaoInfo>> logsBloco,
+        final boolean incluirUsuariosSistema
     ) {
         final List<String> falhas = new ArrayList<>();
         final Set<String> entidadesObrigatorias = planejadorEscopo.determinarEntidadesObrigatoriasParaVolume(
@@ -947,7 +970,8 @@ public class ExtracaoPorIntervaloUseCase {
 
         final Set<String> entidadesIntegridade = planejadorEscopo.determinarEntidadesEsperadasParaIntegridade(
             apiEspecifica,
-            entidadeEspecifica
+            entidadeEspecifica,
+            incluirUsuariosSistema
         );
         if (!entidadesIntegridade.isEmpty()) {
             final IntegridadeEtlPort integridadePort = AplicacaoContexto.integridadeEtlPort();
@@ -959,6 +983,17 @@ public class ExtracaoPorIntervaloUseCase {
         }
 
         return falhas;
+    }
+
+    private boolean deveAdiarUsuariosSistemaNoRetrofit(
+        final ExtracaoPorIntervaloRequest request,
+        final String apiEspecifica,
+        final String entidadeEspecifica
+    ) {
+        return request != null
+            && request.modoExecucao() == ExtracaoPorIntervaloRequest.ModoExecucao.RETROFIT
+            && (apiEspecifica == null || apiEspecifica.isBlank())
+            && (entidadeEspecifica == null || entidadeEspecifica.isBlank());
     }
 
     private void executarPreBackfillReferencialColetas(

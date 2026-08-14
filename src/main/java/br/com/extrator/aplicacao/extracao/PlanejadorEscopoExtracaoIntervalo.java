@@ -94,13 +94,21 @@ final class PlanejadorEscopoExtracaoIntervalo {
         final String apiEspecifica,
         final String entidadeEspecifica
     ) {
+        return criarSteps(apiEspecifica, entidadeEspecifica, true);
+    }
+
+    List<PipelineStep> criarSteps(
+        final String apiEspecifica,
+        final String entidadeEspecifica,
+        final boolean incluirUsuariosSistema
+    ) {
         final String entidadeNormalizada = normalizarEntidade(entidadeEspecifica);
         final List<PipelineStep> steps = new ArrayList<>();
 
         if (apiEspecifica == null || apiEspecifica.isBlank()) {
             final GraphQLGateway graphQLGateway = AplicacaoContexto.graphQLGateway();
             final DataExportGateway dataExportGateway = AplicacaoContexto.dataExportGateway();
-            adicionarStepsGraphQLGranulares(steps, graphQLGateway);
+            adicionarStepsGraphQLGranulares(steps, graphQLGateway, incluirUsuariosSistema);
             adicionarStepsDataExportGranulares(steps, dataExportGateway);
             if (AplicacaoContexto.rasterHabilitadoParaExecucao()) {
                 steps.add(new RasterPipelineStep(AplicacaoContexto.rasterGateway(), ConstantesEntidades.RASTER_VIAGENS));
@@ -111,10 +119,12 @@ final class PlanejadorEscopoExtracaoIntervalo {
         if ("graphql".equalsIgnoreCase(apiEspecifica)) {
             final GraphQLGateway graphQLGateway = AplicacaoContexto.graphQLGateway();
             if (entidadeNormalizada == null) {
-                adicionarStepsGraphQLGranulares(steps, graphQLGateway);
+                adicionarStepsGraphQLGranulares(steps, graphQLGateway, incluirUsuariosSistema);
                 return steps;
             }
-            adicionarStepUsuariosAntesDeFatoGraphQL(steps, graphQLGateway, entidadeNormalizada);
+            if (incluirUsuariosSistema) {
+                adicionarStepUsuariosAntesDeFatoGraphQL(steps, graphQLGateway, entidadeNormalizada);
+            }
             steps.add(new GraphQLPipelineStep(graphQLGateway, entidadeNormalizada));
             return steps;
         }
@@ -182,12 +192,20 @@ final class PlanejadorEscopoExtracaoIntervalo {
         final String apiEspecifica,
         final String entidadeEspecifica
     ) {
+        return determinarEntidadesParaResumo(apiEspecifica, entidadeEspecifica, true);
+    }
+
+    Set<String> determinarEntidadesParaResumo(
+        final String apiEspecifica,
+        final String entidadeEspecifica,
+        final boolean incluirUsuariosSistema
+    ) {
         final Set<String> entidades = new LinkedHashSet<>();
 
         if (entidadeEspecifica != null && !entidadeEspecifica.isBlank()) {
             final String entidadeNormalizada = normalizarEntidade(entidadeEspecifica);
             if (entidadeNormalizada != null) {
-                if (deveSincronizarUsuariosAntesDaFatoGraphQL(apiEspecifica, entidadeNormalizada)) {
+                if (incluirUsuariosSistema && deveSincronizarUsuariosAntesDaFatoGraphQL(apiEspecifica, entidadeNormalizada)) {
                     entidades.add(ConstantesEntidades.USUARIOS_SISTEMA);
                 }
                 adicionarEntidadeResumo(entidades, entidadeNormalizada);
@@ -201,7 +219,9 @@ final class PlanejadorEscopoExtracaoIntervalo {
         final boolean apiRaster = ConstantesEntidades.RASTER.equalsIgnoreCase(apiEspecifica);
 
         if (apiTodas || apiGraphQL) {
-            entidades.add(ConstantesEntidades.USUARIOS_SISTEMA);
+            if (incluirUsuariosSistema) {
+                entidades.add(ConstantesEntidades.USUARIOS_SISTEMA);
+            }
             entidades.add(ConstantesEntidades.COLETAS);
             entidades.add(ConstantesEntidades.FRETES);
         }
@@ -227,6 +247,14 @@ final class PlanejadorEscopoExtracaoIntervalo {
         final String apiEspecifica,
         final String entidadeEspecifica
     ) {
+        return determinarEntidadesEsperadasParaIntegridade(apiEspecifica, entidadeEspecifica, true);
+    }
+
+    Set<String> determinarEntidadesEsperadasParaIntegridade(
+        final String apiEspecifica,
+        final String entidadeEspecifica,
+        final boolean incluirUsuariosSistema
+    ) {
         final Set<String> entidades = new LinkedHashSet<>();
 
         if (entidadeEspecifica != null && !entidadeEspecifica.isBlank()) {
@@ -236,7 +264,7 @@ final class PlanejadorEscopoExtracaoIntervalo {
                     return entidades;
                 }
                 entidades.add(entidadeNormalizada);
-                if (ConstantesEntidades.COLETAS.equals(entidadeNormalizada)) {
+                if (incluirUsuariosSistema && ConstantesEntidades.COLETAS.equals(entidadeNormalizada)) {
                     entidades.add(ConstantesEntidades.USUARIOS_SISTEMA);
                 }
             }
@@ -248,7 +276,9 @@ final class PlanejadorEscopoExtracaoIntervalo {
         final boolean apiDataExport = "dataexport".equalsIgnoreCase(apiEspecifica);
 
         if (apiTodas || apiGraphQL) {
-            entidades.add(ConstantesEntidades.USUARIOS_SISTEMA);
+            if (incluirUsuariosSistema) {
+                entidades.add(ConstantesEntidades.USUARIOS_SISTEMA);
+            }
             entidades.add(ConstantesEntidades.COLETAS);
             entidades.add(ConstantesEntidades.FRETES);
         }
@@ -340,8 +370,11 @@ final class PlanejadorEscopoExtracaoIntervalo {
     }
 
     private void adicionarStepsGraphQLGranulares(final List<PipelineStep> steps,
-                                                 final GraphQLGateway graphQLGateway) {
-        steps.add(new GraphQLPipelineStep(graphQLGateway, ConstantesEntidades.USUARIOS_SISTEMA));
+                                                 final GraphQLGateway graphQLGateway,
+                                                 final boolean incluirUsuariosSistema) {
+        if (incluirUsuariosSistema) {
+            steps.add(new GraphQLPipelineStep(graphQLGateway, ConstantesEntidades.USUARIOS_SISTEMA));
+        }
         steps.add(new GraphQLPipelineStep(graphQLGateway, ConstantesEntidades.COLETAS));
         steps.add(new GraphQLPipelineStep(graphQLGateway, ConstantesEntidades.FRETES));
     }
