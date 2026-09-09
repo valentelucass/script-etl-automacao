@@ -165,9 +165,9 @@ public class ClienteApiGraphQL {
     }
 
     /**
-     * Busca usuários do sistema na API legada sem filtro temporal em Individual.
-     * A janela recebida e mantida apenas para telemetria/auditoria; o hard-limit
-     * de paginacao de usuarios evita full load historico prolongado.
+     * Busca usuários habilitados atualizados nos dias da janela planejada.
+     * A sobreposição dos dias das extremidades preserva alterações intradia;
+     * o upsert absorve os registros reconsultados.
      */
     public ResultadoExtracao<br.com.extrator.dominio.graphql.usuarios.IndividualNodeDTO> buscarUsuariosSistema(
             final LocalDate dataInicio, final LocalDate dataFim) {
@@ -199,9 +199,12 @@ public class ClienteApiGraphQL {
                 : RelogioSistema.agora().minusDays(90);
             final LocalDateTime fim = atualizadoAte != null ? atualizadoAte : RelogioSistema.agora();
             final Map<String, Object> variaveis = new HashMap<>();
-            variaveis.put("params", Map.of("enabled", true));
+            variaveis.put("params", Map.of(
+                "enabled", true,
+                "updatedAt", inicio.toLocalDate() + " - " + fim.toLocalDate()
+            ));
             logger.info(
-                "Buscando Usuarios do Sistema via GraphQL legado (enabled: true, sem filtro temporal; janela informativa: {} a {})",
+                "Buscando Usuarios do Sistema via GraphQL incremental (enabled: true, updatedAt por dia; janela: {} a {})",
                 inicio,
                 fim
             );
@@ -220,10 +223,9 @@ public class ClienteApiGraphQL {
     }
 
     /**
-     * Compatibilidade para chamadas legadas: usa a query legada sem filtro temporal,
-     * protegida pelo hard-limit de paginacao de usuarios no cliente Java.
+     * Compatibilidade para chamadas sem janela: consulta os últimos 90 dias.
      *
-     * @return Resultado da extracao com usuarios habilitados dentro do limite de paginas
+     * @return Resultado da extração, incompleto se atingir o limite de páginas
      */
     public ResultadoExtracao<br.com.extrator.dominio.graphql.usuarios.IndividualNodeDTO> buscarUsuariosSistema() {
         final LocalDateTime fim = RelogioSistema.agora();

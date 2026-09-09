@@ -57,6 +57,7 @@ test-results/
 
 # Analises internas e materiais de apoio locais
 docs/analises/
+docs/SECRETO/
 tmp_horario_corte_xlsx/
 
 # Build e artefatos

@@ -269,7 +269,6 @@ public class ExtractionLogger {
             final boolean invalidosDentroTolerancia =
                 isInvalidosDentroTolerancia(extractor, registrosInvalidos, totalRecebido);
             final String statusFinal = determinarStatusFinal(
-                entityName,
                 resultado,
                 salvamentoConsistente,
                 invalidosDentroTolerancia
@@ -535,18 +534,11 @@ public class ExtractionLogger {
         return registrosSalvos;
     }
 
-    private String determinarStatusFinal(final String entityName,
-                                         final ResultadoExtracao<?> resultado,
+    private String determinarStatusFinal(final ResultadoExtracao<?> resultado,
                                          final boolean salvamentoConsistente,
                                          final boolean invalidosDentroTolerancia) {
         if (!resultado.isCompleto()) {
             final String motivo = resultado.getMotivoInterrupcao();
-            if (ConstantesEntidades.USUARIOS_SISTEMA.equals(entityName)
-                && ResultadoExtracao.MotivoInterrupcao.LIMITE_PAGINAS.getCodigo().equals(motivo)
-                && salvamentoConsistente
-                && invalidosDentroTolerancia) {
-                return ConstantesEntidades.STATUS_COMPLETO;
-            }
             if (ResultadoExtracao.MotivoInterrupcao.ERRO_API.getCodigo().equals(motivo)
                 || ResultadoExtracao.MotivoInterrupcao.CIRCUIT_BREAKER.getCodigo().equals(motivo)) {
                 return ConstantesEntidades.STATUS_ERRO_API;

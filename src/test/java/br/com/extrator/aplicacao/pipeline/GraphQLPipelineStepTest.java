@@ -22,12 +22,23 @@ class GraphQLPipelineStepTest {
 
     @Test
     void deveUsarTimeoutDaEntidadeQuandoStepForEspecifico() {
-        final GraphQLPipelineStep step = new GraphQLPipelineStep(
-            new NoOpGraphQLGateway(),
-            ConstantesEntidades.USUARIOS_SISTEMA
-        );
+        final String chave = "ETL_GRAPHQL_TIMEOUT_ENTIDADE_USUARIOS_SISTEMA_MS";
+        final String anterior = System.getProperty(chave);
+        try {
+            System.setProperty(chave, "420000");
+            final GraphQLPipelineStep step = new GraphQLPipelineStep(
+                new NoOpGraphQLGateway(),
+                ConstantesEntidades.USUARIOS_SISTEMA
+            );
 
-        assertEquals(Duration.ofMinutes(30), step.obterTimeoutExecucao());
+            assertEquals(Duration.ofMinutes(7), step.obterTimeoutExecucao());
+        } finally {
+            if (anterior == null) {
+                System.clearProperty(chave);
+            } else {
+                System.setProperty(chave, anterior);
+            }
+        }
     }
 
     private static final class NoOpGraphQLGateway implements GraphQLGateway {

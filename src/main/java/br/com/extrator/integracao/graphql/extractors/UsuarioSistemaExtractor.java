@@ -61,7 +61,7 @@ import br.com.extrator.suporte.validacao.ConstantesEntidades;
 
 /**
  * Extractor para entidade Usuários do Sistema (Individual - GraphQL).
- * Usa a query legada de Individual sem filtro temporal, protegida por hard-limit de paginas no cliente.
+ * Filtra IndividualInput.updatedAt pelos dias da janela incremental planejada.
  * Deduplica por user_id (Keep Last) antes de salvar para que o log e o banco batam na validação API vs banco.
  * Nunca executa full load; primeira execução sem watermark fica limitada aos últimos 90 dias.
  */
@@ -85,7 +85,7 @@ public class UsuarioSistemaExtractor implements ChunkedEntityExtractor<Individua
     public ResultadoExtracao<IndividualNodeDTO> extract(final LocalDate dataInicio, final LocalDate dataFim) {
         final JanelaUsuarios janela = resolverJanelaIncremental(dataInicio, dataFim);
         logger.info(
-            "usuarios_sistema: executando modo legado sem filtro temporal | origem_janela={} | inicio={} | fim={}",
+            "usuarios_sistema: extraindo por updatedAt | origem_janela={} | inicio={} | fim={}",
             janela.origem(),
             janela.inicio(),
             janela.fim()
@@ -99,7 +99,7 @@ public class UsuarioSistemaExtractor implements ChunkedEntityExtractor<Individua
                                                                 final PageChunkConsumer<IndividualNodeDTO> chunkConsumer) {
         final JanelaUsuarios janela = resolverJanelaIncremental(dataInicio, dataFim);
         logger.info(
-            "usuarios_sistema: executando modo legado sem filtro temporal em chunks | origem_janela={} | inicio={} | fim={}",
+            "usuarios_sistema: extraindo por updatedAt em chunks | origem_janela={} | inicio={} | fim={}",
             janela.origem(),
             janela.inicio(),
             janela.fim()

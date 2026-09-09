@@ -3,7 +3,7 @@ context:
   - ETL
   - GraphQL
   - Extracao
-updated_at: 2026-03-18T00:00:32.1501533-03:00
+updated_at: 2026-09-08
 source_of_truth: code
 classification: atual
 related_files:
@@ -62,6 +62,13 @@ Detalhe importante:
 
 - Pode rodar antes de `coletas`.
 - Serve como apoio para mapear referencias operacionais.
+- **ETL-V1-USUARIOS-001:** consulta somente usuários habilitados atualizados nos dias da janela planejada. O cliente envia `params.enabled: true` e `params.updatedAt: "YYYY-MM-DD - YYYY-MM-DD"` em `IndividualInput`. Exemplo: uma janela intradia em 08/09/2026 envia `2026-09-08 - 2026-09-08`. Os dias das extremidades são reconsultados intencionalmente; o upsert existente mantém idempotência.
+- A janela vem do plano/watermark confirmado; permanecem os fallbacks existentes para chamadas sem plano e dimensão vazia. Erro da API não pode remover o filtro e repetir uma varredura global.
+- Contrato: `POST /graphql`, operação `ExtrairUsuariosSistema`, autenticação Bearer por `API_GRAPHQL_TOKEN`, sem versão explícita no endpoint. A seleção continua `Individual.id` e `Individual.name`; `updatedAt` existe no input, mas não no objeto de saída. A chave persistida continua `user_id` em `dim_usuarios`.
+- Paginação por `pageInfo.endCursor`/`hasNextPage`, preservando filtros e cursor nas tentativas. `first: 1000` é solicitado, mas a API retornou páginas de 20 na validação de 08/09. A ordem é a fornecida pelo cursor; o cliente não presume ordenação por data nem usa página curta como prova isolada de término.
+- Permanecem as políticas existentes de timeout HTTP, retry limitado, throttling, circuit breaker e limite de páginas do `GraphQLPaginator`. Não foram aumentados os timeouts do step nem do ciclo. Erros HTTP/GraphQL, cursor inconsistente ou limite interrompem a confirmação; o filtro temporal permanece em todas as requisições.
+- **ETL-V1-COMPLETUDE-001:** limite de páginas de usuários produz `INCOMPLETO_LIMITE`, `apiCompleta=false` e `sucesso=false`. Não pode confirmar a janela nem avançar watermark como se toda a origem tivesse sido consultada. Uma janela vazia com paginação concluída permanece sucesso.
+- Origem das duas regras: incidente de paralisação de 08/09/2026. Responsável técnico: manutenção do ETL/TI; responsável de negócio não informado. Contratos afetados: parâmetros GraphQL, resultado/auditoria de extração e confirmação de watermark. Testes: `UsuariosIncrementalContencaoTest`, `UsuariosCompletudeContencaoTest` e regressões existentes de sincronização/pipeline. Evidência de leitura da API: 97 registros únicos em 5 páginas e aproximadamente 10 segundos para a janela diária testada; não representa validação de todas as cargas produtivas.
 
 ### `coletas`
 

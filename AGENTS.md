@@ -7,11 +7,38 @@ Você atua como Engenheiro de Software Principal neste repositório (Java 17 CLI
 ## 📚 Garantia de Contexto Antes de Agir
 * **Leitura obrigatória:** Antes de qualquer planejamento, análise ou escrita de código, leia este `AGENTS.md`, o `states.md` local e o `CONTEXTO_GLOBAL.md` do ecossistema.
 * **Hierarquia de regras:** O `CONTEXTO_GLOBAL.md` dita as regras imutáveis do ecossistema; este `AGENTS.md` dita as regras locais do ETL; o `states.md` registra o estado atual e as tarefas pendentes. Em caso de conflito, preserve a integridade arquitetural e explicite a decisão.
+* **Escopo e autorização:** Perguntas, hipóteses e pedidos de opinião não autorizam criação de repositórios, serviços, bancos, agendamentos, integrações externas ou alterações fora do escopo explicitamente pedido. Antes de ação externa, irreversível ou produtiva, confirme alvo, impacto, recuperação e autorização.
+* **Preservação do trabalho:** Mudanças pré-existentes pertencem ao usuário. Não descarte, sobrescreva ou mova materialmente arquivos sem autorização inequívoca e verificação do alvo.
 
-## REGRA DE SILÊNCIO ABSOLUTO (ZERO CHATTER)
-1. É EXPRESSAMENTE PROIBIDO resumir, explicar, repetir regras ou descrever o que você leu no `states.md` ou neste arquivo.
-2. Não faça divagações, não crie planos de ação no chat e não explique o código que vai escrever. Leia tudo silenciosamente.
-3. O seu único output permitido no chat é a execução direta: faça as modificações nos arquivos de código e atualize as Tarefas Pendentes no `states.md`.
+## Comunicação de Trabalho
+
+1. Leia regras e estado silenciosamente; não repita seu conteúdo sem necessidade.
+2. Comunique apenas o necessário para alinhar escopo, riscos, resultado, bloqueios e evidência de validação.
+3. Não afirme que houve revisão humana, teste, auditoria, deploy ou validação se isso não ocorreu.
+4. Pergunte antes de expandir materialmente o escopo, criar recursos paralelos ou executar qualquer ação externa não pedida.
+
+## Qualidade de Código e Arquitetura
+
+* **Clean Code:** Use nomes claros, funções pequenas e coesas, duplicação controlada e comentários apenas para explicar decisões, contexto ou consequências não óbvias. Comentários não devem repetir o código.
+* **SOLID e baixo acoplamento:** Cada classe e módulo deve ter responsabilidade clara. Dependa de abstrações estáveis; evite classes utilitárias globais, service locators e objetos que concentrem regras não relacionadas.
+* **Independência de domínio:** Regras de negócio não devem depender de framework, banco, HTTP, DTO de API, CLI ou interface. DTOs de integração, entidades de persistência, modelos de domínio e contratos de apresentação são tipos distintos.
+* **Padrões com propósito:** Use Factory, Builder, Strategy, Event, Repository ou qualquer outro padrão somente quando resolver um problema concreto e tornar o código mais simples de manter. Não crie camadas ou abstrações por moda.
+* **Governança de regras:** Toda regra nova ou alterada deve ter identificador, origem, exemplo, teste automatizado, contratos afetados e responsável de negócio quando conhecido. Decisões arquiteturais relevantes devem ter ADR.
+
+## Testes, Revisão e Análise Automatizada
+
+* **Testes proporcionais ao risco:** Regras de negócio exigem testes unitários; banco, APIs, paginação, schema e contratos exigem testes de integração ou contrato. Cubra cenários críticos, bordas, falhas, reexecução, concorrência, nulidade e regressões, sem perseguir percentual de cobertura sem valor.
+* **Revisão:** Mudanças relevantes devem estar prontas para revisão humana, com diff compreensível, motivação, impacto de contrato e evidência de teste. Não considere uma mudança revisada até que a revisão ocorra.
+* **Lint, formato e análise estática:** Execute build, testes, formatter/lint, análise estática e validações de schema já configurados. Não silencie erros, warnings ou testes para fazer o pipeline passar. Se uma categoria não possuir ferramenta, registre a lacuna em `states.md`.
+* **Definition of Done:** Antes de concluir, confira diff, encoding, segredos, erros ignorados, impacto de contrato, migrations/baseline, documentação, rollback e evidência de execução das validações aplicáveis.
+
+## Segurança, Observabilidade e Resiliência
+
+* **Segredos e menor privilégio:** Tokens, senhas, chaves e dados sensíveis ficam fora do código e do Git. Nunca os exponha em logs, documentação, testes ou comandos. Use credenciais de menor privilégio e valide entrada de CLI, arquivos, APIs e banco.
+* **Dados e SQL seguros:** Use queries parametrizadas; nunca concatene entrada externa em SQL, URL ou shell sem validação e escape apropriados. Não desabilite autenticação, TLS, sanitização, auditoria ou controle de acesso como atalho.
+* **Erros e logs:** Erros devem ser claros, rastreáveis, com causa preservada e sem sucesso falso. Logs devem ser estruturados, conter correlação/`execution_id` quando disponível e nunca incluir segredo ou payload sensível.
+* **Resiliência:** Use timeout, retry limitado com backoff e jitter, circuit breaker, idempotência, deduplicação, quarentena e limites de volume/memória quando aplicáveis. Retry não pode avançar estado, esconder falha permanente nem repetir escrita não idempotente.
+* **Dependências e operação:** Mantenha versões explícitas, licenças aprovadas e vulnerabilidades avaliadas. Mudanças de dependência exigem análise de compatibilidade, release notes, vulnerabilidades e regressão. Meça desempenho antes de otimizar e mantenha métricas de volume, latência, erro e execução.
 
 ---
 
@@ -39,6 +66,7 @@ Você atua como Engenheiro de Software Principal neste repositório (Java 17 CLI
 * **Clean Code e Pacotes:** Respeite a arquitetura em camadas. O pacote `service` é exclusivo para classes com comportamento de serviço; repositórios e gateways SQL ficam em `repository`/`database`, utilitários puros em `util`, configurações em `config`, políticas em `policy`, jobs em pacotes próprios e scripts SQL em `database`. Cada macaco no seu galho.
 * **Materialização Obrigatória:** Regras de BI complexas, filtros de elegibilidade pesados ou cruzamentos textuais não devem ser processados sob demanda dentro das views de apresentação. Realize o processamento textual pesado e as validações durante a carga (Load) no Java e salve o resultado em colunas físicas (ex: `BIT`, `TINYINT`) indexadas nas tabelas base.
 * **🚨 Exclusão Lógica (Soft Delete Obrigatório):** É ESTRITAMENTE PROIBIDO o uso de exclusão física (Hard Delete / `DELETE FROM` / `TRUNCATE`) em rotinas comuns para dados extraídos, cadastros de suporte, fatos, auditoria ou histórico de BI. Use flags como `excluido_na_origem = 1`, `ativo = 0`, `deleted_at` ou controle de vigência. Views operacionais, views analíticas e materializações devem filtrar registros excluídos logicamente por padrão, exceto em consultas declaradamente de auditoria/reconciliação.
+* **JPA/Hibernate com critério:** ORM pode atender cadastros, configurações e transações pequenas em evoluções futuras, mas não substitui SQL set-based/JDBC para carga em massa, staging, `MERGE`, fatos, agregações ou validações analíticas.
 
 ## Modelo Aditivo com Expurgo Logico (Sweep and Prune)
 
@@ -54,6 +82,9 @@ O job `Sweep and Prune` deve rodar fora do horario de pico, com paginacao por or
 
 * **Testes e Sanidade:** Antes de dar a tarefa por concluída, execute a suíte de testes locais (`src/test`) e os scripts de validação de schema (`database/validacao`). Nenhuma alteração estrutural pode subir sem validação de quebra de contrato.
 * **Encoding e Mojibake:** Todo o ecossistema (código Java, drivers JDBC, scripts SQL e arquivos de log) opera estritamente em UTF-8. Não aceite aliases ou dados de tabelas com caracteres corrompidos.
+* **Contratos de API:** Toda integração deve documentar endpoint/template, versão, autenticação, filtros obrigatórios, chave, paginação, ordenação, formato temporal, timeout, erros esperados e política de retry. Mudanças de payload exigem validação de contrato e estratégia de compatibilidade.
+* **Documentação e CI/CD:** Mantenha README, ADRs, contratos, runbooks e catálogo de configurações vivos. O CI deve cobrir build, testes, schema, formatter/lint, análise estática, dependências e segredos; enquanto alguma etapa não estiver automatizada, registre a lacuna e execute localmente o que estiver disponível.
+* **Débito técnico:** Registre impacto, risco, dono, alternativa e prioridade. Não esconda débito em TODO sem contexto nem espere um incidente para tratá-lo.
 
 ## Diretrizes de Sincronização de Estado (states.md)
 1. Antes de iniciar a implementação de qualquer código, você DEVE ler o arquivo `states.md` para compreender o contexto arquitetural e as regras de negócio vigentes, garantindo que as novas implementações não quebrem o estado atual.

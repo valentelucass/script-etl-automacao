@@ -54,18 +54,28 @@ class GraphQLGatewayAdapterTest {
     @Test
     void deveUsarTimeoutDaEntidadeQuandoExecutaGraphqlEspecifico() throws Exception {
         System.setProperty("ETL_PROCESS_ISOLATION_ENABLED", "true");
+        final String chave = "ETL_GRAPHQL_TIMEOUT_ENTIDADE_USUARIOS_SISTEMA_MS";
+        final String anterior = System.getProperty(chave);
+        try {
+            System.setProperty(chave, "420000");
+            final RecordingGraphQLService service = new RecordingGraphQLService();
+            final RecordingIsolatedExecutor isolatedExecutor = new RecordingIsolatedExecutor();
+            final GraphQLGatewayAdapter adapter = new GraphQLGatewayAdapter(service, isolatedExecutor);
 
-        final RecordingGraphQLService service = new RecordingGraphQLService();
-        final RecordingIsolatedExecutor isolatedExecutor = new RecordingIsolatedExecutor();
-        final GraphQLGatewayAdapter adapter = new GraphQLGatewayAdapter(service, isolatedExecutor);
+            adapter.executar(
+                LocalDate.of(2026, 3, 18),
+                LocalDate.of(2026, 3, 18),
+                ConstantesEntidades.USUARIOS_SISTEMA
+            );
 
-        adapter.executar(
-            LocalDate.of(2026, 3, 18),
-            LocalDate.of(2026, 3, 18),
-            ConstantesEntidades.USUARIOS_SISTEMA
-        );
-
-        assertEquals(Duration.ofMinutes(30), isolatedExecutor.timeout);
+            assertEquals(Duration.ofMinutes(7), isolatedExecutor.timeout);
+        } finally {
+            if (anterior == null) {
+                System.clearProperty(chave);
+            } else {
+                System.setProperty(chave, anterior);
+            }
+        }
     }
 
     private static final class RecordingGraphQLService extends GraphQLExtractionService {

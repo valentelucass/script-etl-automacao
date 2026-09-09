@@ -254,10 +254,9 @@ public final class GraphQLQueries {
     /**
      * Query para buscar Usuários do Sistema (Individual)
      * Tipo GraphQL: Individual
-     * Filtro operacional: enabled: true.
-     * A API ESL legada nao expoe campo temporal em Individual; o controle de seguranca
-     * fica no hard-limit de paginacao do cliente Java.
-     * Paginação: cursor-based (first: 1000, after: $cursor)
+     * Filtros em IndividualInput: enabled: true e updatedAt: YYYY-MM-DD - YYYY-MM-DD.
+     * updatedAt pertence ao input e não deve ser selecionado no node Individual.
+     * Paginação: cursor-based (first: 1000 solicitado; a API pode retornar páginas menores).
      *
      * ATENÇÃO: Esta query busca usuários do tipo Individual.
      * Validar se destroyUserId e cancellationUserId em Pick são do mesmo tipo Individual
